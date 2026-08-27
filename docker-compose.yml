@@ -1,0 +1,20 @@
+# docker-compose.yml
+
+services:
+  postgres:
+    image: postgis/postgis:17-3.5
+    container_name: sentinel-postgres
+
+    environment:
+      POSTGRES_DB: sentinel
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: sentinel_dev
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - sentinel_postgres:/var/lib/postgresql/data
+
+volumes:
+  sentinel_postgres:

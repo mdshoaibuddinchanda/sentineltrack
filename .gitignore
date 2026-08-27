@@ -1,0 +1,52 @@
+# Environment variables & secrets
+.env
+.env.*
+*.env
+!.env.example
+
+
+# Data & Datasets
+data/
+datasets/
+raw/
+
+# Model weights & binaries
+models/
+runs/
+*.pt
+*.pth
+*.onnx
+*.engine
+*.bin
+*.weights
+
+# Reports, outputs & artifacts
+reports/
+*.jpg
+*.jpeg
+*.png
+*.mp4
+*.m3u8
+*.ts
+*.avi
+*.cache
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs & scratch
+*.log
+scratch/
+mlruns/
+.mlflow/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
