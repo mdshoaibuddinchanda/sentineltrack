@@ -6,6 +6,9 @@ ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 DATASET_DIR = ROOT_DIR / 'datasets' / 'plate_ocr'
 SOURCES_CSV = DATASET_DIR / 'sources.csv'
 
+eval_mod = importlib.import_module('04_plate_ocr.training.evaluate')
+calculate_metrics = eval_mod.calculate_metrics
+
 
 def test_sources_csv_exists_and_valid():
     assert SOURCES_CSV.exists(), 'sources.csv must exist in datasets/plate_ocr'
@@ -31,8 +34,6 @@ def test_no_synthetic_in_val_or_test():
                 split_name = r['split']
                 fn = r['filename']
                 assert r['type'] == 'real', f"Synthetic data detected in split {split_name}: {fn}"
-
-
 
 
 def test_zero_hash_and_identity_leakage():
@@ -66,3 +67,19 @@ def test_bbox_provenance_and_dimensions():
             assert ch >= 8, f'Crop height too small: {ch}'
             assert int(r['xmax']) >= int(r['xmin']), 'Invalid x coordinates'
             assert int(r['ymax']) >= int(r['ymin']), 'Invalid y coordinates'
+
+
+def test_raw_vs_postprocessed_metrics():
+    # Sample where raw has O instead of 0 in numeric position
+    preds = ['GJO1AB1234', 'MH12DE1432']
+    gts = ['GJ01AB1234', 'MH12DE1432']
+
+    metrics = calculate_metrics(preds, gts)
+
+    # Raw matches 1/2 (50%) because GJO1 != GJ01
+    assert metrics['raw_exact_matches'] == 1
+    assert metrics['raw_exact_accuracy'] == 0.50
+
+    # Postprocessed matches 2/2 (100%) because positional grammar alternative swaps O -> 0 in position 2
+    assert metrics['postprocessed_exact_matches'] == 2
+    assert metrics['postprocessed_exact_accuracy'] == 1.00

@@ -1,5 +1,6 @@
 import os
 import cv2
+import math
 import importlib
 import numpy as np
 import onnxruntime as ort
@@ -17,8 +18,7 @@ def is_two_line_plate(crop: np.ndarray) -> bool:
         return False
     h, w = crop.shape[:2]
     aspect_ratio = float(w) / max(float(h), 1.0)
-    # Standard single-line plates have aspect ratio > 2.6; two-line/square plates are ~0.8 to 2.2
-    return 0.8 <= aspect_ratio <= 2.2
+    return 0.8 <= aspect_ratio <= 1.85
 
 
 def split_two_line_plate(crop: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -53,12 +53,10 @@ class PPOCRPlateRecognizer(BasePlateRecognizer):
         if not self.dict_path.exists():
             raise FileNotFoundError(f'PP-OCR dictionary not found at: {self.dict_path}')
 
-        # Load character dictionary
         with open(self.dict_path, 'r', encoding='utf-8') as f:
             lines = [line.strip('\r\n') for line in f.readlines()]
         self.char_list = ['blank'] + lines + [' ']
 
-        # Initialize ONNX session with available providers
         avail_providers = ort.get_available_providers()
         if (device == 'cuda' or device == 'gpu') and 'CUDAExecutionProvider' in avail_providers:
             providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
@@ -71,15 +69,18 @@ class PPOCRPlateRecognizer(BasePlateRecognizer):
         self.input_name = self.session.get_inputs()[0].name
         self.target_height = 48
 
-    def _preprocess_single(self, img: np.ndarray, target_w: Optional[int] = None) -> np.ndarray:
+    def _preprocess_single(self, img: np.ndarray, target_w: Optional[int] = None) -> tuple[np.ndarray, int]:
         h, w = img.shape[:2]
         scale = self.target_height / float(max(h, 1))
-        calc_w = max(int(w * scale), 16)
+        # Ensure calculated width is always a positive multiple of 8
+        calc_w = max(16, int(math.ceil(w * scale / 8.0) * 8))
 
         if target_w is not None:
+            # Ensure target_w is also aligned to multiple of 8
+            target_w_aligned = max(calc_w, int(math.ceil(target_w / 8.0) * 8))
             resized = cv2.resize(img, (calc_w, self.target_height))
-            padded = np.zeros((self.target_height, target_w, 3), dtype=np.uint8)
-            padded[:, :min(calc_w, target_w)] = resized[:, :min(calc_w, target_w)]
+            padded = np.zeros((self.target_height, target_w_aligned, 3), dtype=np.uint8)
+            padded[:, :min(calc_w, target_w_aligned)] = resized[:, :min(calc_w, target_w_aligned)]
             resized = padded
         else:
             resized = cv2.resize(img, (calc_w, self.target_height))
@@ -87,7 +88,7 @@ class PPOCRPlateRecognizer(BasePlateRecognizer):
         inp = resized.astype(np.float32) / 255.0
         inp = (inp - 0.5) / 0.5
         inp = inp.transpose((2, 0, 1))  # [3, H, W]
-        return inp
+        return inp, calc_w
 
     def _ctc_decode(self, preds: np.ndarray) -> tuple[str, Optional[float], list[float]]:
         pred_indices = np.argmax(preds, axis=1)
@@ -133,7 +134,7 @@ class PPOCRPlateRecognizer(BasePlateRecognizer):
         if crop is None or crop.size == 0:
             return '', None, []
 
-        inp = self._preprocess_single(crop)
+        inp, _ = self._preprocess_single(crop)
         batch = np.expand_dims(inp, axis=0)  # [1, 3, H, W]
 
         outputs = self.session.run(None, {self.input_name: batch})
@@ -141,20 +142,21 @@ class PPOCRPlateRecognizer(BasePlateRecognizer):
         return self._ctc_decode(preds)
 
     def _infer_flat_tensor_batch(self, crops_list: list[np.ndarray]) -> list[tuple[str, Optional[float], list[float]]]:
-        """Runs tensor batch inference on a list of single-line crops."""
         if not crops_list:
             return []
 
         max_w = 16
+        cws = []
         for c in crops_list:
             if c is None or c.size == 0:
                 c = np.zeros((self.target_height, 64, 3), dtype=np.uint8)
             h, w = c.shape[:2]
             scale = self.target_height / float(max(h, 1))
-            cw = max(int(w * scale), 16)
+            cw = max(16, int(math.ceil(w * scale / 8.0) * 8))
+            cws.append(cw)
             max_w = max(max_w, cw)
 
-        batch_list = [self._preprocess_single(c, target_w=max_w) for c in crops_list]
+        batch_list = [self._preprocess_single(c, target_w=max_w)[0] for c in crops_list]
         batch_tensor = np.stack(batch_list, axis=0)
 
         outputs = self.session.run(None, {self.input_name: batch_tensor})
@@ -162,7 +164,8 @@ class PPOCRPlateRecognizer(BasePlateRecognizer):
 
         results = []
         for i in range(len(crops_list)):
-            results.append(self._ctc_decode(batch_preds[i]))
+            t_valid = max(1, cws[i] // 8)
+            results.append(self._ctc_decode(batch_preds[i, :t_valid, :]))
         return results
 
     def recognize_batch(self, crops: list[np.ndarray]) -> list[tuple[str, Optional[float], list[float]]]:
@@ -174,7 +177,6 @@ class PPOCRPlateRecognizer(BasePlateRecognizer):
             return []
 
         flat_crops_to_infer = []
-        # Mapping: original_index -> ('single', flat_idx) or ('two_line', top_flat_idx, bot_flat_idx)
         layout_map = []
 
         for i, crop in enumerate(crops):
@@ -194,10 +196,8 @@ class PPOCRPlateRecognizer(BasePlateRecognizer):
                 flat_crops_to_infer.append(crop)
                 layout_map.append(('single', flat_idx))
 
-        # Single batched forward pass for all lines
         flat_results = self._infer_flat_tensor_batch(flat_crops_to_infer)
 
-        # Reassemble results preserving original crop indices and two-line concatenation
         final_results = []
         for item in layout_map:
             kind = item[0]
@@ -269,7 +269,6 @@ class AdaptivePlateRecognizer(BasePlateRecognizer):
         norm_txt = mob_txt.replace(' ', '').upper()
         gram_sc = self.score_grammar(norm_txt)
 
-        # Fallback condition: low confidence OR poor grammar score OR suspicious length
         needs_fallback = (
             (mob_conf is not None and mob_conf < self.min_conf_threshold) or
             (gram_sc < self.min_grammar_threshold) or
@@ -282,7 +281,6 @@ class AdaptivePlateRecognizer(BasePlateRecognizer):
             srv_norm = srv_txt.replace(' ', '').upper()
             srv_gram = self.score_grammar(srv_norm)
 
-            # Accept server if higher confidence or higher grammar score
             if srv_gram >= gram_sc or (srv_conf or 0) > (mob_conf or 0):
                 return srv_txt, srv_conf, srv_confs
 

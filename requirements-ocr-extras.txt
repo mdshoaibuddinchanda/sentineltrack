@@ -1,0 +1,4 @@
+# Optional OCR Benchmark & Comparison Engines
+easyocr>=1.7.1
+transformers>=4.40.0
+torchvision>=0.17.0

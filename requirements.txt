@@ -1,3 +1,4 @@
+# Core Production Dependencies
 torch>=2.2.0
 ultralytics>=8.3.0
 opencv-python>=4.8.0
@@ -6,3 +7,6 @@ requests>=2.31.0
 numpy>=1.26.0
 lapx>=0.9.0
 pytest>=8.0.0
+onnxruntime>=1.18.0
+pillow>=10.0.0
+pyyaml>=6.0

@@ -1,30 +1,30 @@
+import json
 import time
-import torch
 import importlib
 import numpy as np
 from pathlib import Path
 
-models_mod = importlib.import_module('04_plate_ocr.models')
 prep_mod = importlib.import_module('04_plate_ocr.preprocess')
 norm_mod = importlib.import_module('04_plate_ocr.normalization')
 gram_mod = importlib.import_module('04_plate_ocr.grammar')
 vote_mod = importlib.import_module('04_plate_ocr.voting')
 rec_mod = importlib.import_module('04_plate_ocr.recognizers')
+models_mod = importlib.import_module('04_plate_ocr.models')
 
-OCRHypothesis = models_mod.OCRHypothesis
 preprocess_crop = prep_mod.preprocess_crop
 normalize_plate_text = norm_mod.normalize_plate_text
 score_indian_grammar = gram_mod.score_indian_grammar
 MultiFramePlateVoter = vote_mod.MultiFramePlateVoter
 get_recognizer = rec_mod.get_recognizer
+OCRHypothesis = models_mod.OCRHypothesis
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 DATASET_DIR = ROOT_DIR / 'datasets' / 'plate_ocr'
 REPORT_DIR = ROOT_DIR / 'reports' / 'plate_ocr' / 'benchmarks'
 
 
-def benchmark_ocr_subsystem(num_samples: int = 50, batch_sizes: list[int] = [1, 2, 4, 8]):
-    print('[BENCHMARK] Initializing Priority 4 Subsystem Benchmark with PP-OCR Mobile...')
+def benchmark_ocr_subsystem(num_samples: int = 50, batch_sizes: list[int] = [1, 2, 4, 8], num_iterations: int = 50):
+    print('================ RUNNING PRIORITY 4 BENCHMARK WITH STRICT PERCENTILES ================')
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
     img_files = list((DATASET_DIR / 'images' / 'val').glob('*.jpg'))[:num_samples]
@@ -39,18 +39,15 @@ def benchmark_ocr_subsystem(num_samples: int = 50, batch_sizes: list[int] = [1, 
     recognizer = get_recognizer('ppocr_mobile', device='cpu')
     voter = MultiFramePlateVoter(min_support_count=2)
 
-    print('[BENCHMARK] Warming up engine...')
-    for _ in range(5):
+    print('Warming up engine (10 iterations)...')
+    for _ in range(10):
         _ = recognizer.recognize(crops[0])
+        _ = recognizer.recognize_batch([crops[0], crops[1]])
 
-    t_preps = []
-    t_ocrs = []
-    t_norms = []
-    t_grams = []
-    t_votes = []
-    t_totals = []
+    # 1. Pipeline stage breakdown
+    t_preps, t_ocrs, t_norms, t_grams, t_votes, t_totals = [], [], [], [], [], []
 
-    for i, crop in enumerate(crops):
+    for crop in crops:
         t_start = time.perf_counter()
 
         t0 = time.perf_counter()
@@ -70,8 +67,8 @@ def benchmark_ocr_subsystem(num_samples: int = 50, batch_sizes: list[int] = [1, 
         t_grams.append((time.perf_counter() - t0) * 1000)
 
         hyps = [
-            OCRHypothesis('cam1', 1, 1, 0.0, raw_text, norm_text, conf, 0.7, gram_sc),
-            OCRHypothesis('cam1', 1, 1, 150.0, raw_text, norm_text, conf, 0.7, gram_sc)
+            OCRHypothesis('cam1', 1, 1, 0.0, raw_text, norm_text, conf or 0.5, 0.7, gram_sc),
+            OCRHypothesis('cam1', 1, 1, 150.0, raw_text, norm_text, conf or 0.5, 0.7, gram_sc)
         ]
         t0 = time.perf_counter()
         _ = voter.vote(hyps)
@@ -79,23 +76,44 @@ def benchmark_ocr_subsystem(num_samples: int = 50, batch_sizes: list[int] = [1, 
 
         t_totals.append((time.perf_counter() - t_start) * 1000)
 
-    # Genuine Tensor Batching Benchmark
-    batch_results = []
+    # 2. Strict Batch Benchmark (>=50 timed iterations per batch size)
+    batch_benchmarks = []
+
     for bs in batch_sizes:
-        batched_crops = [crops[i % len(crops)] for i in range(bs * 10)]
-        t0 = time.perf_counter()
-        for b_idx in range(0, len(batched_crops), bs):
-            chunk = batched_crops[b_idx:b_idx + bs]
-            _ = recognizer.recognize_batch(chunk)
-        elapsed = time.perf_counter() - t0
-        fps = len(batched_crops) / max(elapsed, 1e-6)
-        batch_results.append({
+        batch_slice = [crops[i % len(crops)] for i in range(bs)]
+        iteration_latencies_ms = []
+
+        # Warmup for this batch size
+        for _ in range(5):
+            _ = recognizer.recognize_batch(batch_slice)
+
+        for _ in range(num_iterations):
+            t0 = time.perf_counter()
+            _ = recognizer.recognize_batch(batch_slice)
+            lat_ms = (time.perf_counter() - t0) * 1000
+            iteration_latencies_ms.append(lat_ms)
+
+        mean_batch_lat = float(np.mean(iteration_latencies_ms))
+        p50_batch_lat = float(np.percentile(iteration_latencies_ms, 50))
+        p95_batch_lat = float(np.percentile(iteration_latencies_ms, 95))
+        p99_batch_lat = float(np.percentile(iteration_latencies_ms, 99))
+        mean_amortized = mean_batch_lat / bs
+        throughput = 1000.0 / mean_amortized
+
+        b_entry = {
             'batch_size': bs,
-            'throughput_crops_per_sec': round(fps, 2),
-            'latency_per_batch_ms': round((elapsed / 10) * 1000, 2),
-            'p95_per_crop_latency_ms': round(((elapsed / 10) * 1000) / bs, 2),
+            'timed_iterations': num_iterations,
+            'mean_batch_latency_ms': round(mean_batch_lat, 2),
+            'p50_batch_latency_ms': round(p50_batch_lat, 2),
+            'p95_batch_latency_ms': round(p95_batch_lat, 2),
+            'p99_batch_latency_ms': round(p99_batch_lat, 2),
+            'mean_amortized_per_crop_ms': round(mean_amortized, 2),
+            'throughput_crops_per_sec': round(throughput, 2),
             'batching_mode': 'TRUE_TENSOR_BATCHING'
-        })
+        }
+        batch_benchmarks.append(b_entry)
+
+        print(f"Batch Size: B={bs:<2} | Mean Batch: {mean_batch_lat:>5.2f}ms | P50: {p50_batch_lat:>5.2f}ms | P95: {p95_batch_lat:>5.2f}ms | Amortized/Crop: {mean_amortized:>5.2f}ms | Throughput: {throughput:>6.2f} c/s")
 
     summary = {
         'hardware': {
@@ -131,22 +149,15 @@ def benchmark_ocr_subsystem(num_samples: int = 50, batch_sizes: list[int] = [1, 
                 'p95': round(float(np.percentile(t_totals, 95)), 2),
             }
         },
-        'batching_performance': batch_results
+        'batching_performance': batch_benchmarks
     }
 
-    print('\n================ PRIORITY 4 BENCHMARK RESULTS ================')
-    print(f"Recognizer:             {recognizer.model_name}")
-    print(f"Preprocessing Latency:  P50 = {summary['stage_latencies_ms']['preprocessing']['p50']}ms | P95 = {summary['stage_latencies_ms']['preprocessing']['p95']}ms")
-    print(f"OCR Inference Latency:  P50 = {summary['stage_latencies_ms']['ocr_inference']['p50']}ms | P95 = {summary['stage_latencies_ms']['ocr_inference']['p95']}ms")
-    print(f"Voting Latency:         P50 = {summary['stage_latencies_ms']['voting']['p50']}ms | P95 = {summary['stage_latencies_ms']['voting']['p95']}ms")
-    print(f"Total P4 Pipeline:      P50 = {summary['stage_latencies_ms']['total_p4_pipeline']['p50']}ms | P95 = {summary['stage_latencies_ms']['total_p4_pipeline']['p95']}ms")
-    print('Batching Throughput:', batch_results)
-    print('===============================================================\n')
-
-    import json
-    with open(REPORT_DIR / 'ocr_latency_benchmark.json', 'w', encoding='utf-8') as f:
+    out_file = REPORT_DIR / 'ocr_latency_benchmark.json'
+    with open(out_file, 'w', encoding='utf-8') as f:
         json.dump(summary, f, indent=2)
 
+    print(f"\nSaved benchmark results to: {out_file}")
+    print('======================================================================================\n')
     return summary
 
 

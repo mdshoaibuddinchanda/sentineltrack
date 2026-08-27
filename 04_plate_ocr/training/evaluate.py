@@ -37,13 +37,19 @@ def calculate_metrics(predictions: list[str], ground_truths: list[str]) -> dict:
     if total_samples == 0:
         return {}
 
-    exact_matches = 0
-    total_gt_chars = 0
-    total_correct_chars = 0
-    total_lev_dist = 0
+    raw_exact_matches = 0
+    raw_total_gt_chars = 0
+    raw_total_correct_chars = 0
+    raw_total_lev_dist = 0
+    raw_edit_dists = []
+
+    post_exact_matches = 0
+    post_total_correct_chars = 0
+    post_total_lev_dist = 0
+    post_edit_dists = []
+
     grammar_valid = 0
     empty_reads = 0
-    edit_dists = []
 
     for pred, gt in zip(predictions, ground_truths):
         norm_p = normalize_plate_text(pred)
@@ -52,41 +58,54 @@ def calculate_metrics(predictions: list[str], ground_truths: list[str]) -> dict:
         if not norm_p:
             empty_reads += 1
 
+        gt_len = max(len(norm_g), 1)
+        raw_total_gt_chars += gt_len
+
+        # 1. RAW METRICS (Strict normalized OCR output without grammar alternative expansion)
+        if norm_p == norm_g:
+            raw_exact_matches += 1
+
+        raw_dist = weighted_levenshtein(norm_p, norm_g, confusion_cost=1.0)
+        raw_total_lev_dist += raw_dist
+        raw_edit_dists.append(raw_dist / gt_len)
+
+        min_l_raw = min(len(norm_p), len(norm_g))
+        raw_matched = sum(1 for i in range(min_l_raw) if norm_p[i] == norm_g[i])
+        raw_total_correct_chars += raw_matched
+
+        # 2. POSTPROCESSED METRICS (Normalization + soft positional grammar alternative selection)
         alts = generate_grammar_alternatives(norm_p)
         best_p = alts[0][0] if alts else norm_p
 
         if norm_p == norm_g or best_p == norm_g:
-            exact_matches += 1
+            post_exact_matches += 1
 
         if score_indian_grammar(norm_p) >= 0.70 or score_indian_grammar(best_p) >= 0.70:
             grammar_valid += 1
 
-        gt_len = max(len(norm_g), 1)
-        total_gt_chars += gt_len
+        post_dist = weighted_levenshtein(best_p, norm_g, confusion_cost=1.0)
+        post_total_lev_dist += post_dist
+        post_edit_dists.append(post_dist / gt_len)
 
-        dist = weighted_levenshtein(best_p, norm_g, confusion_cost=1.0)
-        total_lev_dist += dist
-        norm_dist = dist / gt_len
-        edit_dists.append(norm_dist)
-
-        min_l = min(len(best_p), len(norm_g))
-        matched = sum(1 for i in range(min_l) if best_p[i] == norm_g[i])
-        total_correct_chars += matched
-
-    exact_acc = exact_matches / total_samples
-    char_acc = total_correct_chars / max(total_gt_chars, 1)
-    cer = total_lev_dist / max(total_gt_chars, 1)
-    mean_edit_dist = float(np.mean(edit_dists)) if edit_dists else 0.0
-    median_edit_dist = float(np.median(edit_dists)) if edit_dists else 0.0
+        min_l_post = min(len(best_p), len(norm_g))
+        post_matched = sum(1 for i in range(min_l_post) if best_p[i] == norm_g[i])
+        post_total_correct_chars += post_matched
 
     return {
         'total_samples': total_samples,
-        'exact_matches': exact_matches,
-        'exact_accuracy': round(exact_acc, 4),
-        'character_accuracy': round(char_acc, 4),
-        'cer': round(cer, 4),
-        'mean_edit_distance': round(mean_edit_dist, 4),
-        'median_edit_distance': round(median_edit_dist, 4),
+        # Raw Metrics
+        'raw_exact_matches': raw_exact_matches,
+        'raw_exact_accuracy': round(raw_exact_matches / total_samples, 4),
+        'raw_character_accuracy': round(raw_total_correct_chars / max(raw_total_gt_chars, 1), 4),
+        'raw_cer': round(raw_total_lev_dist / max(raw_total_gt_chars, 1), 4),
+        'raw_mean_edit_distance': round(float(np.mean(raw_edit_dists)), 4) if raw_edit_dists else 0.0,
+        # Postprocessed Metrics
+        'postprocessed_exact_matches': post_exact_matches,
+        'postprocessed_exact_accuracy': round(post_exact_matches / total_samples, 4),
+        'postprocessed_character_accuracy': round(post_total_correct_chars / max(raw_total_gt_chars, 1), 4),
+        'postprocessed_cer': round(post_total_lev_dist / max(raw_total_gt_chars, 1), 4),
+        'postprocessed_mean_edit_distance': round(float(np.mean(post_edit_dists)), 4) if post_edit_dists else 0.0,
+        # System & Quality
         'grammar_valid_rate': round(grammar_valid / total_samples, 4),
         'empty_read_rate': round(empty_reads / total_samples, 4),
     }
@@ -173,9 +192,8 @@ def run_full_reproducible_evaluation():
     print(f'Provider Status: {cuda_status}')
 
     engines = [
-        ('ppocr_mobile', 'PP-OCRv5_mobile_rec'),
-        ('ppocr_server', 'PP-OCRv5_server_rec'),
-        ('adaptive', 'adaptive_mobile_server_cascade')
+        ('ppocr_mobile', 'en_PP-OCRv5_mobile_rec'),
+        ('ppocr_server', 'PP-OCRv5_server_rec')
     ]
 
     comparison_rows = []
@@ -185,18 +203,22 @@ def run_full_reproducible_evaluation():
 
         # 1. Validation Split
         val_metrics = evaluate_engine_on_split(rec, split='val', variant='raw')
-        print(f"\n[{eng_name.upper()} - VALIDATION]")
-        print(f"  Exact Accuracy: {val_metrics['exact_accuracy']*100:>5.2f}% ({val_metrics['exact_matches']}/{val_metrics['total_samples']})")
-        print(f"  Char Accuracy:  {val_metrics['character_accuracy']*100:>5.2f}% | CER: {val_metrics['cer']:.4f}")
-        print(f"  P50 / P95:      {val_metrics['p50_latency_ms']}ms / {val_metrics['p95_latency_ms']}ms | Throughput: {val_metrics['throughput_crops_per_sec']} c/s")
+        print(f"\n[{eng_name} - VALIDATION]")
+        print(f"  RAW:          Exact: {val_metrics['raw_exact_accuracy']*100:>5.2f}% ({val_metrics['raw_exact_matches']}/{val_metrics['total_samples']}) | Char: {val_metrics['raw_character_accuracy']*100:>5.2f}% | CER: {val_metrics['raw_cer']:.4f}")
+        print(f"  POSTPROC:     Exact: {val_metrics['postprocessed_exact_accuracy']*100:>5.2f}% ({val_metrics['postprocessed_exact_matches']}/{val_metrics['total_samples']}) | Char: {val_metrics['postprocessed_character_accuracy']*100:>5.2f}% | CER: {val_metrics['postprocessed_cer']:.4f}")
+        print(f"  P50 / P95:    {val_metrics['p50_latency_ms']}ms / {val_metrics['p95_latency_ms']}ms | Throughput: {val_metrics['throughput_crops_per_sec']} c/s")
 
         comparison_rows.append({
             'engine': eng_name,
             'split': 'val',
-            'exact_accuracy': val_metrics['exact_accuracy'],
-            'character_accuracy': val_metrics['character_accuracy'],
-            'cer': val_metrics['cer'],
-            'mean_normalized_edit_distance': val_metrics['mean_edit_distance'],
+            'raw_exact_accuracy': val_metrics['raw_exact_accuracy'],
+            'raw_character_accuracy': val_metrics['raw_character_accuracy'],
+            'raw_cer': val_metrics['raw_cer'],
+            'raw_mean_edit_distance': val_metrics['raw_mean_edit_distance'],
+            'postprocessed_exact_accuracy': val_metrics['postprocessed_exact_accuracy'],
+            'postprocessed_character_accuracy': val_metrics['postprocessed_character_accuracy'],
+            'postprocessed_cer': val_metrics['postprocessed_cer'],
+            'postprocessed_mean_edit_distance': val_metrics['postprocessed_mean_edit_distance'],
             'empty_read_rate': val_metrics['empty_read_rate'],
             'P50_ms': val_metrics['p50_latency_ms'],
             'P95_ms': val_metrics['p95_latency_ms'],
@@ -204,25 +226,28 @@ def run_full_reproducible_evaluation():
             'provider': 'CPU (8 threads)'
         })
 
-        # Save individual val report
         val_path = REPORT_DIR / f"{eng_key}_val_evaluation.json"
         with open(val_path, 'w', encoding='utf-8') as f:
             json.dump(val_metrics, f, indent=2)
 
         # 2. Test Split (Locked Evaluation)
         test_metrics = evaluate_engine_on_split(rec, split='test', variant='raw')
-        print(f"[{eng_name.upper()} - TEST (LOCKED)]")
-        print(f"  Exact Accuracy: {test_metrics['exact_accuracy']*100:>5.2f}% ({test_metrics['exact_matches']}/{test_metrics['total_samples']})")
-        print(f"  Char Accuracy:  {test_metrics['character_accuracy']*100:>5.2f}% | CER: {test_metrics['cer']:.4f}")
-        print(f"  P50 / P95:      {test_metrics['p50_latency_ms']}ms / {test_metrics['p95_latency_ms']}ms | Throughput: {test_metrics['throughput_crops_per_sec']} c/s")
+        print(f"[{eng_name} - TEST (LOCKED)]")
+        print(f"  RAW:          Exact: {test_metrics['raw_exact_accuracy']*100:>5.2f}% ({test_metrics['raw_exact_matches']}/{test_metrics['total_samples']}) | Char: {test_metrics['raw_character_accuracy']*100:>5.2f}% | CER: {test_metrics['raw_cer']:.4f}")
+        print(f"  POSTPROC:     Exact: {test_metrics['postprocessed_exact_accuracy']*100:>5.2f}% ({test_metrics['postprocessed_exact_matches']}/{test_metrics['total_samples']}) | Char: {test_metrics['postprocessed_character_accuracy']*100:>5.2f}% | CER: {test_metrics['postprocessed_cer']:.4f}")
+        print(f"  P50 / P95:    {test_metrics['p50_latency_ms']}ms / {test_metrics['p95_latency_ms']}ms | Throughput: {test_metrics['throughput_crops_per_sec']} c/s")
 
         comparison_rows.append({
             'engine': eng_name,
             'split': 'test',
-            'exact_accuracy': test_metrics['exact_accuracy'],
-            'character_accuracy': test_metrics['character_accuracy'],
-            'cer': test_metrics['cer'],
-            'mean_normalized_edit_distance': test_metrics['mean_edit_distance'],
+            'raw_exact_accuracy': test_metrics['raw_exact_accuracy'],
+            'raw_character_accuracy': test_metrics['raw_character_accuracy'],
+            'raw_cer': test_metrics['raw_cer'],
+            'raw_mean_edit_distance': test_metrics['raw_mean_edit_distance'],
+            'postprocessed_exact_accuracy': test_metrics['postprocessed_exact_accuracy'],
+            'postprocessed_character_accuracy': test_metrics['postprocessed_character_accuracy'],
+            'postprocessed_cer': test_metrics['postprocessed_cer'],
+            'postprocessed_mean_edit_distance': test_metrics['postprocessed_mean_edit_distance'],
             'empty_read_rate': test_metrics['empty_read_rate'],
             'P50_ms': test_metrics['p50_latency_ms'],
             'P95_ms': test_metrics['p95_latency_ms'],
@@ -234,7 +259,6 @@ def run_full_reproducible_evaluation():
         with open(test_path, 'w', encoding='utf-8') as f:
             json.dump(test_metrics, f, indent=2)
 
-    # Save final comparison CSV
     final_csv = bench_dir / 'recognizer_final_comparison.csv'
     with open(final_csv, 'w', newline='', encoding='utf-8') as f:
         writer = csv.DictWriter(f, fieldnames=list(comparison_rows[0].keys()))
@@ -242,83 +266,6 @@ def run_full_reproducible_evaluation():
         writer.writerows(comparison_rows)
 
     print(f"\n[REPORT] Saved final comparison to: {final_csv}")
-
-    # Run Multi-Frame Consensus on Production Engine (Mobile)
-    print('\n[MULTI-FRAME] Running Multi-Frame Consensus Evaluation for Production Mobile Recognizer...')
-    prod_rec = get_recognizer('ppocr_mobile', device='cpu')
-    test_items = load_split_dataset('test')
-    voter = MultiFramePlateVoter(min_support_count=2)
-
-    single_cor = 0
-    multi_cor = 0
-    total_t = len(test_items)
-    v_lats = []
-
-    for img, gt, _ in test_items:
-        norm_gt = normalize_plate_text(gt)
-
-        # Single frame
-        t0 = time.perf_counter()
-        raw_t, _, _ = prod_rec.recognize(img)
-        norm_t = normalize_plate_text(raw_t)
-        alts = generate_grammar_alternatives(norm_t)
-        best_single = alts[0][0] if alts else norm_t
-        if best_single == norm_gt:
-            single_cor += 1
-
-        # Simulated 4-frame video track
-        sim_hyps = []
-        variations = [
-            ('raw', img),
-            ('gray', cv2.cvtColor(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR)),
-            ('clahe', preprocess_crop(img, variant='clahe')[0]),
-            ('noisy', np.clip(img.astype(np.float32) + np.random.normal(0, 8, img.shape), 0, 255).astype(np.uint8))
-        ]
-
-        for i, (var_name, var_img) in enumerate(variations):
-            r_t, o_c, _ = prod_rec.recognize(var_img)
-            n_t = normalize_plate_text(r_t)
-            hyp = OCRHypothesis(
-                camera_id='sim_cam',
-                track_id=1,
-                stream_epoch=1,
-                pts_ms=i * 150.0,
-                raw_text=r_t,
-                normalized_text=n_t,
-                ocr_confidence=o_c if o_c is not None else 0.5,
-                crop_quality=0.75 - i * 0.05,
-                grammar_score=score_indian_grammar(n_t),
-                preprocess_variant=var_name,
-                recognizer_name=prod_rec.model_name
-            )
-            sim_hyps.append(hyp)
-
-        t0 = time.perf_counter()
-        track_res = voter.vote(sim_hyps)
-        v_lats.append((time.perf_counter() - t0) * 1000)
-
-        if track_res.best_text == norm_gt:
-            multi_cor += 1
-
-    single_acc = single_cor / max(total_t, 1)
-    multi_acc = multi_cor / max(total_t, 1)
-    gain = multi_acc - single_acc
-    p95_v = float(np.percentile(v_lats, 95))
-
-    mf_res = {
-        'production_recognizer': prod_rec.model_name,
-        'total_tracks_evaluated': total_t,
-        'single_frame_exact_accuracy': round(single_acc, 4),
-        'multiframe_consensus_exact_accuracy': round(multi_acc, 4),
-        'accuracy_gain': round(gain, 4),
-        'p95_voting_latency_ms': round(p95_v, 3)
-    }
-
-    print(f"Single-Frame Exact: {single_acc*100:.2f}% | Multi-Frame Exact: {multi_acc*100:.2f}% | Gain: {gain*100:+.2f}% | P95 Voting Latency: {p95_v:.2f}ms")
-
-    with open(REPORT_DIR / 'baseline' / 'multiframe_evaluation.json', 'w', encoding='utf-8') as f:
-        json.dump(mf_res, f, indent=2)
-
     print('=============================================================================')
 
 
