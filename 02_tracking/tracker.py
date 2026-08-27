@@ -153,6 +153,11 @@ class CameraByteTracker:
             if track_id not in self.first_seen_pts:
                 self.first_seen_pts[track_id] = packet.pts_ms
 
+            # Prune ancient track IDs to prevent memory leaks in 24/7 deployments
+            if len(self.first_seen_pts) > 1000:
+                cutoff = packet.pts_ms - 60000.0
+                self.first_seen_pts = {tid: pts for tid, pts in self.first_seen_pts.items() if pts >= cutoff}
+
             class_name = VEHICLE_CLASSES.get(cls_id, f'vehicle_{cls_id}')
 
             vt = VehicleTrack(

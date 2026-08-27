@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 if str(ROOT_DIR) not in sys.path:
@@ -21,6 +21,7 @@ class PlateDetector:
         imgsz: int = 960,
         device: Optional[str] = None,
         enforce_contract: bool = True,
+        half: bool = False,
     ):
         if device is None:
             self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -30,6 +31,7 @@ class PlateDetector:
         self.model_path = model_path
         self.confidence = confidence
         self.imgsz = imgsz
+        self.half = half
 
         # Load YOLO model
         self.model = YOLO(model_path)
@@ -43,55 +45,64 @@ class PlateDetector:
                     f"Wrong model loaded at '{model_path}'. Expected {{0: 'license_plate'}}, got: {names}"
                 )
 
+    def detect(self, vehicle_crop: np.ndarray) -> List[Dict[str, float]]:
+        """Runs plate detection inference on a single vehicle crop image."""
+        batch_res = self.detect_batch([vehicle_crop])
+        return batch_res[0] if batch_res else []
 
-    def detect(self, vehicle_crop: np.ndarray) -> list[dict]:
+    def detect_batch(self, vehicle_crops: List[np.ndarray]) -> List[List[Dict[str, float]]]:
         """
-        Runs plate detection inference on a vehicle crop image.
-        Returns list of dicts: [{'confidence': float, 'x1': float, 'y1': float, 'x2': float, 'y2': float}]
+        Runs batch plate detection inference across a list of vehicle crops.
+        Returns a list of detected plate lists.
         """
-        if vehicle_crop is None or vehicle_crop.size == 0:
-            return []
+        valid_indices = []
+        valid_crops = []
+
+        for idx, crop in enumerate(vehicle_crops):
+            if crop is not None and crop.size > 0:
+                valid_indices.append(idx)
+                valid_crops.append(crop)
+
+        all_results: List[List[Dict[str, float]]] = [[] for _ in range(len(vehicle_crops))]
+        if not valid_crops:
+            return all_results
 
         results = self.model.predict(
-            source=vehicle_crop,
+            source=valid_crops,
             conf=self.confidence,
             imgsz=self.imgsz,
             device=self.device,
+            half=self.half,
             verbose=False,
         )
 
-        plates = []
-        if not results:
-            return plates
+        for orig_idx, result in zip(valid_indices, results):
+            plates = []
+            if result.boxes is not None and len(result.boxes) > 0:
+                for box in result.boxes:
+                    class_id = int(box.cls.item())
+                    if class_id != 0:
+                        continue
 
-        result = results[0]
-        if result.boxes is None or len(result.boxes) == 0:
-            return plates
+                    conf = float(box.conf.item())
+                    coords = box.xyxy[0].cpu().tolist()
+                    x1, y1, x2, y2 = float(coords[0]), float(coords[1]), float(coords[2]), float(coords[3])
 
-        for box in result.boxes:
-            # Enforce single class check: class 0 = license_plate
-            class_id = int(box.cls.item())
-            if class_id != 0:
-                continue
+                    bw = max(0.0, x2 - x1)
+                    bh = max(0.0, y2 - y1)
 
-            conf = float(box.conf.item())
-            coords = box.xyxy[0].cpu().tolist()
-            x1, y1, x2, y2 = float(coords[0]), float(coords[1]), float(coords[2]), float(coords[3])
+                    # Sanity filter: Plates cannot be taller than they are wide
+                    if bh > 0 and (bw / bh) < 0.9:
+                        continue
 
-            bw = max(0.0, x2 - x1)
-            bh = max(0.0, y2 - y1)
+                    plates.append({
+                        "confidence": conf,
+                        "x1": x1,
+                        "y1": y1,
+                        "x2": x2,
+                        "y2": y2,
+                    })
 
-            # Sanity filter: Plates cannot be taller than they are wide (aspect ratio >= 1.0)
-            if bh > 0 and (bw / bh) < 0.9:
-                continue
+            all_results[orig_idx] = plates
 
-            plates.append({
-                "confidence": conf,
-                "x1": x1,
-                "y1": y1,
-                "x2": x2,
-                "y2": y2,
-            })
-
-        return plates
-
+        return all_results
