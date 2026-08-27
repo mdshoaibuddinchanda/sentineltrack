@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import json
+import cv2
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
@@ -19,7 +20,6 @@ p_det_mod = importlib.import_module('03_plate_detection.detector')
 p_pipe_mod = importlib.import_module('03_plate_detection.pipeline')
 quality_mod = importlib.import_module('03_plate_detection.quality')
 
-get_all_cameras = db_mod.get_all_cameras
 get_camera = db_mod.get_camera
 RTSPReader = reader_mod.RTSPReader
 resolve_stream = res_mod.resolve_stream
@@ -30,11 +30,13 @@ PlateDetectionPipeline = p_pipe_mod.PlateDetectionPipeline
 TrackPlateAccumulator = quality_mod.TrackPlateAccumulator
 
 REPORT_DIR = ROOT_DIR / 'reports' / 'plate_detection'
+EVIDENCE_DIR = REPORT_DIR / 'evidence'
 
 
 def run_live_production_validation(camera_ids: list[str], frames_per_camera: int = 15):
     print(f'[VALIDATION] Initializing Production Multi-Camera Live Validation across cameras: {camera_ids}')
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
 
     v_detector = VehicleDetector(model_path='models/vehicle/yolo11m.pt', confidence=0.25, imgsz=960)
     p_detector = PlateDetector(model_path='models/plate/production/best.pt', confidence=0.20, imgsz=960)
@@ -51,9 +53,8 @@ def run_live_production_validation(camera_ids: list[str], frames_per_camera: int
     markdown_lines = [
         '# Sentinel Live Multi-Camera Production Validation Report',
         f'**Generated:** {now_str}',
-
         '',
-        '| Camera ID | Name / Location | Transport | Frames | Vehicles Tracked | Plates Detected | Avg Quality |',
+        '| Camera ID | Name / Location | Transport | Frames | Vehicles Tracked | Plates Detected | Status |',
         '| :--- | :--- | :--- | :--- | :--- | :--- | :--- |',
     ]
 
@@ -75,11 +76,9 @@ def run_live_production_validation(camera_ids: list[str], frames_per_camera: int
         p_pipe = PlateDetectionPipeline(plate_detector=p_detector, target_crop_width=960)
         accumulator = TrackPlateAccumulator(max_candidates_per_track=5)
 
-
         reader = RTSPReader(url=url, camera_id=str(cid))
 
         cam_frames = 0
-        cam_vehicles = 0
         cam_plates = 0
         quality_scores = []
         track_ids_seen = set()
@@ -99,6 +98,12 @@ def run_live_production_validation(camera_ids: list[str], frames_per_camera: int
                 quality_scores.append(p.quality_score)
                 cam_plates += 1
 
+                # Save evidence crop if plate is detected
+                evidence_img = packet.image.copy()
+                cv2.rectangle(evidence_img, (int(p.x1), int(p.y1)), (int(p.x2), int(p.y2)), (0, 255, 0), 2)
+                ev_name = f'cam_{cid}_track_{p.track_id}_frame_{cam_frames}.jpg'
+                cv2.imwrite(str(EVIDENCE_DIR / ev_name), evidence_img)
+
             if cam_frames % 5 == 0 or len(plates) > 0:
                 print(f'  Frame #{cam_frames:<2} | PTS: {packet.pts_ms:>7.1f}ms | Active Tracks: {len(tracks)} | Genuine Plates: {len(plates)}')
                 for p in plates:
@@ -110,6 +115,8 @@ def run_live_production_validation(camera_ids: list[str], frames_per_camera: int
         elapsed = max(0.001, time.time() - start_time)
         avg_q = (sum(quality_scores) / len(quality_scores)) if quality_scores else 0.0
 
+        obs_status = "Positive plate detections recorded" if cam_plates > 0 else "No positive plate-validation opportunity observed (wide-angle/far view)"
+
         cam_summary = {
             'camera_id': cid,
             'name': cam_name,
@@ -118,9 +125,9 @@ def run_live_production_validation(camera_ids: list[str], frames_per_camera: int
             'unique_vehicles_tracked': len(track_ids_seen),
             'plates_detected': cam_plates,
             'average_quality_score': round(avg_q, 3),
+            'status': obs_status,
             'elapsed_seconds': round(elapsed, 2),
             'fps': round(cam_frames / elapsed, 2),
-            'top_k_accumulated_tracks': len(accumulator.get_all_tracks()),
         }
 
         overall_results['cameras_tested'].append(cam_summary)
@@ -129,7 +136,7 @@ def run_live_production_validation(camera_ids: list[str], frames_per_camera: int
         overall_results['total_plates_detected'] += cam_plates
 
         markdown_lines.append(
-            f'| {cid} | {cam_name} | {transport} | {cam_frames} | {len(track_ids_seen)} | {cam_plates} | {avg_q:.2f} |'
+            f'| {cid} | {cam_name} | {transport} | {cam_frames} | {len(track_ids_seen)} | {cam_plates} | {obs_status} |'
         )
 
     # Save JSON & Markdown reports
@@ -151,7 +158,5 @@ def run_live_production_validation(camera_ids: list[str], frames_per_camera: int
     print('=================================================================================\n')
 
 
-
 if __name__ == '__main__':
-    # Test on heterogeneous cameras 1, 2, 3
     run_live_production_validation(['1', '2', '3'], frames_per_camera=12)

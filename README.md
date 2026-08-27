@@ -45,10 +45,11 @@ SENTINEL STREAM INGESTION (RTSP / HLS)
 * **Cadence-Aware Kalman Filter**: Matches ByteTrack frame rate directly to the 150 ms sampling cadence.
 * **Epoch & Gap Reset Safeguards**: Automatically invalidates tracks on stream restarts or PTS gaps > 1500 ms.
 
-### Priority 3: License Plate Detection
+### Priority 3: License Plate Detection & Provenance
 * **Padded Vehicle Cropping**: Extracts vehicle ROIs with 8% margin to protect bumper edges.
 * **High-Resolution Magnification**: Dynamically scales crops to 960 px before plate localization.
 * **Dedicated Single-Class Plate Model**: Enforces `{0: 'license_plate'}` contract, rejecting generic COCO false positives.
+* **Verified Real Dataset Workflow**: Uses open verified ANPR dataset (CC-BY-4.0) with strict **Real-Only Validation & Test** splits and zero hash overlap.
 * **Coordinate Re-Projection**: Accurately projects local crop coordinates back to full 1920x1080 CCTV space.
 * **Quality & Top-K Accumulation**: Evaluates sharpness (Laplacian variance), contrast, and retains the top candidate crops per track.
 
@@ -91,7 +92,7 @@ python scripts/setup_models.py
 
 ## Testing & Validation
 
-Run the automated test suite (33 unit tests):
+Run the automated test suite (38 unit tests):
 ```bash
 python -m pytest -v
 ```
@@ -112,6 +113,10 @@ python -m pytest -v
 * **Real-Time Plate Detector with Quality Overlay:**
   ```bash
   python -m 03_plate_detection.scripts.test_stream 1
+  ```
+* **Multi-Camera Production Stream Validator:**
+  ```bash
+  python -m 03_plate_detection.scripts.validate_live_production
   ```
 
 ---
