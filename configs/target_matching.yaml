@@ -1,0 +1,23 @@
+# SentinelTrack Priority 5 Configuration
+matching:
+  exact_fast_path: true
+  high_probability_threshold: 0.85
+  probable_threshold: 0.70
+  possible_threshold: 0.50
+
+scoring:
+  similarity_weight: 0.55
+  ocr_confidence_weight: 0.15
+  support_weight: 0.15
+  grammar_weight: 0.10
+  quality_weight: 0.05
+  base_confusion_cost: 0.20
+
+alerts:
+  min_alert_class: HIGH_PROBABILITY
+  cooldown_seconds: 60.0
+  deduplicate_by_track: true
+
+watchlist:
+  cache_enabled: true
+  max_candidate_shortlist: 100
