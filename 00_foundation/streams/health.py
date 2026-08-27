@@ -1,14 +1,4 @@
 import time
-from typing import Optional
-
-try:
-    from ..registry.database import record_health_event, update_camera_probe_status
-except (ImportError, ValueError):
-    from registry.database import record_health_event, update_camera_probe_status
-
-
-
-import time
 from collections import deque
 from typing import Optional
 import numpy as np
@@ -19,8 +9,8 @@ except (ImportError, ValueError):
     from registry.database import record_health_event, update_camera_probe_status
 
 
-
 class StreamHealthTracker:
+
     """
     Monitors live stream health, frame timing, and drops for a specific camera using dynamic PTS analysis.
     Does not assume a constant 25 FPS.

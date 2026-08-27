@@ -36,10 +36,12 @@ class VehicleTrackingPipeline:
         detector,
         tracker_registry: Optional[CameraTrackerRegistry] = None,
         track_manager: Optional[TrackManager] = None,
+        sampling_interval_ms: float = 150.0,
     ):
         self.detector = detector
-        self.tracker_registry = tracker_registry or CameraTrackerRegistry()
+        self.tracker_registry = tracker_registry or CameraTrackerRegistry(sampling_interval_ms=sampling_interval_ms)
         self.track_manager = track_manager or TrackManager()
+
 
     def process(self, packet) -> list[VehicleTrack]:
         # 1. Detect vehicles

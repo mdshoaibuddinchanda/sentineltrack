@@ -176,12 +176,18 @@ class CameraByteTracker:
 
 
 class CameraTrackerRegistry:
-    """Manages independent ByteTrack instances for each camera."""
+    """Manages independent ByteTrack instances for each camera with cadence awareness."""
 
-    def __init__(self, max_track_gap_ms: float = 1500.0, track_thresh: float = 0.25):
+    def __init__(
+        self,
+        max_track_gap_ms: float = 1500.0,
+        track_thresh: float = 0.25,
+        sampling_interval_ms: float = 150.0,
+    ):
         self.trackers: dict[str, CameraByteTracker] = {}
         self.max_track_gap_ms = max_track_gap_ms
         self.track_thresh = track_thresh
+        self.sampling_interval_ms = sampling_interval_ms
 
     def get_tracker(self, camera_id: str) -> CameraByteTracker:
         if camera_id not in self.trackers:
@@ -189,8 +195,10 @@ class CameraTrackerRegistry:
                 camera_id=camera_id,
                 max_track_gap_ms=self.max_track_gap_ms,
                 track_thresh=self.track_thresh,
+                sampling_interval_ms=self.sampling_interval_ms,
             )
         return self.trackers[camera_id]
+
 
     def update(self, packet, detections: list) -> list[VehicleTrack]:
         tracker = self.get_tracker(packet.camera_id)

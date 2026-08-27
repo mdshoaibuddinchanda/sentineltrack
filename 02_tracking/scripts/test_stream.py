@@ -68,8 +68,8 @@ def main():
 
 
     print(f'[INFO] Initializing VehicleDetector and ByteTrack pipeline for Camera {camera_id}...')
-    detector = VehicleDetector(model_path='models/vehicle/yolo11m.pt', confidence=0.25, imgsz=960)
-    pipeline = VehicleTrackingPipeline(detector=detector)
+    pipeline = VehicleTrackingPipeline(detector=detector, sampling_interval_ms=inference_interval_ms)
+
 
     reader = RTSPReader(url=url, camera_id=str(camera_id))
 

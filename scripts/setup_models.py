@@ -27,20 +27,20 @@ def setup_models():
         print(f'[SETUP] Vehicle detector exists at: {vehicle_model_path}')
 
     # 2. Dedicated Single-Class License Plate Model (best.pt)
-    plate_dir = ROOT_DIR / 'models' / 'plate' / 'production'
-    plate_dir.mkdir(parents=True, exist_ok=True)
-    plate_model_path = plate_dir / 'best.pt'
+    plate_model_path_str = os.getenv('PLATE_MODEL_PATH', 'models/plate/production/best.pt')
+    plate_model_path = Path(plate_model_path_str)
+    if not plate_model_path.is_absolute():
+        plate_model_path = ROOT_DIR / plate_model_path
 
     if not plate_model_path.exists():
-        print('[SETUP] Training/initializing dedicated license plate detector...')
-        import importlib
-        prep_mod = importlib.import_module('03_plate_detection.training.prepare_dataset')
-        train_mod = importlib.import_module('03_plate_detection.training.train')
-        
-        prep_mod.prepare_dataset(300)
-        train_mod.main()
+        raise FileNotFoundError(
+            f"\n[ERROR] Production license-plate model not found at '{plate_model_path}'.\n"
+            f"To generate a development synthetic baseline model, run:\n"
+            f"  python scripts/setup_dev_plate_model.py\n"
+            f"Or specify a trained model path using the PLATE_MODEL_PATH environment variable."
+        )
     else:
-        print(f'[SETUP] Dedicated plate detector exists at: {plate_model_path}')
+        print(f'[SETUP] Validated plate detector found at: {plate_model_path}')
 
     # 3. Verify Model Contracts
     print('\n[SETUP] Verifying model contracts:')
@@ -56,3 +56,4 @@ def setup_models():
 
 if __name__ == '__main__':
     setup_models()
+
