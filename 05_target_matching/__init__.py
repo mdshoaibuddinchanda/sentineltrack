@@ -5,9 +5,11 @@ from .models import (
     TargetRegistration,
     MatchCandidate,
     Sighting,
+    TargetMatchRecord,
     WatchlistEntry,
     Alert
 )
+from .config import TargetMatchingConfig
 from .normalizer import normalize_target_registration, normalize_search_query
 from .distance import (
     is_exact_match,
@@ -18,7 +20,15 @@ from .distance import (
 from .scorer import TargetMatchScorer
 from .watchlist import WatchlistManager
 from .alerts import AlertManager, calculate_alert_severity
-from .repository import TargetMatchingRepository
+from .repository import (
+    BaseTargetMatchingRepository,
+    SQLiteTargetMatchingRepository,
+    PostgresTargetMatchingRepository,
+    get_repository
+)
+# Alias for backwards compatibility
+TargetMatchingRepository = SQLiteTargetMatchingRepository
+
 from .history import HistoricalSearchService
 from .pipeline import TargetMatchingPipeline
 
@@ -29,8 +39,10 @@ __all__ = [
     'TargetRegistration',
     'MatchCandidate',
     'Sighting',
+    'TargetMatchRecord',
     'WatchlistEntry',
     'Alert',
+    'TargetMatchingConfig',
     'normalize_target_registration',
     'normalize_search_query',
     'is_exact_match',
@@ -41,7 +53,11 @@ __all__ = [
     'WatchlistManager',
     'AlertManager',
     'calculate_alert_severity',
+    'BaseTargetMatchingRepository',
+    'SQLiteTargetMatchingRepository',
+    'PostgresTargetMatchingRepository',
     'TargetMatchingRepository',
+    'get_repository',
     'HistoricalSearchService',
     'TargetMatchingPipeline',
 ]

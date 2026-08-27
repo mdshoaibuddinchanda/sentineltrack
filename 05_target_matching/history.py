@@ -2,26 +2,35 @@ from typing import Optional, Any
 from datetime import datetime
 
 from .normalizer import normalize_search_query
-from .repository import TargetMatchingRepository
+from .repository import BaseTargetMatchingRepository
 from .scorer import TargetMatchScorer
 from .models import MatchCandidate, MatchClass
+from .config import TargetMatchingConfig
 
 
 class HistoricalSearchService:
     """
     Search and rescoring service for historical vehicle sightings.
-    Enables police operators to search past sightings across cameras, time ranges, and partial plate patterns.
+    Enables police operators to search past sightings across cameras, date ranges, and partial plate patterns.
     """
 
-    def __init__(self, repository: TargetMatchingRepository, scorer: Optional[TargetMatchScorer] = None):
+    def __init__(
+        self,
+        repository: BaseTargetMatchingRepository,
+        scorer: Optional[TargetMatchScorer] = None,
+        config: Optional[TargetMatchingConfig] = None
+    ):
         self.repository = repository
-        self.scorer = scorer or TargetMatchScorer()
+        self.config = config or TargetMatchingConfig.from_yaml()
+        self.scorer = scorer or TargetMatchScorer(config=self.config)
 
     def search_vehicle_history(
         self,
         query: str,
         camera_id: Optional[str] = None,
-        min_match_score: float = 0.50,
+        created_after: Optional[datetime] = None,
+        created_before: Optional[datetime] = None,
+        min_match_score: float = 0.0,
         max_results: int = 50
     ) -> list[dict[str, Any]]:
         norm_q, is_wildcard, is_valid = normalize_search_query(query)
@@ -33,6 +42,8 @@ class HistoricalSearchService:
         sightings = self.repository.query_sightings(
             registration_pattern=pattern,
             camera_id=camera_id,
+            created_after=created_after,
+            created_before=created_before,
             min_score=min_match_score,
             limit=max_results
         )
@@ -71,4 +82,3 @@ class HistoricalSearchService:
             crop_quality=qual,
             multi_frame_support=supp
         )
-

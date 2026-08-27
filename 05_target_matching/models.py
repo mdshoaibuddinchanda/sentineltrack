@@ -66,6 +66,10 @@ class MatchCandidate:
     match_score: float
     match_class: MatchClass
 
+    matched_from: str = 'BEST_TEXT'  # 'BEST_TEXT' | 'ALTERNATIVE'
+    alternative_rank: int = 0
+    alternative_support_score: float = 1.0
+
     reasons: list[str] = field(default_factory=list)
     alternatives: list[tuple[str, float]] = field(default_factory=list)
     reid_score: Optional[float] = None  # Reserved for Priority 6
@@ -87,6 +91,22 @@ class Sighting:
     target_id: Optional[str] = None
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     raw_evidence: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class TargetMatchRecord:
+    """Persisted record of an evaluated target candidate in target_matches table."""
+    match_id: str
+    sighting_id: str
+    watchlist_id: str
+    match_score: float
+    match_class: MatchClass
+    raw_distance: int
+    confusion_distance: float
+    matched_from: str = 'BEST_TEXT'
+    alternative_rank: int = 0
+    explanation: list[str] = field(default_factory=list)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass

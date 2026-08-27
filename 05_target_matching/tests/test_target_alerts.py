@@ -43,6 +43,8 @@ def test_alert_manager_deduplication():
         camera_id='cam-1',
         stream_epoch=1,
         track_id=42,
+        ocr_confidence=0.92,
+        crop_quality=0.85,
         multi_frame_support=2
     )
 

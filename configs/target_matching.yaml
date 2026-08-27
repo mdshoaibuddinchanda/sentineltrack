@@ -1,7 +1,7 @@
 # SentinelTrack Priority 5 Configuration
 matching:
   exact_fast_path: true
-  high_probability_threshold: 0.85
+  high_probability_threshold: 0.90
   probable_threshold: 0.70
   possible_threshold: 0.50
 
@@ -17,7 +17,15 @@ alerts:
   min_alert_class: HIGH_PROBABILITY
   cooldown_seconds: 60.0
   deduplicate_by_track: true
+  exact_evidence_gate_required: true
+  min_exact_alert_confidence: 0.85
+  min_exact_alert_support: 2
 
 watchlist:
   cache_enabled: true
   max_candidate_shortlist: 100
+  duplicate_policy: update
+
+database:
+  backend: postgres
+  sqlite_path: ':memory:'

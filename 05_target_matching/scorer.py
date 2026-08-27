@@ -3,6 +3,7 @@ import importlib
 from typing import Optional
 
 from .models import MatchCandidate, MatchClass
+from .config import TargetMatchingConfig
 from .distance import (
     is_exact_match,
     standard_levenshtein,
@@ -23,28 +24,31 @@ class TargetMatchScorer:
 
     def __init__(
         self,
-        similarity_weight: float = 0.55,
-        ocr_confidence_weight: float = 0.15,
-        support_weight: float = 0.15,
-        grammar_weight: float = 0.10,
-        quality_weight: float = 0.05,
-        confusion_cost: float = 0.20,
-        high_prob_threshold: float = 0.85,
-        probable_threshold: float = 0.70,
-        possible_threshold: float = 0.50,
-        exact_fast_path: bool = True
+        config: Optional[TargetMatchingConfig] = None,
+        similarity_weight: Optional[float] = None,
+        ocr_confidence_weight: Optional[float] = None,
+        support_weight: Optional[float] = None,
+        grammar_weight: Optional[float] = None,
+        quality_weight: Optional[float] = None,
+        confusion_cost: Optional[float] = None,
+        high_prob_threshold: Optional[float] = None,
+        probable_threshold: Optional[float] = None,
+        possible_threshold: Optional[float] = None,
+        exact_fast_path: Optional[bool] = None
     ):
-        self.w_sim = similarity_weight
-        self.w_ocr = ocr_confidence_weight
-        self.w_supp = support_weight
-        self.w_gram = grammar_weight
-        self.w_qual = quality_weight
-        self.confusion_cost = confusion_cost
+        self.config = config or TargetMatchingConfig.from_yaml()
 
-        self.high_prob_threshold = high_prob_threshold
-        self.probable_threshold = probable_threshold
-        self.possible_threshold = possible_threshold
-        self.exact_fast_path = exact_fast_path
+        self.w_sim = similarity_weight if similarity_weight is not None else self.config.similarity_weight
+        self.w_ocr = ocr_confidence_weight if ocr_confidence_weight is not None else self.config.ocr_confidence_weight
+        self.w_supp = support_weight if support_weight is not None else self.config.support_weight
+        self.w_gram = grammar_weight if grammar_weight is not None else self.config.grammar_weight
+        self.w_qual = quality_weight if quality_weight is not None else self.config.quality_weight
+        self.confusion_cost = confusion_cost if confusion_cost is not None else self.config.base_confusion_cost
+
+        self.high_prob_threshold = high_prob_threshold if high_prob_threshold is not None else self.config.high_probability_threshold
+        self.probable_threshold = probable_threshold if probable_threshold is not None else self.config.probable_threshold
+        self.possible_threshold = possible_threshold if possible_threshold is not None else self.config.possible_threshold
+        self.exact_fast_path = exact_fast_path if exact_fast_path is not None else self.config.exact_fast_path
 
     def score_match(
         self,
@@ -61,17 +65,19 @@ class TargetMatchScorer:
         grammar_score: Optional[float] = None,
         multi_frame_support: int = 1,
         total_hypotheses: int = 1,
-        alternatives: Optional[list[tuple[str, float]]] = None
+        alternatives: Optional[list[tuple[str, float]]] = None,
+        matched_from: str = 'BEST_TEXT',
+        alternative_rank: int = 0,
+        alternative_support_score: float = 1.0
     ) -> MatchCandidate:
-        t_reg = target_registration.strip()
-        o_reg = observed_registration.strip()
+        t_reg = target_registration.strip().upper()
+        o_reg = observed_registration.strip().upper()
         alts = alternatives or []
 
         gram_sc = grammar_score if grammar_score is not None else score_indian_grammar(o_reg)
 
         # 1. Exact Match Fast Path
         if self.exact_fast_path and is_exact_match(t_reg, o_reg):
-            supp_sc = min(1.0, max(multi_frame_support, 1) / 3.0)
             score = 1.0
             reasons = [
                 'Exact match: 100% identical registration string',
@@ -97,6 +103,9 @@ class TargetMatchScorer:
                 exact_match=True,
                 match_score=1.0,
                 match_class=MatchClass.EXACT,
+                matched_from=matched_from,
+                alternative_rank=alternative_rank,
+                alternative_support_score=alternative_support_score,
                 reasons=reasons,
                 alternatives=alts
             )
@@ -109,8 +118,7 @@ class TargetMatchScorer:
         norm_sim = calculate_normalized_similarity(t_reg, o_reg, conf_dist)
         norm_dist = 1.0 - norm_sim
 
-        # 3. Multi-Frame Support Factor
-        # Saturates at 3+ corroborating observations
+        # 3. Multi-Frame Support Factor (Saturates at 3+ corroborating observations)
         supp_factor = min(1.0, max(multi_frame_support, 1) / 3.0)
 
         # 4. Multi-Feature Composite Scoring
@@ -122,13 +130,17 @@ class TargetMatchScorer:
             self.w_qual * crop_quality
         )
 
-        # Gating: Damping if raw similarity is below 0.60
+        # Gating: Non-linear damping if raw similarity is below 0.60
         if norm_sim < 0.60:
             composite_score *= (norm_sim / 0.60)
 
         # Penalty for single isolated frame observation
         if multi_frame_support == 1:
             composite_score *= 0.90
+
+        # Adjust score if matched from an alternative candidate
+        if matched_from == 'ALTERNATIVE':
+            composite_score *= min(1.0, alternative_support_score)
 
         final_score = round(float(np.clip(composite_score, 0.0, 0.99)), 4)
 
@@ -147,6 +159,8 @@ class TargetMatchScorer:
         reasons.append(f'OCR confidence: {ocr_confidence:.2f}')
         reasons.append(f'Multi-frame support: {multi_frame_support}/{max(total_hypotheses, 1)} observations')
         reasons.append(f'Indian registration grammar score: {gram_sc:.2f}')
+        if matched_from == 'ALTERNATIVE':
+            reasons.append(f'Matched from P4 alternative #{alternative_rank} (Grammar score: {alternative_support_score:.2f})')
 
         return MatchCandidate(
             target_id=target_id,
@@ -167,6 +181,9 @@ class TargetMatchScorer:
             exact_match=False,
             match_score=final_score,
             match_class=match_cls,
+            matched_from=matched_from,
+            alternative_rank=alternative_rank,
+            alternative_support_score=alternative_support_score,
             reasons=reasons,
             alternatives=alts
         )
