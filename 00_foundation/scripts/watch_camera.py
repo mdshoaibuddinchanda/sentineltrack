@@ -30,14 +30,15 @@ def main():
             print(f"[ERROR] Camera ID '{arg}' not found in registry.")
             return
         camera_id = cam["camera_id"]
-        # Prefer HLS if available and online, or RTSP
-        url = cam.get("hls_url") or cam.get("rtsp_url")
+        from ..streams.resolver import resolve_stream
+        url, transport = resolve_stream(cam)
         if not url:
             print(f"[ERROR] No stream URL found for camera '{camera_id}'.")
             return
-        print(f"[INFO] Playing Camera {camera_id}: {url}")
+        print(f"[INFO] Playing Camera {camera_id} via {transport}: {url}")
     else:
         print(f"[INFO] Playing stream: {url}")
+
 
     reader = RTSPReader(url=url, camera_id=str(camera_id))
 

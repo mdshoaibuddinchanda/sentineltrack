@@ -8,15 +8,32 @@ except (ImportError, ValueError):
 
 
 
+import time
+from collections import deque
+from typing import Optional
+import numpy as np
+
+try:
+    from ..registry.database import record_health_event, update_camera_probe_status
+except (ImportError, ValueError):
+    from registry.database import record_health_event, update_camera_probe_status
+
+
+
 class StreamHealthTracker:
     """
-    Monitors live stream health, frame timing, and drops for a specific camera.
+    Monitors live stream health, frame timing, and drops for a specific camera using dynamic PTS analysis.
+    Does not assume a constant 25 FPS.
     """
 
-    def __init__(self, camera_id: str, expected_fps: float = 25.0):
+    def __init__(self, camera_id: str, default_interval_ms: float = 40.0, expected_fps: Optional[float] = None):
         self.camera_id = camera_id
-        self.expected_fps = expected_fps if expected_fps and expected_fps > 0 else 25.0
-        self.expected_interval_ms = 1000.0 / self.expected_fps
+        if expected_fps and expected_fps > 0:
+            self.default_interval_ms = 1000.0 / expected_fps
+        else:
+            self.default_interval_ms = default_interval_ms
+        self.recent_deltas = deque(maxlen=100)
+
 
         self.last_pts_ms: Optional[float] = None
         self.last_wall_time: Optional[float] = None
@@ -53,21 +70,31 @@ class StreamHealthTracker:
 
     def on_frame(self, pts_ms: float) -> None:
         """
-        Processes each received frame timestamp, tracking FPS and drift.
+        Processes each received frame timestamp, tracking FPS and dynamic drift.
         """
         now = time.time()
         self.frame_count += 1
         self.fps_frame_count += 1
 
-        # Check PTS jump or drop if previous PTS exists
         if self.last_pts_ms is not None:
             delta_pts = pts_ms - self.last_pts_ms
-            # If PTS delta is more than 3x expected interval, report a drop/gap
-            if delta_pts > 3 * self.expected_interval_ms:
+
+            if delta_pts > 0:
+                self.recent_deltas.append(delta_pts)
+
+            # Compute median PTS interval across recent frames
+            if len(self.recent_deltas) >= 5:
+                median_interval = float(np.median(self.recent_deltas))
+            else:
+                median_interval = self.default_interval_ms
+
+            # Trigger abnormal drop alert only on significant deviation (> 5x dynamic median or > 1000ms)
+            threshold = max(250.0, 5.0 * median_interval)
+            if delta_pts > threshold:
                 record_health_event(
                     camera_id=self.camera_id,
                     event_type="FRAME_DROP",
-                    message=f"Detected PTS gap: {delta_pts:.1f}ms (expected ~{self.expected_interval_ms:.1f}ms)",
+                    message=f"Detected abnormal PTS gap: {delta_pts:.1f}ms (median cadence: {median_interval:.1f}ms)",
                     pts_ms=pts_ms,
                 )
 
@@ -85,3 +112,4 @@ class StreamHealthTracker:
                 stream_status="ONLINE",
                 measured_fps=round(self.current_fps, 2),
             )
+

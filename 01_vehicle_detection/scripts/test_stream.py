@@ -42,18 +42,20 @@ def main():
     if not (arg.startswith("rtsp://") or arg.startswith("http://") or arg.startswith("https://")):
         import importlib
         db_mod = importlib.import_module("00_foundation.registry.database")
+        res_mod = importlib.import_module("00_foundation.streams.resolver")
         cam = db_mod.get_camera(arg)
         if not cam:
             print(f"[ERROR] Camera ID '{arg}' not found in registry.")
             return
         camera_id = cam["camera_id"]
-        url = cam.get("hls_url") or cam.get("rtsp_url")
+        url, transport = res_mod.resolve_stream(cam)
         if not url:
             print(f"[ERROR] No stream URL found for camera '{camera_id}'.")
             return
-        print(f"[INFO] Playing Camera {camera_id} from registry: {url}")
+        print(f"[INFO] Playing Camera {camera_id} via {transport}: {url}")
     else:
         print(f"[INFO] Connecting to {url} (camera_id: {camera_id})...")
+
 
     print(f"[INFO] PTS inference sampling interval: {inference_interval_ms} ms (~{1000/inference_interval_ms:.1f} FPS)")
 

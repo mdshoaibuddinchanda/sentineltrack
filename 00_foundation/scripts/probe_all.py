@@ -84,7 +84,7 @@ def probe_all_cameras():
                 event_type="PROBE_SUCCESS",
                 message=f"Probe OK ({transport}): {codec} {res_str} @ {fps}fps (latency: {latency_ms:.1f}ms)",
             )
-            print(f"{camera_id:<10} | {is_live:<5} | {'OK':<7} | {transport:<9} | {codec:<7} | {res_str:<10} | {'OK':<4} | {latency_ms:.0f}ms")
+            print(f"{camera_id:<10} | {is_live:<5} | {'OK':<7} | {transport:<9} | {codec:<7} | {res_str:<10} | {'N/T':<4} | {latency_ms:.0f}ms")
             report_rows.append({
                 "Camera": camera_id,
                 "Live": is_live,
@@ -92,9 +92,10 @@ def probe_all_cameras():
                 "Transport": transport,
                 "Codec": codec,
                 "Resolution": res_str,
-                "PTS": "OK",
+                "PTS": "NOT_TESTED",
                 "Error": "",
             })
+
             online_count += 1
         else:
             err = result.get("error", "No stream URL found")

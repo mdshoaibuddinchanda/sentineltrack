@@ -35,3 +35,27 @@ def test_plate_model_contract_accepts_license_plate_model():
         assert len(detector.model.names) == 1
         assert detector.model.names[0] == 'license_plate'
 
+
+def test_plate_model_contract_rejects_wrong_single_class():
+
+    """Ensures that loading a 1-class non-plate model (e.g. {0: 'car'}) raises RuntimeError."""
+    with patch.object(det_mod, 'YOLO') as mock_yolo:
+        mock_instance = MagicMock()
+        mock_instance.names = {0: 'car'}
+        mock_yolo.return_value = mock_instance
+
+        with pytest.raises(RuntimeError, match='Expected {0: \'license_plate\'}'):
+            PlateDetector(model_path='dummy_car.pt', enforce_contract=True)
+
+
+def test_plate_model_contract_rejects_wrong_class_index():
+    """Ensures that loading a model with non-zero plate index (e.g. {1: 'license_plate'}) raises RuntimeError."""
+    with patch.object(det_mod, 'YOLO') as mock_yolo:
+        mock_instance = MagicMock()
+        mock_instance.names = {1: 'license_plate'}
+        mock_yolo.return_value = mock_instance
+
+        with pytest.raises(RuntimeError, match='Expected {0: \'license_plate\'}'):
+            PlateDetector(model_path='dummy_index.pt', enforce_contract=True)
+
+

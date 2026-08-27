@@ -50,18 +50,21 @@ def main():
     sampling_interval_ms = float(sys.argv[3]) if len(sys.argv) > 3 else 150.0
 
     if not (arg.startswith('rtsp://') or arg.startswith('http://') or arg.startswith('https://')):
+        import importlib
+        res_mod = importlib.import_module('00_foundation.streams.resolver')
         cam = get_camera(arg)
         if not cam:
-            print(f'[ERROR] Camera ID \"{arg}\" not found in registry.')
+            print(f'[ERROR] Camera ID "{arg}" not found in registry.')
             return
         camera_id = cam['camera_id']
-        url = cam.get('hls_url') or cam.get('rtsp_url')
+        url, transport = res_mod.resolve_stream(cam)
         if not url:
-            print(f'[ERROR] No stream URL found for camera \"{camera_id}\".')
+            print(f'[ERROR] No stream URL found for camera "{camera_id}".')
             return
-        print(f'[INFO] Playing Camera {camera_id} from registry: {url}')
+        print(f'[INFO] Playing Camera {camera_id} via {transport}: {url}')
     else:
         print(f'[INFO] Connecting to {url} (camera_id: {camera_id})...')
+
 
     print(f'[INFO] Initializing Vehicle Tracker and Plate Detector for Camera {camera_id}...')
     v_detector = VehicleDetector(model_path='models/vehicle/yolo11m.pt', confidence=0.25, imgsz=960)

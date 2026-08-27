@@ -41,14 +41,20 @@ def main():
     url = target
     camera_id = target
     if not (target.startswith('rtsp://') or target.startswith('http://') or target.startswith('https://')):
+        import importlib
+        res_mod = importlib.import_module('00_foundation.streams.resolver')
         cam = get_camera(target)
         if not cam:
             print(f'[ERROR] Camera {target} not found.')
             return
         camera_id = cam['camera_id']
-        url = cam.get('hls_url') or cam.get('rtsp_url')
+        url, transport = res_mod.resolve_stream(cam)
+        if not url:
+            print(f'[ERROR] No stream URL for {target}.')
+            return
 
     print(f'[BENCHMARK] Starting Plate Detection Benchmark on {camera_id} ({url}) for {max_frames} frames...')
+
 
     v_detector = VehicleDetector(model_path='models/vehicle/yolo11m.pt', confidence=0.25, imgsz=960)
     v_pipeline = VehicleTrackingPipeline(detector=v_detector)

@@ -1,11 +1,27 @@
 import os
 import csv
+import shutil
 import cv2
 import numpy as np
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 DATASET_DIR = ROOT_DIR / 'datasets' / 'plate_detection'
+
+
+def clean_dataset():
+    """Wipes all previous images and labels across train/val/test splits to avoid dataset contamination."""
+    for split in ['train', 'val', 'test']:
+        img_dir = DATASET_DIR / 'images' / split
+        lbl_dir = DATASET_DIR / 'labels' / split
+
+        if img_dir.exists():
+            shutil.rmtree(img_dir)
+        if lbl_dir.exists():
+            shutil.rmtree(lbl_dir)
+
+        img_dir.mkdir(parents=True, exist_ok=True)
+        lbl_dir.mkdir(parents=True, exist_ok=True)
 
 
 def generate_synthetic_plate_crop(img_id: int, split: str) -> tuple[np.ndarray, list[float]]:
@@ -97,8 +113,9 @@ def generate_synthetic_plate_crop(img_id: int, split: str) -> tuple[np.ndarray, 
     return crop, [0, x_center, y_center, norm_w, norm_h]
 
 
-def prepare_dataset(total_samples: int = 500):
-    print(f'[DATASET] Preparing {total_samples} plate detection samples with provenance...')
+def prepare_dataset(total_samples: int = 300):
+    print(f'[DATASET] Cleaning and preparing {total_samples} plate detection samples with provenance...')
+    clean_dataset()
 
     sources = []
     num_train = int(total_samples * 0.70)
@@ -143,11 +160,19 @@ def prepare_dataset(total_samples: int = 500):
         writer.writeheader()
         writer.writerows(sources)
 
-    print(f'[DATASET] Generated {num_train} train, {num_val} val, {num_test} test samples.')
-    print(f'[DATASET] Provenance catalog written to {sources_csv}')
+    train_count = len(list((DATASET_DIR / 'images' / 'train').glob('*.jpg')))
+    val_count = len(list((DATASET_DIR / 'images' / 'val').glob('*.jpg')))
+    test_count = len(list((DATASET_DIR / 'images' / 'test').glob('*.jpg')))
 
+    assert train_count == num_train, f'Expected {num_train} train images, found {train_count}'
+    assert val_count == num_val, f'Expected {num_val} val images, found {val_count}'
+    assert test_count == num_test, f'Expected {num_test} test images, found {test_count}'
+
+    print(f'[DATASET] Clean verification passed: {train_count} train, {val_count} val, {test_count} test images.')
+    print(f'[DATASET] Provenance catalog written to {sources_csv}')
 
 
 if __name__ == '__main__':
     prepare_dataset(300)
+
 

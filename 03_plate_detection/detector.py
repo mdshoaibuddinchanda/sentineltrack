@@ -37,12 +37,12 @@ class PlateDetector:
         # Startup Model Contract Assertion
         if enforce_contract:
             names = self.model.names
-            if len(names) != 1 or (0 in names and names[0] not in ("license_plate", "license-plate", "plate", "license_plates")):
-                if len(names) > 5:  # e.g. 80-class COCO
-                    raise RuntimeError(
-                        f"Wrong model loaded at '{model_path}': Expected a single-class license plate detector "
-                        f"({{0: 'license_plate'}}), but found {len(names)} classes: {names}"
-                    )
+            valid_names = {"license_plate", "license-plate", "plate", "license_plates"}
+            if len(names) != 1 or 0 not in names or names[0] not in valid_names:
+                raise RuntimeError(
+                    f"Wrong model loaded at '{model_path}'. Expected {{0: 'license_plate'}}, got: {names}"
+                )
+
 
     def detect(self, vehicle_crop: np.ndarray) -> list[dict]:
         """

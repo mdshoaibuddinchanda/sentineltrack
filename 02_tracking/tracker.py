@@ -78,11 +78,13 @@ class CameraByteTracker:
         track_thresh: float = 0.25,
         match_thresh: float = 0.8,
         track_buffer: int = 30,
-        frame_rate: int = 25,
+        sampling_interval_ms: float = 150.0,
+        frame_rate: Optional[int] = None,
     ):
         self.camera_id = camera_id
         self.max_track_gap_ms = max_track_gap_ms
-        self.frame_rate = frame_rate
+        self.sampling_interval_ms = sampling_interval_ms
+        self.frame_rate = frame_rate or max(1, int(round(1000.0 / sampling_interval_ms)))
 
         self.args = SimpleNamespace(
             tracker_type='bytetrack',
@@ -99,6 +101,7 @@ class CameraByteTracker:
         )
 
         self.tracker = BYTETracker(self.args, frame_rate=self.frame_rate)
+
         self.last_pts_ms: Optional[float] = None
         self.last_epoch: int = 0
         self.first_seen_pts: dict[int, float] = {}
