@@ -1,0 +1,28 @@
+ocr:
+  engine: 'easyocr_crnn'
+  device: 'cuda'
+  batch_size: 4
+  min_crop_quality: 0.20
+  max_candidates_per_track: 5
+  consensus_min_support: 1
+  consensus_threshold: 0.50
+
+preprocessing:
+  selected_variant: 'gray'
+  target_height: 64
+
+  max_width: 320
+  clahe_clip_limit: 2.0
+  clahe_grid_size: [4, 4]
+
+normalization:
+  grammar_enabled: true
+  confusion_cost: 0.35
+  grammar_weight: 0.30
+  confidence_weight: 0.45
+  quality_weight: 0.25
+
+optimization:
+  enable_deduplication: true
+  min_quality_filter: 0.15
+  early_consensus_stopping: true

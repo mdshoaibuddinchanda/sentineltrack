@@ -1,0 +1,39 @@
+# Non-blocking Plate Detector Model Sweep Experiments
+# Candidate outputs MUST save to models/plate/candidates/ and NOT overwrite models/plate/production/best.pt
+
+baseline:
+  model: 'yolo11s.pt'
+  imgsz: 640
+  epochs: 10
+  batch_size: 4
+  status: 'production_frozen'
+  weights: 'models/plate/production/best.pt'
+
+challengers:
+  - id: 'yolo11s_640_long'
+    model: 'yolo11s.pt'
+    imgsz: 640
+    epochs: 150
+    patience: 25
+    output_dir: 'models/plate/candidates/yolo11s_640_long'
+
+  - id: 'yolo11s_768_long'
+    model: 'yolo11s.pt'
+    imgsz: 768
+    epochs: 150
+    patience: 25
+    output_dir: 'models/plate/candidates/yolo11s_768_long'
+
+  - id: 'yolo11s_960_long'
+    model: 'yolo11s.pt'
+    imgsz: 960
+    epochs: 150
+    patience: 25
+    output_dir: 'models/plate/candidates/yolo11s_960_long'
+
+  - id: 'yolo26s_768_long'
+    model: 'yolo11s.pt'
+    imgsz: 768
+    epochs: 150
+    patience: 25
+    output_dir: 'models/plate/candidates/yolo26s_768_long'
