@@ -138,8 +138,8 @@ def evaluate_production_model(model_path: str = 'models/plate/production/best.pt
     eval_report = {
         'model_path': model_path,
         'dataset_source': 'roboflow_quobotic_indian_number_plate_v3 (CC-BY-4.0)',
-        'source_url': 'https://universe.roboflow.com/quobotic/indian-number-plate/dataset/3',
-        'test_set_type': 'GENUINE REAL INDIAN ONLY (227 Unseen Real Indian Vehicle Test Images)',
+        'test_set_type': f'GENUINE REAL INDIAN ONLY ({len(test_imgs)} Unseen Real Indian Vehicle Test Images)',
+
 
         'test_images_count': len(test_imgs),
         'total_gt_plates': tp + fn,

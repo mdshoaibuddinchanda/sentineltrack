@@ -46,7 +46,8 @@ def run_live_production_validation(camera_ids: list[str], frames_per_camera: int
         'cameras_tested': [],
         'total_frames_processed': 0,
         'total_vehicles_tracked': 0,
-        'total_plates_detected': 0,
+        'total_plate_observations': 0,
+        'total_tracks_with_plate_observations': 0,
     }
 
     now_str = time.strftime('%Y-%m-%d %H:%M:%S')
@@ -54,8 +55,8 @@ def run_live_production_validation(camera_ids: list[str], frames_per_camera: int
         '# Sentinel Live Multi-Camera Production Validation Report',
         f'**Generated:** {now_str}',
         '',
-        '| Camera ID | Name / Location | Transport | Frames | Vehicles Tracked | Plates Detected | Status |',
-        '| :--- | :--- | :--- | :--- | :--- | :--- | :--- |',
+        '| Camera ID | Name / Location | Transport | Frames | Vehicles Tracked | Plate Observations | Tracks w/ Observations | Status |',
+        '| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |',
     ]
 
     for cid in camera_ids:
@@ -79,9 +80,10 @@ def run_live_production_validation(camera_ids: list[str], frames_per_camera: int
         reader = RTSPReader(url=url, camera_id=str(cid))
 
         cam_frames = 0
-        cam_plates = 0
+        cam_plate_obs = 0
         quality_scores = []
         track_ids_seen = set()
+        tracks_with_plates = set()
 
         start_time = time.time()
 
@@ -91,22 +93,22 @@ def run_live_production_validation(camera_ids: list[str], frames_per_camera: int
             plates = p_pipe.process(packet, tracks)
 
             for t in tracks:
-                track_ids_seen.add(t.track_id)
+                track_ids_seen.add((packet.camera_id, packet.stream_epoch, t.track_id))
 
             for p in plates:
                 accumulator.add(p)
                 quality_scores.append(p.quality_score)
-                cam_plates += 1
+                cam_plate_obs += 1
+                tracks_with_plates.add((p.camera_id, p.stream_epoch, p.track_id))
 
-                # Save evidence crop if plate is detected
+                # Save evidence crop for detector-positive observation
                 evidence_img = packet.frame.copy()
                 cv2.rectangle(evidence_img, (int(p.x1), int(p.y1)), (int(p.x2), int(p.y2)), (0, 255, 0), 2)
-
                 ev_name = f'cam_{cid}_track_{p.track_id}_frame_{cam_frames}.jpg'
                 cv2.imwrite(str(EVIDENCE_DIR / ev_name), evidence_img)
 
             if cam_frames % 5 == 0 or len(plates) > 0:
-                print(f'  Frame #{cam_frames:<2} | PTS: {packet.pts_ms:>7.1f}ms | Active Tracks: {len(tracks)} | Genuine Plates: {len(plates)}')
+                print(f'  Frame #{cam_frames:<2} | PTS: {packet.pts_ms:>7.1f}ms | Active Tracks: {len(tracks)} | Plate Observations: {len(plates)}')
                 for p in plates:
                     print(f'    -> Track #{p.track_id:<2} ({p.vehicle_class.upper()}) | Box: [{p.x1:.0f},{p.y1:.0f},{p.x2:.0f},{p.y2:.0f}] ({p.width:.0f}x{p.height:.0f}) | Aspect: {p.aspect_ratio:.2f} | Q: {p.quality_score:.2f}')
 
@@ -116,7 +118,7 @@ def run_live_production_validation(camera_ids: list[str], frames_per_camera: int
         elapsed = max(0.001, time.time() - start_time)
         avg_q = (sum(quality_scores) / len(quality_scores)) if quality_scores else 0.0
 
-        obs_status = "Positive plate detections recorded" if cam_plates > 0 else "No positive plate-validation opportunity observed (wide-angle/far view)"
+        obs_status = "Detector-positive plate observations recorded (unreviewed machine inferences)" if cam_plate_obs > 0 else "No detector-positive plate observation opportunity observed (wide-angle/far view)"
 
         cam_summary = {
             'camera_id': cid,
@@ -124,7 +126,8 @@ def run_live_production_validation(camera_ids: list[str], frames_per_camera: int
             'transport': transport,
             'frames_processed': cam_frames,
             'unique_vehicles_tracked': len(track_ids_seen),
-            'plates_detected': cam_plates,
+            'total_plate_observations': cam_plate_obs,
+            'unique_tracks_with_plates': len(tracks_with_plates),
             'average_quality_score': round(avg_q, 3),
             'status': obs_status,
             'elapsed_seconds': round(elapsed, 2),
@@ -134,10 +137,11 @@ def run_live_production_validation(camera_ids: list[str], frames_per_camera: int
         overall_results['cameras_tested'].append(cam_summary)
         overall_results['total_frames_processed'] += cam_frames
         overall_results['total_vehicles_tracked'] += len(track_ids_seen)
-        overall_results['total_plates_detected'] += cam_plates
+        overall_results['total_plate_observations'] += cam_plate_obs
+        overall_results['total_tracks_with_plate_observations'] += len(tracks_with_plates)
 
         markdown_lines.append(
-            f'| {cid} | {cam_name} | {transport} | {cam_frames} | {len(track_ids_seen)} | {cam_plates} | {obs_status} |'
+            f'| `{cid}` | {cam_name} | {transport} | {cam_frames} | {len(track_ids_seen)} | {cam_plate_obs} | {len(tracks_with_plates)} | {obs_status} |'
         )
 
     # Save JSON & Markdown reports
@@ -154,10 +158,12 @@ def run_live_production_validation(camera_ids: list[str], frames_per_camera: int
     print(f"Total Cameras Tested: {len(overall_results['cameras_tested'])}")
     print(f"Total Frames: {overall_results['total_frames_processed']}")
     print(f"Total Unique Vehicles Tracked: {overall_results['total_vehicles_tracked']}")
-    print(f"Total Plates Detected: {overall_results['total_plates_detected']}")
+    print(f"Total Plate Observations: {overall_results['total_plate_observations']}")
+    print(f"Unique Tracks with Plate Observations: {overall_results['total_tracks_with_plate_observations']}")
     print(f"Report written to: {json_path} and {md_path}")
     print('=================================================================================\n')
 
 
 if __name__ == '__main__':
     run_live_production_validation(['1', '2', '3'], frames_per_camera=12)
+
