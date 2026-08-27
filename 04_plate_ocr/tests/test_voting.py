@@ -17,22 +17,31 @@ def test_weighted_levenshtein_confusion_discount():
     assert dist_conf < 0.50
 
 
-def test_voting_unanimous_consensus():
-    voter = MultiFramePlateVoter()
-    hyps = [
+def test_voting_unanimous_consensus_requires_min_support():
+    voter = MultiFramePlateVoter(min_support_count=2)
+    # 1 observation -> CANDIDATE, not RESOLVED
+    single_hyp = [
+        OCRHypothesis('cam1', 1, 1, 0.0, 'GJ01AB1234', 'GJ01AB1234', 0.90, 0.8, 1.0),
+    ]
+    res_single = voter.vote(single_hyp)
+    assert res_single.status == 'CANDIDATE'
+    assert res_single.is_resolved is False
+
+    # 3 observations -> RESOLVED
+    triple_hyps = [
         OCRHypothesis('cam1', 1, 1, 0.0, 'GJ01AB1234', 'GJ01AB1234', 0.90, 0.8, 1.0),
         OCRHypothesis('cam1', 1, 1, 150.0, 'GJ01AB1234', 'GJ01AB1234', 0.95, 0.8, 1.0),
         OCRHypothesis('cam1', 1, 1, 300.0, 'GJ01AB1234', 'GJ01AB1234', 0.92, 0.8, 1.0),
     ]
-    res = voter.vote(hyps)
-    assert res.is_resolved is True
-    assert res.best_text == 'GJ01AB1234'
-    assert res.support_count == 3
-    assert res.confidence >= 0.85
+    res_triple = voter.vote(triple_hyps)
+    assert res_triple.is_resolved is True
+    assert res_triple.best_text == 'GJ01AB1234'
+    assert res_triple.support_count == 3
+    assert res_triple.confidence >= 0.85
 
 
 def test_voting_filters_noisy_frame():
-    voter = MultiFramePlateVoter()
+    voter = MultiFramePlateVoter(min_support_count=2)
     hyps = [
         OCRHypothesis('cam1', 2, 1, 0.0, 'GJ01AB1234', 'GJ01AB1234', 0.92, 0.85, 1.0),
         OCRHypothesis('cam1', 2, 1, 150.0, 'GJ01AB1234', 'GJ01AB1234', 0.94, 0.85, 1.0),
@@ -46,7 +55,7 @@ def test_voting_filters_noisy_frame():
 
 
 def test_voting_low_confidence_fallback():
-    voter = MultiFramePlateVoter()
+    voter = MultiFramePlateVoter(min_support_count=2)
     hyps = [
         OCRHypothesis('cam1', 3, 1, 0.0, 'X9', 'X9', 0.20, 0.15, 0.1),
     ]

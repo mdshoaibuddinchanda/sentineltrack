@@ -35,33 +35,35 @@ REPORT_DIR = ROOT_DIR / 'reports' / 'plate_ocr' / 'live'
 EVIDENCE_DIR = ROOT_DIR / 'reports' / 'plate_ocr' / 'evidence'
 
 
-def run_live_ocr_validation(camera_ids: list[str] = ['1', '2', '3'], frames_per_camera: int = 15):
+def run_live_ocr_validation(camera_ids: list[str] = ['1', '2', '3'], frames_per_camera: int = 20):
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
 
-    print(f'[LIVE OCR] Starting Multi-Camera Live OCR Validation on: {camera_ids}...')
+    print(f'[LIVE OCR] Starting Multi-Camera Live OCR Validation on: {camera_ids} ({frames_per_camera} frames/cam)...')
 
     v_detector = VehicleDetector(model_path='models/vehicle/yolo11m.pt', confidence=0.25, imgsz=960)
     p_detector = PlateDetector(model_path='models/plate/production/best.pt', confidence=0.20, imgsz=960)
-    recognizer = get_recognizer('easyocr_crnn', device='cuda')
-    ocr_pipe = PlateOCRPipeline(recognizer=recognizer, default_variant='gray')
+    recognizer = get_recognizer('ppocr_mobile', device='cpu')
+    ocr_pipe = PlateOCRPipeline(recognizer=recognizer, default_variant='raw', min_crop_quality=0.20)
 
     overall_results = {
         'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
+        'recognizer': recognizer.model_name,
         'cameras_tested': [],
         'total_frames': 0,
         'total_vehicles_tracked': 0,
         'tracks_with_plate_observations': 0,
         'tracks_ocr_attempted': 0,
+        'tracks_with_ge2_hypotheses': 0,
         'tracks_stable_consensus': 0,
     }
 
     markdown_lines = [
         '# Sentinel Live Multi-Camera OCR Validation Report',
-        f"**Generated:** {time.strftime('%Y-%m-%d %H:%M:%S')}",
+        f"**Generated:** {time.strftime('%Y-%m-%d %H:%M:%S')} | **Recognizer:** {recognizer.model_name}",
         '',
-        '| Camera ID | Name / Location | Transport | Frames | Vehicles | Tracks w/ Plates | OCR Attempted | Stable Consensus | Status |',
-        '| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |',
+        '| Camera ID | Name / Location | Transport | Frames | Vehicles | Tracks w/ Plates | OCR Attempted | >=2 Hypotheses | Stable Consensus | Status |',
+        '| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |',
     ]
 
     for cid in camera_ids:
@@ -82,6 +84,7 @@ def run_live_ocr_validation(camera_ids: list[str] = ['1', '2', '3'], frames_per_
         cam_frames = 0
         active_track_ids = set()
         tracks_with_plates = set()
+        tracks_ge2 = set()
         resolved_tracks = set()
 
         start_time = time.time()
@@ -95,7 +98,8 @@ def run_live_ocr_validation(camera_ids: list[str] = ['1', '2', '3'], frames_per_
                 active_track_ids.add((packet.camera_id, packet.stream_epoch, t.track_id))
 
             for p in plates:
-                tracks_with_plates.add((p.camera_id, p.stream_epoch, p.track_id))
+                trk_key = (p.camera_id, p.stream_epoch, p.track_id)
+                tracks_with_plates.add(trk_key)
 
                 h_f, w_f = packet.frame.shape[:2]
                 px1 = max(0, int(p.x1))
@@ -111,9 +115,15 @@ def run_live_ocr_validation(camera_ids: list[str] = ['1', '2', '3'], frames_per_
                     cv2.imwrite(str(ev_path), plate_crop)
 
                     track_res = ocr_pipe.get_track_result(p.camera_id, p.stream_epoch, p.track_id)
+                    if track_res.total_hypotheses >= 2:
+                        tracks_ge2.add(trk_key)
+
                     if track_res.is_resolved:
-                        resolved_tracks.add((p.camera_id, p.stream_epoch, p.track_id))
-                        print(f'  [CONSENSUS RESOLVED] Cam {cid} Track #{p.track_id} -> Text: {track_res.best_text} | Conf: {track_res.confidence:.2f} | Support: {track_res.support_count}/{track_res.total_hypotheses}')
+                        resolved_tracks.add(trk_key)
+                        txt_len = len(track_res.best_text) if track_res.best_text else 0
+                        print(f'  [CONSENSUS RESOLVED] Cam {cid} Track #{p.track_id} -> Length: {txt_len} | Conf: {track_res.confidence:.2f} | Support: {track_res.support_count}/{track_res.total_hypotheses}')
+
+
 
             if cam_frames >= frames_per_camera:
                 break
@@ -129,6 +139,7 @@ def run_live_ocr_validation(camera_ids: list[str] = ['1', '2', '3'], frames_per_
             'vehicles_tracked': len(active_track_ids),
             'tracks_with_plates': len(tracks_with_plates),
             'tracks_ocr_attempted': len(tracks_with_plates),
+            'tracks_with_ge2_hypotheses': len(tracks_ge2),
             'tracks_stable_consensus': len(resolved_tracks),
             'status': status_str,
             'elapsed_seconds': round(elapsed, 2),
@@ -139,10 +150,11 @@ def run_live_ocr_validation(camera_ids: list[str] = ['1', '2', '3'], frames_per_
         overall_results['total_vehicles_tracked'] += len(active_track_ids)
         overall_results['tracks_with_plate_observations'] += len(tracks_with_plates)
         overall_results['tracks_ocr_attempted'] += len(tracks_with_plates)
+        overall_results['tracks_with_ge2_hypotheses'] += len(tracks_ge2)
         overall_results['tracks_stable_consensus'] += len(resolved_tracks)
 
         markdown_lines.append(
-            f'| {cid} | {cam_name} | {transport} | {cam_frames} | {len(active_track_ids)} | {len(tracks_with_plates)} | {len(tracks_with_plates)} | {len(resolved_tracks)} | {status_str} |'
+            f'| {cid} | {cam_name} | {transport} | {cam_frames} | {len(active_track_ids)} | {len(tracks_with_plates)} | {len(tracks_with_plates)} | {len(tracks_ge2)} | {len(resolved_tracks)} | {status_str} |'
         )
 
     with open(REPORT_DIR / 'production_validation_report.json', 'w', encoding='utf-8') as f:
@@ -156,6 +168,7 @@ def run_live_ocr_validation(camera_ids: list[str] = ['1', '2', '3'], frames_per_
     print(f"Total Frames Processed:        {overall_results['total_frames']}")
     print(f"Total Vehicles Tracked:        {overall_results['total_vehicles_tracked']}")
     print(f"Tracks with Plate Obs:         {overall_results['tracks_with_plate_observations']}")
+    print(f"Tracks with >=2 Hypotheses:    {overall_results['tracks_with_ge2_hypotheses']}")
     print(f"Tracks with Stable Consensus:  {overall_results['tracks_stable_consensus']}")
     print(f"Reports saved to: {REPORT_DIR}")
     print('==========================================================================\n')
@@ -164,4 +177,4 @@ def run_live_ocr_validation(camera_ids: list[str] = ['1', '2', '3'], frames_per_
 
 
 if __name__ == '__main__':
-    run_live_ocr_validation(['1', '2', '3'], frames_per_camera=15)
+    run_live_ocr_validation(['1', '2', '3'], frames_per_camera=20)

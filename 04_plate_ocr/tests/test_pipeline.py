@@ -45,6 +45,7 @@ def test_pipeline_end_to_end_with_mock():
     assert hyp1 is not None
     assert hyp1.normalized_text == 'GJ01AB1234'
 
+    # Duplicate crop: should be deduplicated
     obs2 = PlateObservation(
         camera_id='cam1',
         track_id=10,
@@ -60,9 +61,31 @@ def test_pipeline_end_to_end_with_mock():
     hyp2 = pipeline.process_observation(obs2, crop1)
     assert hyp2 is None
 
+    # Single observation -> CANDIDATE (requires min_support=2)
+    res_single = pipeline.get_track_result('cam1', 1, 10)
+    assert res_single.status == 'CANDIDATE'
+
+    # Corroborating second observation with distinct crop
+    obs3 = PlateObservation(
+        camera_id='cam1',
+        track_id=10,
+        stream_epoch=1,
+        pts_ms=300.0,
+        confidence=0.88,
+        x1=105, y1=202, x2=225, y2=242,
+        width=120, height=40,
+        vehicle_class='car',
+        vehicle_confidence=0.92,
+        quality_score=0.88
+    )
+    crop2 = np.full((40, 120, 3), 215, dtype=np.uint8)
+    hyp3 = pipeline.process_observation(obs3, crop2)
+    assert hyp3 is not None
+
     res = pipeline.get_track_result('cam1', 1, 10)
     assert res.is_resolved is True
     assert res.best_text == 'GJ01AB1234'
+    assert res.support_count >= 2
 
 
 def test_pipeline_camera_reset_clears_state():

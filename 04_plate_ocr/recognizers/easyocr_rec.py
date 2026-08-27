@@ -1,41 +1,70 @@
+import torch
 import easyocr
 import numpy as np
 from .base import BasePlateRecognizer
 
 
 class EasyOCRPlateRecognizer(BasePlateRecognizer):
-    """PyTorch-based CRNN/ResNet license plate text recognizer."""
+    """
+    PyTorch-based CRNN/ResNet license plate text recognizer.
+    Supports recognition-only mode (direct CRNN inference) and detect+recognize mode.
+    """
 
-    def __init__(self, device: str = 'cuda', model_name: str = 'easyocr_crnn'):
+    def __init__(
+        self,
+        device: str = 'cuda',
+        model_name: str = 'easyocr_rec_only',
+        rec_only: bool = True
+    ):
         super().__init__(model_name=model_name, device=device)
-        use_gpu = (device == 'cuda' or device == 'gpu')
-        self.reader = easyocr.Reader(['en'], gpu=use_gpu, verbose=False)
+        self.use_gpu = (device == 'cuda' or device == 'gpu') and torch.cuda.is_available()
+        self.rec_only = rec_only
+        self.reader = easyocr.Reader(['en'], gpu=self.use_gpu, verbose=False)
 
     def recognize(self, crop: np.ndarray) -> tuple[str, float, list[float]]:
         if crop is None or crop.size == 0:
             return '', 0.0, []
 
         try:
-            results = self.reader.readtext(
-                crop,
-                detail=1,
-                paragraph=False,
-                allowlist='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-            )
-            if not results:
-                results = self.reader.readtext(crop, detail=1, paragraph=False)
+            h, w = crop.shape[:2]
 
-            if not results:
-                return '', 0.0, []
+            if self.rec_only:
+                # Direct Recognition-Only: pass full bounding box without CRAFT text detector
+                horizontal_list = [[0, w, 0, h]]
+                free_list = []
+                results = self.reader.recognize(
+                    crop,
+                    horizontal_list=horizontal_list,
+                    free_list=free_list,
+                    allowlist='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+                )
+                if not results:
+                    return '', 0.0, []
 
-            sorted_res = sorted(results, key=lambda x: (x[0][0][1], x[0][0][0]))
-            full_text = ''.join([r[1] for r in sorted_res])
-            confidences = [float(r[2]) for r in sorted_res]
-            avg_conf = float(np.mean(confidences)) if confidences else 0.0
+                sorted_res = sorted(results, key=lambda x: (x[0][0][1], x[0][0][0]))
+                full_text = ''.join([r[1] for r in sorted_res])
+                confidences = [float(r[2]) for r in sorted_res]
+                avg_conf = float(np.mean(confidences)) if confidences else 0.0
+                return full_text, round(avg_conf, 4), confidences
 
-            return full_text, round(avg_conf, 4), confidences
+            else:
+                # Detect + Recognize (CRAFT + CRNN)
+                results = self.reader.readtext(
+                    crop,
+                    detail=1,
+                    paragraph=False,
+                    allowlist='ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+                )
+                if not results:
+                    return '', 0.0, []
 
-        except Exception as e:
+                sorted_res = sorted(results, key=lambda x: (x[0][0][1], x[0][0][0]))
+                full_text = ''.join([r[1] for r in sorted_res])
+                confidences = [float(r[2]) for r in sorted_res]
+                avg_conf = float(np.mean(confidences)) if confidences else 0.0
+                return full_text, round(avg_conf, 4), confidences
+
+        except Exception:
             return '', 0.0, []
 
     def recognize_batch(self, crops: list[np.ndarray]) -> list[tuple[str, float, list[float]]]:

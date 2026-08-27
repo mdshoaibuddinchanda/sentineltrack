@@ -12,8 +12,9 @@ PATTERN_BH_SERIES = re.compile(r'^[0-9]{2}BH[0-9]{4}[A-Z]{1,2}$')
 PATTERN_DEFENSE = re.compile(r'^[0-9]{2}[A-Z][0-9]{6}[A-Z]?$')
 PATTERN_DIPLOMATIC = re.compile(r'^[0-9]{2,3}(CD|CC|UN)[0-9]+$')
 
-CHAR_TO_DIGIT = {'O': '0', 'Q': '0', 'D': '0', 'I': '1', 'L': '1', 'Z': '2', 'S': '5', 'G': '6', 'B': '8'}
-DIGIT_TO_CHAR = {'0': 'O', '1': 'I', '2': 'Z', '5': 'S', '6': 'G', '8': 'B'}
+# Positional substitution maps
+LETTER_TO_DIGIT_MAP = {'O': '0', 'Q': '0', 'D': '0', 'I': '1', 'L': '1', 'Z': '2', 'A': '4', 'S': '5', 'G': '6', 'B': '8'}
+DIGIT_TO_LETTER_MAP = {'0': 'O', '1': 'I', '2': 'Z', '4': 'A', '5': 'S', '6': 'G', '8': 'B'}
 
 
 def score_indian_grammar(plate_text: str) -> float:
@@ -54,6 +55,10 @@ def score_indian_grammar(plate_text: str) -> float:
 
 
 def generate_grammar_alternatives(plate_text: str, max_candidates: int = 5) -> list[tuple[str, float]]:
+    """
+    Generates position-aware alternatives using soft Indian registration grammar.
+    Only swaps letters/digits where slot position context supports it.
+    """
     candidates = [(plate_text, score_indian_grammar(plate_text))]
 
     if len(plate_text) < 7:
@@ -62,24 +67,27 @@ def generate_grammar_alternatives(plate_text: str, max_candidates: int = 5) -> l
     chars = list(plate_text)
     n = len(chars)
 
+    # Position 0, 1: State Code expects LETTERS
     for i in [0, 1]:
-        if chars[i] in DIGIT_TO_CHAR:
+        if chars[i] in DIGIT_TO_LETTER_MAP:
             fixed = list(chars)
-            fixed[i] = DIGIT_TO_CHAR[chars[i]]
+            fixed[i] = DIGIT_TO_LETTER_MAP[chars[i]]
             fixed_str = ''.join(fixed)
             candidates.append((fixed_str, score_indian_grammar(fixed_str)))
 
+    # Position 2, 3: RTO Code expects DIGITS
     for i in [2, 3]:
-        if i < n and chars[i] in CHAR_TO_DIGIT:
+        if i < n and chars[i] in LETTER_TO_DIGIT_MAP:
             fixed = list(chars)
-            fixed[i] = CHAR_TO_DIGIT[chars[i]]
+            fixed[i] = LETTER_TO_DIGIT_MAP[chars[i]]
             fixed_str = ''.join(fixed)
             candidates.append((fixed_str, score_indian_grammar(fixed_str)))
 
+    # Suffix: Last 4 characters expect DIGITS
     for i in range(max(4, n - 4), n):
-        if chars[i] in CHAR_TO_DIGIT:
+        if chars[i] in LETTER_TO_DIGIT_MAP:
             fixed = list(chars)
-            fixed[i] = CHAR_TO_DIGIT[chars[i]]
+            fixed[i] = LETTER_TO_DIGIT_MAP[chars[i]]
             fixed_str = ''.join(fixed)
             candidates.append((fixed_str, score_indian_grammar(fixed_str)))
 

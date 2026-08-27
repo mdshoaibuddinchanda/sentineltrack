@@ -2,11 +2,12 @@ import torch
 import cv2
 import numpy as np
 from PIL import Image
+from typing import Optional
 from .base import BasePlateRecognizer
 
 
 class TrOCRPlateRecognizer(BasePlateRecognizer):
-    """Transformer Vision-Encoder-Decoder Plate Recognizer."""
+    """Transformer Vision-Encoder-Decoder Plate Recognizer with genuine confidence estimation."""
 
     def __init__(self, device: str = 'cuda', model_name: str = 'microsoft/trocr-small-printed'):
         super().__init__(model_name=model_name, device=device)
@@ -23,9 +24,9 @@ class TrOCRPlateRecognizer(BasePlateRecognizer):
             self.model.eval()
             self._initialized = True
 
-    def recognize(self, crop: np.ndarray) -> tuple[str, float, list[float]]:
+    def recognize(self, crop: np.ndarray) -> tuple[str, Optional[float], list[float]]:
         if crop is None or crop.size == 0:
-            return '', 0.0, []
+            return '', None, []
 
         try:
             self._lazy_init()
@@ -38,14 +39,31 @@ class TrOCRPlateRecognizer(BasePlateRecognizer):
             pixel_values = self.processor(pil_img, return_tensors='pt').pixel_values.to(self.device)
 
             with torch.no_grad():
-                generated_ids = self.model.generate(pixel_values, max_new_tokens=16)
+                gen_out = self.model.generate(
+                    pixel_values,
+                    max_new_tokens=16,
+                    return_dict_in_generate=True,
+                    output_scores=True
+                )
 
-            text = self.processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
-            confidence = 0.85 if len(text.strip()) >= 6 else 0.40
-            return text.strip(), confidence, [confidence]
+            sequences = gen_out.sequences[0]
+            text = self.processor.decode(sequences, skip_special_tokens=True).strip()
 
-        except Exception as e:
-            return '', 0.0, []
+            # Calculate true token probabilities from generation scores
+            scores = gen_out.scores  # list of [1, vocab_size] tensors
+            char_probs = []
+            if scores:
+                for t, score_tensor in enumerate(scores):
+                    probs = torch.softmax(score_tensor[0], dim=-1)
+                    token_id = sequences[t + 1] if t + 1 < len(sequences) else torch.argmax(probs)
+                    token_prob = float(probs[token_id].item())
+                    char_probs.append(round(token_prob, 4))
 
-    def recognize_batch(self, crops: list[np.ndarray]) -> list[tuple[str, float, list[float]]]:
+            avg_conf = float(np.mean(char_probs)) if char_probs else None
+            return text, avg_conf, char_probs
+
+        except Exception:
+            return '', None, []
+
+    def recognize_batch(self, crops: list[np.ndarray]) -> list[tuple[str, Optional[float], list[float]]]:
         return [self.recognize(c) for c in crops]

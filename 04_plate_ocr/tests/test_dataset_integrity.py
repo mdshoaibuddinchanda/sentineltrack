@@ -1,4 +1,5 @@
 import csv
+import importlib
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
@@ -7,48 +8,61 @@ SOURCES_CSV = DATASET_DIR / 'sources.csv'
 
 
 def test_sources_csv_exists_and_valid():
-    assert SOURCES_CSV.exists(), 'datasets/plate_ocr/sources.csv missing!'
-
-    rows = []
+    assert SOURCES_CSV.exists(), 'sources.csv must exist in datasets/plate_ocr'
     with open(SOURCES_CSV, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for r in reader:
-            rows.append(r)
+        reader = list(csv.DictReader(f))
+        assert len(reader) >= 1500, f'Expected >=1500 records, got {len(reader)}'
 
-    assert len(rows) >= 1000, f'Expected >= 1000 records in sources.csv, found {len(rows)}'
-    for r in rows:
-        assert r['source_name'] == 'zenitsu09_indian_number_plate'
-        assert r['license'] == 'CC-BY-4.0'
-        assert r['type'] == 'real'
-        assert len(r['sha256']) == 64
+        sample = reader[0]
+        required_keys = [
+            'filename', 'split', 'type', 'plate_text', 'parent_identity',
+            'original_image_sha256', 'crop_sha256', 'xmin', 'ymin', 'xmax', 'ymax',
+            'crop_width', 'crop_height', 'source_name', 'source_url', 'license'
+        ]
+        for k in required_keys:
+            assert k in sample, f'Missing required metadata key: {k}'
 
 
 def test_no_synthetic_in_val_or_test():
     with open(SOURCES_CSV, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
+        reader = list(csv.DictReader(f))
         for r in reader:
             if r['split'] in ('val', 'test'):
-                assert r['type'] == 'real', f"Synthetic sample found in {r['split']}!"
+                split_name = r['split']
+                fn = r['filename']
+                assert r['type'] == 'real', f"Synthetic data detected in split {split_name}: {fn}"
+
 
 
 
 def test_zero_hash_and_identity_leakage():
-    hashes_by_split = {'train': set(), 'val': set(), 'test': set()}
-    identities_by_split = {'train': set(), 'val': set(), 'test': set()}
+    hashes = {'train': set(), 'val': set(), 'test': set()}
+    identities = {'train': set(), 'val': set(), 'test': set()}
 
     with open(SOURCES_CSV, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for r in reader:
-            split = r['split']
-            hashes_by_split[split].add(r['sha256'])
-            identities_by_split[split].add(r['parent_identity'])
+        for r in csv.DictReader(f):
+            s = r['split']
+            hashes[s].add(r['crop_sha256'])
+            identities[s].add(r['parent_identity'])
 
-    # Zero hash leakage
-    assert len(hashes_by_split['train'].intersection(hashes_by_split['val'])) == 0
-    assert len(hashes_by_split['train'].intersection(hashes_by_split['test'])) == 0
-    assert len(hashes_by_split['val'].intersection(hashes_by_split['test'])) == 0
+    # Assert zero hash leakage
+    assert len(hashes['train'].intersection(hashes['val'])) == 0, 'Hash leakage: train & val'
+    assert len(hashes['train'].intersection(hashes['test'])) == 0, 'Hash leakage: train & test'
+    assert len(hashes['val'].intersection(hashes['test'])) == 0, 'Hash leakage: val & test'
 
-    # Zero identity leakage
-    assert len(identities_by_split['train'].intersection(identities_by_split['val'])) == 0
-    assert len(identities_by_split['train'].intersection(identities_by_split['test'])) == 0
-    assert len(identities_by_split['val'].intersection(identities_by_split['test'])) == 0
+    # Assert zero identity leakage
+    assert len(identities['train'].intersection(identities['val'])) == 0, 'Identity leakage: train & val'
+    assert len(identities['train'].intersection(identities['test'])) == 0, 'Identity leakage: train & test'
+    assert len(identities['val'].intersection(identities['test'])) == 0, 'Identity leakage: val & test'
+
+
+def test_bbox_provenance_and_dimensions():
+    with open(SOURCES_CSV, 'r', encoding='utf-8') as f:
+        reader = list(csv.DictReader(f))
+        for r in reader[:100]:
+            cw = int(r['crop_width'])
+            ch = int(r['crop_height'])
+            assert cw >= 16, f'Crop width too small: {cw}'
+            assert ch >= 8, f'Crop height too small: {ch}'
+            assert int(r['xmax']) >= int(r['xmin']), 'Invalid x coordinates'
+            assert int(r['ymax']) >= int(r['ymin']), 'Invalid y coordinates'

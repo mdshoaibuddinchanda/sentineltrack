@@ -21,13 +21,12 @@ def compute_sha256(data_bytes: bytes) -> str:
 def clean_plate_string(text: str) -> str:
     if not text:
         return ''
-    cleaned = re.sub(r'[^A-Z0-9]', '', str(text).upper().strip())
-    return cleaned
+    return re.sub(r'[^A-Z0-9]', '', str(text).upper().strip())
 
 
-def prepare_real_ocr_dataset(val_ratio: float = 0.15, test_ratio: float = 0.15):
+def prepare_real_ocr_dataset(val_ratio: float = 0.15, test_ratio: float = 0.15, crop_margin: float = 0.08):
     """
-    Ingests genuine real Indian license plate crops with verified ground-truth transcriptions.
+    Ingests genuine real Indian license plate crops with verified ground-truth transcriptions and bbox provenance.
     Enforces strict group-based partitioning on plate identity to prevent identity leakage.
     """
     print('[DATASET OCR] Initializing real Indian license plate OCR dataset preparation...')
@@ -53,18 +52,64 @@ def prepare_real_ocr_dataset(val_ratio: float = 0.15, test_ratio: float = 0.15):
     df = pd.read_parquet(io.BytesIO(parquet_bytes))
     print(f'[DATASET OCR] Downloaded {len(df)} total raw records.')
 
-    # Filter and group by clean physical plate text
+    # Process and crop images using verified bbox metadata
     records_by_identity = {}
+    total_processed = 0
+    total_rejected = 0
+
     for idx, row in df.iterrows():
         raw_txt = str(row.get('plate_text') or '').strip()
         clean_txt = clean_plate_string(raw_txt)
 
         if not (6 <= len(clean_txt) <= 12):
+            total_rejected += 1
             continue
 
         img_bytes = row['image']['bytes']
         if not img_bytes:
+            total_rejected += 1
             continue
+
+        try:
+            im = Image.open(io.BytesIO(img_bytes))
+            im_w, im_h = im.size
+            x1 = float(row.get('xmin', 0))
+            y1 = float(row.get('ymin', 0))
+            x2 = float(row.get('xmax', im_w))
+            y2 = float(row.get('ymax', im_h))
+        except Exception:
+            total_rejected += 1
+            continue
+
+        orig_sha = compute_sha256(img_bytes)
+
+        # In zenitsu09, if im_w == (x2 - x1) and im_h == (y2 - y1), im is already a crop of that exact bbox
+        # If im is larger than bbox, we apply strict crop
+        if im_w > (x2 - x1 + 2) or im_h > (y2 - y1 + 2):
+            bw = max(x2 - x1, 1)
+            bh = max(y2 - y1, 1)
+            pad_x = crop_margin * bw
+            pad_y = crop_margin * bh
+            cx1 = max(0, int(x1 - pad_x))
+            cy1 = max(0, int(y1 - pad_y))
+            cx2 = min(im_w, int(x2 + pad_x))
+            cy2 = min(im_h, int(y2 + pad_y))
+            cropped_im = im.crop((cx1, cy1, cx2, cy2))
+            buf = io.BytesIO()
+            cropped_im.save(buf, format='JPEG', quality=95)
+            crop_bytes = buf.getvalue()
+            crop_w, crop_h = cropped_im.size
+        else:
+            cropped_im = im
+            crop_bytes = img_bytes
+            crop_w, crop_h = im_w, im_h
+            cx1, cy1, cx2, cy2 = int(x1), int(y1), int(x2), int(y2)
+
+        if crop_w < 16 or crop_h < 8:
+            total_rejected += 1
+            continue
+
+        crop_sha = compute_sha256(crop_bytes)
 
         if clean_txt not in records_by_identity:
             records_by_identity[clean_txt] = []
@@ -73,19 +118,28 @@ def prepare_real_ocr_dataset(val_ratio: float = 0.15, test_ratio: float = 0.15):
             'idx': idx,
             'plate_text': clean_txt,
             'raw_text': raw_txt,
-            'bytes': img_bytes,
+            'bytes': crop_bytes,
+            'orig_sha': orig_sha,
+            'crop_sha': crop_sha,
+            'xmin': cx1,
+            'ymin': cy1,
+            'xmax': cx2,
+            'ymax': cy2,
+            'crop_width': crop_w,
+            'crop_height': crop_h,
             'source_name': 'zenitsu09_indian_number_plate',
             'source_url': 'https://huggingface.co/datasets/zenitsu09/indian-number-plate',
-            'license': 'CC-BY-4.0',
+            'license': 'LICENSE_UNVERIFIED',
             'download_date': '2025-01-10',
             'type': 'real',
         })
+        total_processed += 1
 
     unique_identities = sorted(list(records_by_identity.keys()))
     total_unique = len(unique_identities)
-    print(f'[DATASET OCR] Filtered to {total_unique} unique physical plate identities.')
+    print(f'[DATASET OCR] Ingested {total_processed} valid plate crops across {total_unique} unique physical identities.')
 
-    # Deterministic partition based on hash of identity string
+    # Deterministic partition
     val_cut = int(total_unique * val_ratio)
     test_cut = int(total_unique * (val_ratio + test_ratio))
 
@@ -98,9 +152,10 @@ def prepare_real_ocr_dataset(val_ratio: float = 0.15, test_ratio: float = 0.15):
     assert len(train_identities.intersection(test_identities)) == 0, 'Train and Test share plate identities!'
     assert len(val_identities.intersection(test_identities)) == 0, 'Val and Test share plate identities!'
 
-    sources_records = []
-    seen_hashes_by_split = {'train': set(), 'val': set(), 'test': set()}
     split_counts = {'train': 0, 'val': 0, 'test': 0}
+    split_identities = {'train': set(), 'val': set(), 'test': set()}
+    manifest_rows = []
+    seen_hashes = {'train': set(), 'val': set(), 'test': set()}
 
     for identity, recs in records_by_identity.items():
         if identity in val_identities:
@@ -110,59 +165,63 @@ def prepare_real_ocr_dataset(val_ratio: float = 0.15, test_ratio: float = 0.15):
         else:
             split = 'train'
 
-        for i, r in enumerate(recs):
-            img_name = f"{split}_{identity}_{i}.jpg"
-            lbl_name = f"{split}_{identity}_{i}.txt"
+        split_identities[split].add(identity)
 
-            dest_img = DATASET_DIR / 'images' / split / img_name
-            dest_lbl = DATASET_DIR / 'labels' / split / lbl_name
+        for rec in recs:
+            idx_val = rec['idx']
+            img_filename = f'{split}_{identity}_{idx_val}.jpg'
+            lbl_filename = f'{split}_{identity}_{idx_val}.txt'
 
-            with open(dest_img, 'wb') as f:
-                f.write(r['bytes'])
+            img_path = DATASET_DIR / 'images' / split / img_filename
+            lbl_path = DATASET_DIR / 'labels' / split / lbl_filename
 
-            with open(dest_lbl, 'w', encoding='utf-8') as f:
-                f.write(r['plate_text'])
+            with open(img_path, 'wb') as f:
+                f.write(rec['bytes'])
 
-            sha = compute_sha256(r['bytes'])
-            seen_hashes_by_split[split].add(sha)
+            with open(lbl_path, 'w', encoding='utf-8') as f:
+                f.write(rec['plate_text'])
+
             split_counts[split] += 1
+            seen_hashes[split].add(rec['crop_sha'])
 
-            sources_records.append({
-                'image': img_name,
-                'source_name': r['source_name'],
-                'source_url': r['source_url'],
-                'license': r['license'],
-                'download_date': r['download_date'],
-                'plate_text': r['plate_text'],
-                'parent_identity': identity,
+            manifest_rows.append({
+                'filename': img_filename,
                 'split': split,
                 'type': 'real',
-                'sha256': sha,
+                'plate_text': rec['plate_text'],
+                'raw_text': rec['raw_text'],
+                'parent_identity': identity,
+                'original_image_sha256': rec['orig_sha'],
+                'crop_sha256': rec['crop_sha'],
+                'xmin': rec['xmin'],
+                'ymin': rec['ymin'],
+                'xmax': rec['xmax'],
+                'ymax': rec['ymax'],
+                'crop_width': rec['crop_width'],
+                'crop_height': rec['crop_height'],
+                'source_name': rec['source_name'],
+                'source_url': rec['source_url'],
+                'license': rec['license'],
+                'download_date': rec['download_date'],
             })
 
-    # Save sources.csv
+    # Assert zero hash leakage
+    assert len(seen_hashes['train'].intersection(seen_hashes['val'])) == 0, 'Hash leakage between Train and Val!'
+    assert len(seen_hashes['train'].intersection(seen_hashes['test'])) == 0, 'Hash leakage between Train and Test!'
+    assert len(seen_hashes['val'].intersection(seen_hashes['test'])) == 0, 'Hash leakage between Val and Test!'
+
     with open(SOURCES_CSV, 'w', newline='', encoding='utf-8') as f:
-        fieldnames = ['image', 'source_name', 'source_url', 'license', 'download_date', 'plate_text', 'parent_identity', 'split', 'type', 'sha256']
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer = csv.DictWriter(f, fieldnames=list(manifest_rows[0].keys()))
         writer.writeheader()
-        writer.writerows(sources_records)
+        writer.writerows(manifest_rows)
 
-    # Assertions
-    assert len(seen_hashes_by_split['train'].intersection(seen_hashes_by_split['val'])) == 0, 'Hash overlap train/val!'
-    assert len(seen_hashes_by_split['train'].intersection(seen_hashes_by_split['test'])) == 0, 'Hash overlap train/test!'
-    assert len(seen_hashes_by_split['val'].intersection(seen_hashes_by_split['test'])) == 0, 'Hash overlap val/test!'
-
-    total_images = sum(split_counts.values())
-    print('\n[DATASET OCR SUMMARY]')
-    print(f"  - Train: {split_counts['train']} images ({len(train_identities)} unique plates)")
-    print(f"  - Val:   {split_counts['val']} images ({len(val_identities)} unique plates) [100% REAL ONLY]")
-    print(f"  - Test:  {split_counts['test']} images ({len(test_identities)} unique plates) [100% REAL ONLY]")
-    print(f'  - Total: {total_images} real Indian plate crops')
-    print(f'  - Zero Hash Leakage: PASSED')
-    print(f'  - Zero Identity Leakage: PASSED')
-    print(f'  - Sources CSV: {SOURCES_CSV}')
-
-    return split_counts
+    print('================ REAL OCR DATASET PARTITION COMPLETE ================')
+    print(f"Train Set: {split_counts['train']} crops ({len(split_identities['train'])} unique plate identities)")
+    print(f"Val Set:   {split_counts['val']} crops ({len(split_identities['val'])} unique plate identities) [100% REAL]")
+    print(f"Test Set:  {split_counts['test']} crops ({len(split_identities['test'])} unique plate identities) [100% REAL]")
+    print(f"Total:     {len(manifest_rows)} crops across {total_unique} unique identities")
+    print(f"License:   LICENSE_UNVERIFIED (HuggingFace metadata has no explicit license field)")
+    print('=====================================================================')
 
 
 

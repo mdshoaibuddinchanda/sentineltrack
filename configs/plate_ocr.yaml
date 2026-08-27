@@ -1,28 +1,23 @@
-ocr:
-  engine: 'easyocr_crnn'
-  device: 'cuda'
-  batch_size: 4
+recognizer:
+  engine_name: 'ppocr_mobile'
+  device: 'cpu'
+  min_confidence: 0.40
+
+voting:
   min_crop_quality: 0.20
-  max_candidates_per_track: 5
-  consensus_min_support: 1
+  min_support_count: 2
+  cluster_distance_threshold: 0.35
+  w_conf: 0.45
+  w_qual: 0.25
+  w_gram: 0.30
   consensus_threshold: 0.50
 
 preprocessing:
-  selected_variant: 'gray'
-  target_height: 64
-
+  selected_variant: 'raw'
+  target_height: 48
   max_width: 320
-  clahe_clip_limit: 2.0
-  clahe_grid_size: [4, 4]
+  two_line_aspect_threshold: 2.2
 
-normalization:
-  grammar_enabled: true
-  confusion_cost: 0.35
-  grammar_weight: 0.30
-  confidence_weight: 0.45
-  quality_weight: 0.25
-
-optimization:
-  enable_deduplication: true
-  min_quality_filter: 0.15
-  early_consensus_stopping: true
+deduplication:
+  enabled: true
+  hash_dim: [16, 8]

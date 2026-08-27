@@ -40,8 +40,8 @@ class PlateOCRPipeline:
         enable_deduplication: bool = True,
         min_crop_quality: float = 0.20,
     ):
-        self.recognizer = recognizer or get_recognizer(engine_name='easyocr_crnn', device='cuda')
-        self.voter = voter or MultiFramePlateVoter(min_crop_quality=min_crop_quality)
+        self.recognizer = recognizer or get_recognizer(engine_name='ppocr_mobile', device='cpu')
+        self.voter = voter or MultiFramePlateVoter(min_crop_quality=min_crop_quality, min_support_count=2)
         self.default_variant = default_variant
         self.enable_deduplication = enable_deduplication
         self.min_crop_quality = min_crop_quality
@@ -60,7 +60,7 @@ class PlateOCRPipeline:
         variant: Optional[str] = None
     ) -> OCRHypothesis:
         var = variant or self.default_variant
-        prep_img, prep_meta = preprocess_crop(crop, variant=var)
+        prep_img, prep_meta = preprocess_crop(crop, variant=var, target_height=48)
 
         raw_text, ocr_conf, char_confs = self.recognizer.recognize(prep_img)
         norm_text = normalize_plate_text(raw_text)
@@ -75,7 +75,7 @@ class PlateOCRPipeline:
             pts_ms=pts_ms,
             raw_text=raw_text,
             normalized_text=norm_text,
-            ocr_confidence=ocr_conf,
+            ocr_confidence=ocr_conf if ocr_conf is not None else 0.5,
             crop_quality=crop_quality,
             grammar_score=grammar_sc,
             preprocess_variant=var,

@@ -2,17 +2,18 @@ import math
 from typing import Optional
 from .models import OCRHypothesis, TrackOCRResult
 from .normalization import normalize_plate_text
-from .grammar import score_indian_grammar, generate_grammar_alternatives, CHAR_TO_DIGIT, DIGIT_TO_CHAR
+from .grammar import score_indian_grammar, generate_grammar_alternatives, LETTER_TO_DIGIT_MAP, DIGIT_TO_LETTER_MAP
 
 CONFUSION_PAIRS = {
     frozenset({'0', 'O'}), frozenset({'0', 'Q'}), frozenset({'0', 'D'}),
     frozenset({'1', 'I'}), frozenset({'1', 'L'}), frozenset({'2', 'Z'}),
-    frozenset({'5', 'S'}), frozenset({'6', 'G'}), frozenset({'8', 'B'})
+    frozenset({'4', 'A'}), frozenset({'5', 'S'}), frozenset({'6', 'G'}),
+    frozenset({'8', 'B'})
 }
 
 
 def weighted_levenshtein(s1: str, s2: str, confusion_cost: float = 0.35) -> float:
-    """Computes Levenshtein distance with position-aware/character confusion discount."""
+    """Computes Levenshtein distance with position-aware character confusion discount."""
     if s1 == s2:
         return 0.0
     if not s1:
@@ -34,7 +35,14 @@ def weighted_levenshtein(s1: str, s2: str, confusion_cost: float = 0.35) -> floa
             if c1 == c2:
                 cost = 0.0
             elif frozenset({c1, c2}) in CONFUSION_PAIRS:
-                cost = confusion_cost
+                # Check slot context if strings are roughly aligned
+                pos = i - 1
+                if pos < 2 and (c1 in DIGIT_TO_LETTER_MAP or c2 in DIGIT_TO_LETTER_MAP):
+                    cost = confusion_cost
+                elif pos >= 2 and (c1 in LETTER_TO_DIGIT_MAP or c2 in LETTER_TO_DIGIT_MAP):
+                    cost = confusion_cost
+                else:
+                    cost = confusion_cost * 1.2
             else:
                 cost = 1.0
 
@@ -91,7 +99,7 @@ class MultiFramePlateVoter:
         self,
         min_crop_quality: float = 0.20,
         min_confidence_threshold: float = 0.50,
-        min_support_count: int = 1,
+        min_support_count: int = 2,
         cluster_distance_threshold: float = 0.35,
         w_conf: float = 0.45,
         w_qual: float = 0.25,
@@ -165,7 +173,7 @@ class MultiFramePlateVoter:
         for c in clusters:
             support = len(c)
             hyp_score = sum(
-                (self.w_conf * h.ocr_confidence + self.w_qual * h.crop_quality + self.w_gram * h.grammar_score)
+                (self.w_conf * (h.ocr_confidence or 0.5) + self.w_qual * h.crop_quality + self.w_gram * h.grammar_score)
                 for h in c
             )
             total_score = hyp_score * (1.0 + math.log2(1.0 + support))
@@ -175,7 +183,7 @@ class MultiFramePlateVoter:
         winner_cluster, winner_score, winner_support = cluster_scores[0]
 
         weighted_strings = [
-            (h.normalized_text, (self.w_conf * h.ocr_confidence + self.w_qual * h.crop_quality + self.w_gram * h.grammar_score))
+            (h.normalized_text, (self.w_conf * (h.ocr_confidence or 0.5) + self.w_qual * h.crop_quality + self.w_gram * h.grammar_score))
             for h in winner_cluster
         ]
         consensus_text = resolve_character_consensus(weighted_strings)
@@ -187,7 +195,7 @@ class MultiFramePlateVoter:
         total_all_scores = sum(cs[1] for cs in cluster_scores)
         dominance_ratio = winner_score / max(total_all_scores, 1e-6)
         avg_quality = float(sum(h.crop_quality for h in winner_cluster) / len(winner_cluster))
-        avg_ocr_conf = float(sum(h.ocr_confidence for h in winner_cluster) / len(winner_cluster))
+        avg_ocr_conf = float(sum((h.ocr_confidence or 0.5) for h in winner_cluster) / len(winner_cluster))
 
         final_conf = (
             0.40 * dominance_ratio +
@@ -197,8 +205,8 @@ class MultiFramePlateVoter:
         )
         final_conf = round(min(0.99, max(0.01, final_conf)), 4)
 
-        if winner_support < self.min_support_count or final_conf < 0.35:
-            status = 'LOW_CONFIDENCE'
+        if winner_support < self.min_support_count:
+            status = 'CANDIDATE' if final_conf >= 0.40 else 'LOW_CONFIDENCE'
         elif final_conf >= self.min_confidence_threshold:
             status = 'RESOLVED'
         else:
@@ -216,7 +224,7 @@ class MultiFramePlateVoter:
             stream_epoch=epoch,
             first_pts_ms=first_pts,
             last_pts_ms=last_pts,
-            best_text=final_best_text if status == 'RESOLVED' else (final_best_text if final_conf >= 0.40 else None),
+            best_text=final_best_text if status in ('RESOLVED', 'CANDIDATE') else (final_best_text if final_conf >= 0.40 else None),
             confidence=final_conf,
             support_count=winner_support,
             total_hypotheses=len(hypotheses),

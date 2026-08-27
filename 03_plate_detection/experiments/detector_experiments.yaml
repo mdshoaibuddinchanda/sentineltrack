@@ -31,9 +31,9 @@ challengers:
     patience: 25
     output_dir: 'models/plate/candidates/yolo11s_960_long'
 
-  - id: 'yolo26s_768_long'
-    model: 'yolo11s.pt'
+  - id: 'yolo11m_768_long'
+    model: 'yolo11m.pt'
     imgsz: 768
     epochs: 150
     patience: 25
-    output_dir: 'models/plate/candidates/yolo26s_768_long'
+    output_dir: 'models/plate/candidates/yolo11m_768_long'
