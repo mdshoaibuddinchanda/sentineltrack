@@ -1,5 +1,6 @@
 import os
 import csv
+import json
 import shutil
 import cv2
 import numpy as np
@@ -7,6 +8,8 @@ from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 DATASET_DIR = ROOT_DIR / 'datasets' / 'plate_detection'
+PUBLIC_DIR = DATASET_DIR / 'sources' / 'public_indian'
+SYNTH_DIR = DATASET_DIR / 'sources' / 'synthetic'
 
 
 def clean_dataset():
@@ -24,155 +27,188 @@ def clean_dataset():
         lbl_dir.mkdir(parents=True, exist_ok=True)
 
 
-def generate_synthetic_plate_crop(img_id: int, split: str) -> tuple[np.ndarray, list[float]]:
-    """
-    Generates a realistic vehicle crop with Indian license plate layout.
-    """
-    # Base vehicle crop dimensions
-    w = np.random.randint(400, 800)
+def generate_synthetic_plate_crop(img_id: int) -> tuple[np.ndarray, list[float]]:
+    """Generates an augmented synthetic vehicle crop for training data augmentation."""
+    w = np.random.randint(450, 850)
     h = np.random.randint(300, 600)
 
-    # 10% negative background samples (no plate)
+    # 10% negative background samples
     if img_id % 10 == 0:
-        bg_color = np.random.randint(30, 220, size=3).tolist()
-        crop = np.full((h, w, 3), bg_color, dtype=np.uint8)
-        # Add road texture / bumper without plate
-        cv2.rectangle(crop, (0, int(h * 0.6)), (w, h), (40, 40, 40), -1)
-        return crop, []
+        bg = np.full((h, w, 3), np.random.randint(30, 200, size=3).tolist(), dtype=np.uint8)
+        cv2.rectangle(bg, (0, int(h * 0.6)), (w, h), (40, 40, 40), -1)
+        return bg, []
 
-    # Vehicle body color
-    bg_color = np.random.randint(20, 240, size=3).tolist()
+    bg_color = np.random.randint(20, 230, size=3).tolist()
     crop = np.full((h, w, 3), bg_color, dtype=np.uint8)
+    cv2.rectangle(crop, (int(w * 0.05), int(h * 0.45)), (int(w * 0.95), int(h * 0.9)), (max(0, bg_color[0] - 40), max(0, bg_color[1] - 40), max(0, bg_color[2] - 40)), -1)
 
-    # Vehicle bumper and grille contours
-    cv2.rectangle(crop, (int(w * 0.05), int(h * 0.5)), (int(w * 0.95), int(h * 0.95)),
-                  (max(0, bg_color[0] - 40), max(0, bg_color[1] - 40), max(0, bg_color[2] - 40)), -1)
-
-    # Plate dimensions (standard Indian car plate ~3.5:1 ratio, bike ~1.8:1)
-    is_motorcycle = (img_id % 7 == 0)
-    if is_motorcycle:
+    is_bike = (img_id % 7 == 0)
+    if is_bike:
         pw = np.random.randint(int(w * 0.18), int(w * 0.28))
         ph = int(pw / np.random.uniform(1.4, 2.0))
     else:
         pw = np.random.randint(int(w * 0.25), int(w * 0.45))
         ph = int(pw / np.random.uniform(3.2, 4.0))
 
-    # Plate placement (centered on bumper)
     px1 = int((w - pw) / 2 + np.random.randint(-20, 20))
-    py1 = int(h * 0.65 + np.random.randint(-15, 15))
-    px2 = px1 + pw
-    py2 = py1 + ph
+    py1 = int(h * 0.62 + np.random.randint(-15, 15))
+    px2 = min(w - 2, px1 + pw)
+    py2 = min(h - 2, py1 + ph)
+    px1, py1 = max(2, px1), max(2, py1)
+    pw, ph = px2 - px1, py2 - py1
 
-    # Clamp coordinates
-    px1, py1 = max(0, px1), max(0, py1)
-    px2, py2 = min(w, px2), min(h, py2)
-    pw = px2 - px1
-    ph = py2 - py1
+    p_bg = (25, 215, 245) if (img_id % 4 == 0) else (245, 245, 245)
+    cv2.rectangle(crop, (px1, py1), (px2, py2), p_bg, -1)
+    cv2.rectangle(crop, (px1, py1), (px2, py2), (10, 10, 10), 2)
 
-    # Plate type: White (private), Yellow (commercial), Green (EV)
-    mod = img_id % 5
-    if mod == 0:
-        plate_bg = (30, 215, 245)  # Yellow (BGR)
-    elif mod == 1:
-        plate_bg = (50, 160, 40)   # Green (EV)
-    else:
-        plate_bg = (245, 245, 245) # White
-
-    cv2.rectangle(crop, (px1, py1), (px2, py2), plate_bg, -1)
-    cv2.rectangle(crop, (px1, py1), (px2, py2), (10, 10, 10), 2)  # border
-
-    # Blue HSRP strip on left edge
-    strip_w = max(4, int(pw * 0.08))
+    strip_w = max(3, int(pw * 0.08))
     cv2.rectangle(crop, (px1, py1), (px1 + strip_w, py2), (180, 50, 0), -1)
 
-    # Render license plate alphanumeric text
-    state_codes = ['GJ', 'MH', 'DL', 'KA', 'HR', 'UP', 'RJ']
-    state = state_codes[img_id % len(state_codes)]
-    district = (img_id % 38) + 1
-    series_chars = chr(65 + (img_id % 26)) + chr(65 + ((img_id * 3) % 26))
-    num = (img_id * 73) % 9000 + 1000
-    plate_text = f'{state}{district:02d}{series_chars}{num}'
+    state = ['GJ', 'MH', 'DL', 'KA', 'UP', 'HR'][img_id % 6]
+    rto = (img_id % 30) + 1
+    num = (img_id * 71) % 9000 + 1000
+    text = f'{state}{rto:02d}AB{num}'
+    cv2.putText(crop, text, (px1 + strip_w + 4, py1 + int(ph * 0.72)),
+                cv2.FONT_HERSHEY_SIMPLEX, max(0.35, pw / 320.0), (0, 0, 0), 2)
 
-    text_color = (0, 0, 0)
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = max(0.35, min(0.9, pw / 300.0))
-    cv2.putText(crop, plate_text, (px1 + strip_w + 4, py1 + int(ph * 0.72)),
-                font, font_scale, text_color, 2)
-
-    # Lighting condition simulation (night/low-light or headlight glare)
-    if img_id % 4 == 0:
-        # Night dimming
-        crop = (crop.astype(np.float32) * 0.45).astype(np.uint8)
-
-    # YOLO normalized coordinates: class x_c y_c w h
-    x_center = (px1 + px2) / (2.0 * w)
-    y_center = (py1 + py2) / (2.0 * h)
-    norm_w = pw / float(w)
-    norm_h = ph / float(h)
-
-    return crop, [0, x_center, y_center, norm_w, norm_h]
+    xc = (px1 + px2) / (2.0 * w)
+    yc = (py1 + py2) / (2.0 * h)
+    nw = pw / float(w)
+    nh = ph / float(h)
+    return crop, [0, xc, yc, nw, nh]
 
 
-def prepare_dataset(total_samples: int = 300):
-    print(f'[DATASET] Cleaning and preparing {total_samples} plate detection samples with provenance...')
+def prepare_production_dataset(
+    num_real_val: int = 35,
+    num_real_test: int = 35,
+    num_synthetic_train: int = 200,
+):
+    """
+    Constructs the production dataset:
+    - Validation: REAL ONLY (num_real_val)
+    - Test: REAL ONLY (num_real_test)
+    - Train: Remaining Real + Synthetic Augmentation
+    """
+    print('[DATASET] Cleaning previous dataset splits...')
     clean_dataset()
 
-    sources = []
-    num_train = int(total_samples * 0.70)
-    num_val = int(total_samples * 0.15)
-    num_test = total_samples - num_train - num_val
+    # 1. Check if real Indian dataset exists in sources/public_indian
+    import importlib
+    if not PUBLIC_DIR.exists() or len(list(PUBLIC_DIR.glob('*.jpg'))) == 0:
+        import_mod = importlib.import_module('03_plate_detection.training.import_real_dataset')
+        import_mod.acquire_real_indian_dataset()
 
-    splits = (
-        [('train', i) for i in range(num_train)] +
-        [('val', i) for i in range(num_train, num_train + num_val)] +
-        [('test', i) for i in range(num_train + num_val, total_samples)]
-    )
+    real_images = sorted(list(PUBLIC_DIR.glob('*.jpg')))
+    total_real = len(real_images)
+    print(f'[DATASET] Found {total_real} real Indian vehicle plate images.')
 
-    for split, idx in splits:
-        img_name = f'plate_sample_{idx:05d}.jpg'
-        label_name = f'plate_sample_{idx:05d}.txt'
+    assert total_real >= (num_real_val + num_real_test + 10), f'Insufficient real images ({total_real}) for clean real val/test split!'
 
-        img_path = DATASET_DIR / 'images' / split / img_name
-        label_path = DATASET_DIR / 'labels' / split / label_name
+    # Split real images strictly with 0 overlap:
+    # 0 to num_real_val -> val
+    # num_real_val to (num_real_val + num_real_test) -> test
+    # remainder -> train
+    real_val_imgs = real_images[:num_real_val]
+    real_test_imgs = real_images[num_real_val : num_real_val + num_real_test]
+    real_train_imgs = real_images[num_real_val + num_real_test:]
 
-        img, bbox = generate_synthetic_plate_crop(idx, split)
+    sources_records = []
 
-        # Save image
-        cv2.imwrite(str(img_path), img)
+    # Copy real validation images (REAL ONLY)
+    for img_p in real_val_imgs:
+        lbl_p = img_p.with_suffix('.txt')
+        dest_img = DATASET_DIR / 'images' / 'val' / img_p.name
+        dest_lbl = DATASET_DIR / 'labels' / 'val' / lbl_p.name
+        shutil.copy2(str(img_p), str(dest_img))
+        if lbl_p.exists():
+            shutil.copy2(str(lbl_p), str(dest_lbl))
+        sources_records.append({
+            'image': img_p.name,
+            'source': 'public_indian_open_anpr',
+            'license': 'CC-BY-SA-4.0',
+            'type': 'real',
+            'split': 'val',
+        })
 
-        # Save YOLO label (empty for negative samples)
-        with open(label_path, 'w', encoding='utf-8') as f:
+    # Copy real test images (REAL ONLY)
+    for img_p in real_test_imgs:
+        lbl_p = img_p.with_suffix('.txt')
+        dest_img = DATASET_DIR / 'images' / 'test' / img_p.name
+        dest_lbl = DATASET_DIR / 'labels' / 'test' / lbl_p.name
+        shutil.copy2(str(img_p), str(dest_img))
+        if lbl_p.exists():
+            shutil.copy2(str(lbl_p), str(dest_lbl))
+
+        sources_records.append({
+            'image': img_p.name,
+            'source': 'public_indian_open_anpr',
+            'license': 'CC-BY-SA-4.0',
+            'type': 'real',
+            'split': 'test',
+        })
+
+    # Copy real train images
+    for img_p in real_train_imgs:
+        lbl_p = img_p.with_suffix('.txt')
+        dest_img = DATASET_DIR / 'images' / 'train' / img_p.name
+        dest_lbl = DATASET_DIR / 'labels' / 'train' / lbl_p.name
+        shutil.copy2(str(img_p), str(dest_img))
+        if lbl_p.exists():
+            shutil.copy2(str(lbl_p), str(dest_lbl))
+        sources_records.append({
+            'image': img_p.name,
+            'source': 'public_indian_open_anpr',
+            'license': 'CC-BY-SA-4.0',
+            'type': 'real',
+            'split': 'train',
+        })
+
+    # Generate synthetic training augmentation
+    SYNTH_DIR.mkdir(parents=True, exist_ok=True)
+    for i in range(num_synthetic_train):
+        img_name = f'synth_train_{i:04d}.jpg'
+        lbl_name = f'synth_train_{i:04d}.txt'
+        dest_img = DATASET_DIR / 'images' / 'train' / img_name
+        dest_lbl = DATASET_DIR / 'labels' / 'train' / lbl_name
+
+        crop, bbox = generate_synthetic_plate_crop(i)
+        cv2.imwrite(str(dest_img), crop)
+        with open(dest_lbl, 'w', encoding='utf-8') as f:
             if bbox:
-                cls_id, xc, yc, nw, nh = bbox
-                f.write(f'{cls_id} {xc:.6f} {yc:.6f} {nw:.6f} {nh:.6f}\n')
+                c, xc, yc, nw, nh = bbox
+                f.write(f'{c} {xc:.6f} {yc:.6f} {nw:.6f} {nh:.6f}\n')
 
-        sources.append({
+        sources_records.append({
             'image': img_name,
             'source': 'sentineltrack_synthetic_generator',
             'license': 'team_generated',
-            'split': split,
+            'type': 'synthetic',
+            'split': 'train',
         })
 
-    # Save provenance CSV
+    # Write sources.csv
     sources_csv = DATASET_DIR / 'sources.csv'
     with open(sources_csv, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=['image', 'source', 'license', 'split'])
+        writer = csv.DictWriter(f, fieldnames=['image', 'source', 'license', 'type', 'split'])
         writer.writeheader()
-        writer.writerows(sources)
+        writer.writerows(sources_records)
 
-    train_count = len(list((DATASET_DIR / 'images' / 'train').glob('*.jpg')))
-    val_count = len(list((DATASET_DIR / 'images' / 'val').glob('*.jpg')))
-    test_count = len(list((DATASET_DIR / 'images' / 'test').glob('*.jpg')))
+    # Verification assertions
+    actual_train = len(list((DATASET_DIR / 'images' / 'train').glob('*.jpg')))
+    actual_val = len(list((DATASET_DIR / 'images' / 'val').glob('*.jpg')))
+    actual_test = len(list((DATASET_DIR / 'images' / 'test').glob('*.jpg')))
 
-    assert train_count == num_train, f'Expected {num_train} train images, found {train_count}'
-    assert val_count == num_val, f'Expected {num_val} val images, found {val_count}'
-    assert test_count == num_test, f'Expected {num_test} test images, found {test_count}'
+    expected_train = len(real_train_imgs) + num_synthetic_train
+    assert actual_train == expected_train, f'Expected {expected_train} train images, found {actual_train}'
+    assert actual_val == num_real_val, f'Expected {num_real_val} val images, found {actual_val}'
+    assert actual_test == num_real_test, f'Expected {num_real_test} test images, found {actual_test}'
 
-    print(f'[DATASET] Clean verification passed: {train_count} train, {val_count} val, {test_count} test images.')
-    print(f'[DATASET] Provenance catalog written to {sources_csv}')
+    print(f'[DATASET] Clean production split created:')
+    print(f'  - Train: {actual_train} images ({len(real_train_imgs)} real + {num_synthetic_train} synthetic)')
+    print(f'  - Val (REAL ONLY): {actual_val} images')
+    print(f'  - Test (REAL ONLY): {actual_test} images')
+    print(f'  - Provenance: {sources_csv}')
 
 
 if __name__ == '__main__':
-    prepare_dataset(300)
-
-
+    prepare_production_dataset()

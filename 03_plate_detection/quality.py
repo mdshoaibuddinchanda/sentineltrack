@@ -101,7 +101,11 @@ class TrackPlateAccumulator:
         key = (camera_id, stream_epoch, track_id)
         return self.candidates.get(key, [])
 
+    def get_all_tracks(self) -> list[tuple[str, int, int]]:
+        return list(self.candidates.keys())
+
     def reset_camera(self, camera_id: str):
         to_remove = [k for k in self.candidates if k[0] == camera_id]
         for k in to_remove:
             del self.candidates[k]
+
