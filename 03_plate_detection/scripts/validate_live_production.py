@@ -99,8 +99,9 @@ def run_live_production_validation(camera_ids: list[str], frames_per_camera: int
                 cam_plates += 1
 
                 # Save evidence crop if plate is detected
-                evidence_img = packet.image.copy()
+                evidence_img = packet.frame.copy()
                 cv2.rectangle(evidence_img, (int(p.x1), int(p.y1)), (int(p.x2), int(p.y2)), (0, 255, 0), 2)
+
                 ev_name = f'cam_{cid}_track_{p.track_id}_frame_{cam_frames}.jpg'
                 cv2.imwrite(str(EVIDENCE_DIR / ev_name), evidence_img)
 
