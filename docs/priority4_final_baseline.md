@@ -19,12 +19,15 @@
 
 ---
 
-## 2. Production OCR Engine & Authoritative Model Provenance
-* **Selected Engine:** n_PP-OCRv5_mobile_rec (PaddlePaddle English PP-LCNet + CTC greedy decoding)
-* **Inference Provider:** ONNX Runtime CPU (8 threads) (CUDA_PROVIDER_UNAVAILABLE)
-* **Authoritative Download Source:** https://huggingface.co/monkt/paddleocr-onnx/resolve/main/languages/english/rec.onnx
+## 2. Production OCR Engine & Provenance
+* **Exact Runtime Model Identity:** n_PP-OCRv5_mobile_rec_onnx
+* **Upstream Model Family:** PaddlePaddle n_PP-OCRv5_mobile_rec (PP-LCNet + CTC greedy decoding)
+* **Artifact Repository:** monkt/paddleocr-onnx (pinned community ONNX artifact derived from PaddleOCR)
+* **Official Upstream Codebase / Architecture:** PaddlePaddle/PaddleOCR
+* **Artifact Download URL:** https://huggingface.co/monkt/paddleocr-onnx/resolve/main/languages/english/rec.onnx
 * **Pinned Expected SHA-256:** 4e16deb22c4da6468bdca539b2cd3c8687825538b67109177c47d359ab994cd7
-* **Production Batch Size:** B=2 (Peak throughput: 109.26 crops/sec, 9.15 ms amortized latency per crop)
+* **Inference Provider:** ONNX Runtime CPU (8 threads) (CUDA_PROVIDER_UNAVAILABLE)
+* **Production Operating Point:** Batch size B=2 selected for lower real-time latency (18.30 ms mean batch latency, 9.15 ms amortized per crop, 109.26 crops/s). Note that B=4 yielded highest raw throughput (122.70 crops/s at 32.60 ms mean batch latency).
 
 ---
 
@@ -33,21 +36,21 @@
 Evaluated across the exact same 147 real validation and 178 locked real test crops:
 
 ### A. Real Validation Set (147 Crops)
-* **n_PP-OCRv5_mobile_rec (Production Selected):**
+* **n_PP-OCRv5_mobile_rec_onnx (Production Selected):**
   * **RAW Metrics:** Exact: **50.34%** (74/147) | Char Acc: **80.66%** | CER: **0.1328** | Mean Edit Dist: 0.1351
   * **POSTPROCESSED Metrics:** Exact: **61.90%** (91/147) | Char Acc: **82.44%** | CER: **0.1156** | Mean Edit Dist: 0.1183
   * **Latency & Throughput:** P50: **9.92 ms** | P95: **18.83 ms** | Throughput: **89.20 crops/s** | Empty-Read Rate: **0.00%**
-* **PP-OCRv5_server_rec (Challenger):**
+* **PP-OCRv5_server_rec_onnx (Challenger):**
   * **RAW Metrics:** Exact: 57.82% (85/147) | Char Acc: 75.73% | CER: 0.1627
   * **POSTPROCESSED Metrics:** Exact: 61.90% (91/147) | Char Acc: 76.23% | CER: 0.1592
   * **Latency & Throughput:** P50: 444.26 ms | P95: 717.97 ms | Throughput: 2.15 crops/s
 
 ### B. Final Real Test Set (178 Crops - LOCKED)
-* **n_PP-OCRv5_mobile_rec (Production Selected):**
+* **n_PP-OCRv5_mobile_rec_onnx (Production Selected):**
   * **RAW Metrics:** Exact: **49.44%** (88/178) | Char Acc: **77.92%** | CER: **0.1782** | Mean Edit Dist: 0.1804
   * **POSTPROCESSED Metrics:** Exact: **57.30%** (102/178) | Char Acc: **78.69%** | CER: **0.1729** | Mean Edit Dist: 0.1752
   * **Latency & Throughput:** P50: **9.06 ms** | P95: **14.95 ms** | Throughput: **100.75 crops/s** | Empty-Read Rate: **0.00%**
-* **PP-OCRv5_server_rec (Challenger):**
+* **PP-OCRv5_server_rec_onnx (Challenger):**
   * **RAW Metrics:** Exact: 51.69% (92/178) | Char Acc: 75.67% | CER: 0.1753
   * **POSTPROCESSED Metrics:** Exact: 53.37% (95/178) | Char Acc: 75.84% | CER: 0.1747
   * **Latency & Throughput:** P50: 439.30 ms | P95: 881.73 ms | Throughput: 2.04 crops/s
@@ -90,7 +93,7 @@ Evaluated across the exact same 147 real validation and 178 locked real test cro
 
 ---
 
-## 8. Reproducibility
+## 8. Reproducibility & Commands
 * **Model Setup Command:** python -m 04_plate_ocr.scripts.setup_ocr_models
 * **Test Single Crop:** python -m 04_plate_ocr.scripts.test_crop <image_path>
 * **Full Evaluation:** python -m 04_plate_ocr.training.evaluate

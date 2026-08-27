@@ -41,7 +41,7 @@ class PPOCRPlateRecognizer(BasePlateRecognizer):
         self,
         model_path: str,
         dict_path: str,
-        model_name: str = 'ppocr_mobile',
+        model_name: str = 'en_PP-OCRv5_mobile_rec_onnx',
         device: str = 'cpu'
     ):
         super().__init__(model_name=model_name, device=device)
@@ -74,18 +74,15 @@ class PPOCRPlateRecognizer(BasePlateRecognizer):
         scale = self.target_height / float(max(h, 1))
         # Ensure calculated width is always a positive multiple of 8
         calc_w = max(16, int(math.ceil(w * scale / 8.0) * 8))
+        resized = cv2.resize(img, (calc_w, self.target_height))
 
-        if target_w is not None:
-            # Ensure target_w is also aligned to multiple of 8
-            target_w_aligned = max(calc_w, int(math.ceil(target_w / 8.0) * 8))
-            resized = cv2.resize(img, (calc_w, self.target_height))
-            padded = np.zeros((self.target_height, target_w_aligned, 3), dtype=np.uint8)
-            padded[:, :min(calc_w, target_w_aligned)] = resized[:, :min(calc_w, target_w_aligned)]
-            resized = padded
+        if target_w is not None and target_w > calc_w:
+            pad_w = target_w - calc_w
+            padded = cv2.copyMakeBorder(resized, 0, 0, 0, pad_w, cv2.BORDER_REPLICATE)
         else:
-            resized = cv2.resize(img, (calc_w, self.target_height))
+            padded = resized
 
-        inp = resized.astype(np.float32) / 255.0
+        inp = padded.astype(np.float32) / 255.0
         inp = (inp - 0.5) / 0.5
         inp = inp.transpose((2, 0, 1))  # [3, H, W]
         return inp, calc_w
@@ -221,7 +218,7 @@ class PPOCRMobilePlateRecognizer(PPOCRPlateRecognizer):
         super().__init__(
             model_path=str(MODELS_DIR / 'PP-OCRv5_mobile_rec_infer.onnx'),
             dict_path=str(MODELS_DIR / 'ppocr_mobile_dict.txt'),
-            model_name='PP-OCRv5_mobile_rec',
+            model_name='en_PP-OCRv5_mobile_rec_onnx',
             device=device
         )
 
@@ -231,7 +228,7 @@ class PPOCRServerPlateRecognizer(PPOCRPlateRecognizer):
         super().__init__(
             model_path=str(MODELS_DIR / 'PP-OCRv5_server_rec_infer.onnx'),
             dict_path=str(MODELS_DIR / 'ppocrv5_dict.txt'),
-            model_name='PP-OCRv5_server_rec',
+            model_name='PP-OCRv5_server_rec_onnx',
             device=device
         )
 
@@ -248,7 +245,7 @@ class AdaptivePlateRecognizer(BasePlateRecognizer):
         min_grammar_threshold: float = 0.70,
         device: str = 'cpu'
     ):
-        super().__init__(model_name='adaptive_mobile_server_cascade', device=device)
+        super().__init__(model_name='adaptive_mobile_server_cascade_onnx', device=device)
         self.mobile = PPOCRMobilePlateRecognizer(device=device)
         self.server = PPOCRServerPlateRecognizer(device=device)
         self.min_conf_threshold = min_conf_threshold

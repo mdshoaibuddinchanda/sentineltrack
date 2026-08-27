@@ -1,4 +1,5 @@
 import pytest
+import cv2
 import importlib
 import numpy as np
 
@@ -15,7 +16,6 @@ MockPlateRecognizer = mock_mod.MockPlateRecognizer
 normalize_plate_text = norm_mod.normalize_plate_text
 verify_file_integrity = setup_mod.verify_file_integrity
 compute_file_sha256 = setup_mod.compute_file_sha256
-MODEL_RESOURCES = setup_mod.MODEL_RESOURCES
 
 
 def test_mock_recognizer():
@@ -31,12 +31,13 @@ def test_recognizer_factory():
     rec_mock = get_recognizer('mock_rec')
     assert isinstance(rec_mock, MockPlateRecognizer)
     rec_mobile = get_recognizer('ppocr_mobile', device='cpu')
-    assert rec_mobile.model_name == 'PP-OCRv5_mobile_rec'
+    assert rec_mobile.model_name == 'en_PP-OCRv5_mobile_rec_onnx'
 
 
 def test_single_line_batch_parity():
     rec = get_recognizer('ppocr_mobile', device='cpu')
-    single_crop = np.full((48, 192, 3), 240, dtype=np.uint8)
+    single_crop = np.full((48, 192, 3), 255, dtype=np.uint8)
+    cv2.putText(single_crop, 'MH12DE1432', (10, 34), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 0), 2)
 
     res_single = rec.recognize(single_crop)
     res_batch = rec.recognize_batch([single_crop])[0]
@@ -46,8 +47,9 @@ def test_single_line_batch_parity():
 
 def test_two_line_batch_parity():
     rec = get_recognizer('ppocr_mobile', device='cpu')
-    # Motorcycle / square plate crop: aspect ratio 1.2
-    two_line_crop = np.full((100, 120, 3), 240, dtype=np.uint8)
+    two_line_crop = np.full((96, 160, 3), 255, dtype=np.uint8)
+    cv2.putText(two_line_crop, 'MH12', (15, 36), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 2)
+    cv2.putText(two_line_crop, 'AB1234', (15, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 2)
     assert is_two_line_plate(two_line_crop) is True
 
     res_single = rec.recognize(two_line_crop)
@@ -58,20 +60,32 @@ def test_two_line_batch_parity():
 
 def test_mixed_batch_ordering_preservation():
     rec = get_recognizer('ppocr_mobile', device='cpu')
-    crop_single_1 = np.full((48, 180, 3), 230, dtype=np.uint8)
-    crop_two_line = np.full((100, 120, 3), 240, dtype=np.uint8)
-    crop_single_2 = np.full((48, 180, 3), 250, dtype=np.uint8)
+
+    crop_single_1 = np.full((48, 192, 3), 255, dtype=np.uint8)
+    cv2.putText(crop_single_1, 'MH12DE1432', (10, 34), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 0), 2)
+
+    crop_two_line = np.full((96, 160, 3), 255, dtype=np.uint8)
+    cv2.putText(crop_two_line, 'MH12', (15, 36), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 2)
+    cv2.putText(crop_two_line, 'AB1234', (15, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 2)
+
+    crop_single_2 = np.full((48, 192, 3), 255, dtype=np.uint8)
+    cv2.putText(crop_single_2, 'DL01AB9999', (10, 34), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 0), 2)
 
     mixed_batch = [crop_single_1, crop_two_line, crop_single_2]
     batch_results = rec.recognize_batch(mixed_batch)
 
-    # 1. Exact batch length preservation across mixed layouts
+    # Standalone executions
+    s0 = rec.recognize(crop_single_1)
+    s1 = rec.recognize(crop_two_line)
+    s2 = rec.recognize(crop_single_2)
+
+    # 1. Exact batch length preservation
     assert len(batch_results) == 3
 
-    # 2. Output structure preservation for each item
-    for res in batch_results:
-        assert isinstance(res[0], str)
-        assert isinstance(res[2], list)
+    # 2. Strict index-by-index parity assertions
+    assert normalize_plate_text(batch_results[0][0]) == normalize_plate_text(s0[0])
+    assert normalize_plate_text(batch_results[1][0]) == normalize_plate_text(s1[0])
+    assert normalize_plate_text(batch_results[2][0]) == normalize_plate_text(s2[0])
 
 
 def test_sha256_verification_integrity(tmp_path):

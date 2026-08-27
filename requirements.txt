@@ -1,4 +1,4 @@
-# Core Production Dependencies
+# Core SentinelTrack Production Runtime Dependencies
 torch>=2.2.0
 ultralytics>=8.3.0
 opencv-python>=4.8.0
