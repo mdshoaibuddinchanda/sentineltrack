@@ -150,9 +150,17 @@ class TargetService:
         if not entry:
             raise TargetNotFoundError(f"Target '{target_id}' not found.")
 
+        # Snapshot existing state for rollback if DB persistence fails
+        old_priority = entry.priority
+        old_enabled = entry.enabled
+        old_expires_at = entry.expires_at
+        old_notes = entry.notes
+        old_metadata = dict(entry.metadata) if entry.metadata else {}
+
+        # Apply prospective changes
         if request.priority:
             entry.priority = self.models.WatchlistPriority(request.priority.value)
-        if request.enabled is not None:
+        if request.enabled is not None and request.enabled != old_enabled:
             self.watchlist_manager.set_enabled(target_id, request.enabled)
         if request.expires_at is not None:
             entry.expires_at = request.expires_at
@@ -165,6 +173,13 @@ class TargetService:
             try:
                 self.repository.save_watchlist_entry(entry)
             except Exception as e:
+                # Rollback in-memory entry on DB persistence failure
+                entry.priority = old_priority
+                entry.expires_at = old_expires_at
+                entry.notes = old_notes
+                entry.metadata = old_metadata
+                if request.enabled is not None and request.enabled != old_enabled:
+                    self.watchlist_manager.set_enabled(target_id, old_enabled)
                 raise DatabaseUnavailableError(f"Database persistence failure while updating target: {e}")
 
         return TargetResponse(
@@ -184,12 +199,15 @@ class TargetService:
         if not entry:
             raise TargetNotFoundError(f"Target '{target_id}' not found.")
 
+        old_enabled = entry.enabled
         self.watchlist_manager.set_enabled(target_id, False)
 
         if self.repository:
             try:
                 self.repository.save_watchlist_entry(entry)
             except Exception as e:
+                # Rollback in-memory enabled state on DB persistence failure
+                self.watchlist_manager.set_enabled(target_id, old_enabled)
                 raise DatabaseUnavailableError(f"Database persistence failure while disabling target: {e}")
 
         return TargetResponse(
@@ -203,3 +221,4 @@ class TargetService:
             notes=entry.notes,
             metadata=entry.metadata
         )
+

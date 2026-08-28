@@ -183,14 +183,24 @@ class WatchlistManager:
                 self._suffix4_index[p[-4:]].add(w_id)
         else:
             self._exact_index[p].discard(w_id)
+            if not self._exact_index[p]:
+                self._exact_index.pop(p, None)
             if entry.state_prefix:
                 self._state_index[entry.state_prefix].discard(w_id)
+                if not self._state_index[entry.state_prefix]:
+                    self._state_index.pop(entry.state_prefix, None)
             if entry.plate_length:
                 self._length_index[entry.plate_length].discard(w_id)
+                if not self._length_index[entry.plate_length]:
+                    self._length_index.pop(entry.plate_length, None)
             if len(p) >= 3:
                 self._prefix3_index[p[:3]].discard(w_id)
+                if not self._prefix3_index[p[:3]]:
+                    self._prefix3_index.pop(p[:3], None)
             if len(p) >= 4:
                 self._suffix4_index[p[-4:]].discard(w_id)
+                if not self._suffix4_index[p[-4:]]:
+                    self._suffix4_index.pop(p[-4:], None)
 
     def lookup_candidates(self, observed_registration: str, max_candidates: Optional[int] = None) -> list[WatchlistEntry]:
         norm_obs = observed_registration.strip().upper()

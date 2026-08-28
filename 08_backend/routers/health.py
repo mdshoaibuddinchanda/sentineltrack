@@ -126,6 +126,15 @@ async def get_readiness(response: Response):
         components["analytics_worker"] = False
         details["analytics_error"] = str(e)
 
+    # 3. Check P7 Route Engine Pipeline
+    try:
+        p7_mod = importlib.import_module("07_route_engine.pipeline")
+        p7_pipe = p7_mod.RouteEnginePipeline()
+        components["route_engine"] = bool(p7_pipe.camera_repo is not None and p7_pipe.sighting_repo is not None)
+    except Exception as e:
+        components["route_engine"] = False
+        details["route_engine_error"] = str(e)
+
     all_ready = all(components.values())
     if all_ready:
         return ReadinessResponse(status="ready", components=components, details=details)

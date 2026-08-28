@@ -48,16 +48,22 @@ def test_create_target_duplicate_rejection():
     assert data["error"]["code"] == "DUPLICATE_TARGET"
 
 
-def test_create_target_database_failure_returns_503():
+def test_create_target_database_failure_returns_503_and_rolls_back_memory():
     client = TestClient(app)
     reg = f"GJ01ERR{uuid.uuid4().hex[:4].upper()}"
     p5_repo = importlib.import_module("05_target_matching.repository")
+    shared_wm = importlib.import_module("08_backend.services.target_service").get_shared_watchlist_manager()
 
     with patch.object(p5_repo.PostgresTargetMatchingRepository, "save_watchlist_entry", side_effect=ConnectionError("DB connection lost")):
         res = client.post("/api/v1/targets", json={"registration": reg, "priority": "HIGH"})
         assert res.status_code == 503
         data = res.json()
         assert data["error"]["code"] == "DATABASE_UNAVAILABLE"
+
+    # Verify target does NOT exist in in-memory watchlist manager after failure
+    assert reg not in shared_wm._exact_index
+    for e in shared_wm._entries.values():
+        assert e.registration != reg
 
 
 def test_list_targets_and_pagination():
@@ -102,17 +108,25 @@ def test_update_target_endpoint():
     assert data["notes"] == "Upgraded urgency"
 
 
-def test_update_target_database_failure_returns_503():
+def test_update_target_database_failure_returns_503_and_rolls_back_memory():
     client = TestClient(app)
     reg = f"GJ01UPERR{uuid.uuid4().hex[:4].upper()}"
-    res = client.post("/api/v1/targets", json={"registration": reg})
+    res = client.post("/api/v1/targets", json={"registration": reg, "priority": "LOW", "notes": "Original notes"})
     target_id = res.json()["target_id"]
 
+    shared_wm = importlib.import_module("08_backend.services.target_service").get_shared_watchlist_manager()
     p5_repo = importlib.import_module("05_target_matching.repository")
+
     with patch.object(p5_repo.PostgresTargetMatchingRepository, "save_watchlist_entry", side_effect=ConnectionError("DB connection lost")):
-        patch_res = client.patch(f"/api/v1/targets/{target_id}", json={"notes": "Failure test"})
+        patch_res = client.patch(f"/api/v1/targets/{target_id}", json={"priority": "CRITICAL", "notes": "Failed update notes"})
         assert patch_res.status_code == 503
         assert patch_res.json()["error"]["code"] == "DATABASE_UNAVAILABLE"
+
+    # Verify in-memory entry retains original values after DB failure
+    mem_entry = shared_wm.get_entry(target_id)
+    assert mem_entry is not None
+    assert mem_entry.priority.value == "LOW"
+    assert mem_entry.notes == "Original notes"
 
 
 def test_disable_target_endpoint():
@@ -126,14 +140,21 @@ def test_disable_target_endpoint():
     assert del_res.json()["enabled"] is False
 
 
-def test_disable_target_database_failure_returns_503():
+def test_disable_target_database_failure_returns_503_and_rolls_back_memory():
     client = TestClient(app)
     reg = f"GJ01DISERR{uuid.uuid4().hex[:4].upper()}"
     res = client.post("/api/v1/targets", json={"registration": reg})
     target_id = res.json()["target_id"]
 
+    shared_wm = importlib.import_module("08_backend.services.target_service").get_shared_watchlist_manager()
     p5_repo = importlib.import_module("05_target_matching.repository")
+
     with patch.object(p5_repo.PostgresTargetMatchingRepository, "save_watchlist_entry", side_effect=ConnectionError("DB connection lost")):
         del_res = client.delete(f"/api/v1/targets/{target_id}")
         assert del_res.status_code == 503
         assert del_res.json()["error"]["code"] == "DATABASE_UNAVAILABLE"
+
+    # Verify target remains enabled in in-memory manager after DB failure
+    mem_entry = shared_wm.get_entry(target_id)
+    assert mem_entry is not None
+    assert mem_entry.enabled is True
