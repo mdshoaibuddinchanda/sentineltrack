@@ -138,13 +138,15 @@ class RouteEnginePipeline:
         self,
         registration: str,
         start_time_utc: Optional[datetime] = None,
-        end_time_utc: Optional[datetime] = None
+        end_time_utc: Optional[datetime] = None,
+        min_match_score: Optional[float] = None
     ) -> Dict[str, Any]:
         """Returns standard GeoJSON FeatureCollection directly for Leaflet / Mapbox."""
         traj = self.build_target_trajectory(
             registration=registration,
             start_time_utc=start_time_utc,
             end_time_utc=end_time_utc,
+            min_match_score=min_match_score,
             persist=False
         )
         return traj.geojson

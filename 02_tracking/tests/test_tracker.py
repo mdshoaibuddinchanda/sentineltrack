@@ -136,3 +136,44 @@ def test_tracker_active_long_lived_track_not_pruned():
     assert active_tid in tracker.first_seen_pts
     assert tracker.first_seen_pts[active_tid] == 0.0
     assert tracker.last_seen_pts[active_tid] == 119960.0
+
+
+def test_multi_camera_tracking_isolation_5_cameras():
+    registry = CameraTrackerRegistry()
+    cam_ids = [f"cam_multi_{i}" for i in range(5)]
+    trackers = [registry.get_tracker(cid) for cid in cam_ids]
+
+    # Verify 5 distinct trackers created
+    assert len(set(trackers)) == 5
+
+    # Feed frames to each camera with identical local track coordinates
+    for i, tracker in enumerate(trackers):
+        packet = FramePacket(cam_ids[i], 1000.0, np.zeros((100, 100, 3), dtype=np.uint8), stream_epoch=1)
+        dets = [VehicleDetection(cam_ids[i], 1000.0, 1, 2, 'car', 0.95, 20 + i*10, 20 + i*10, 80 + i*10, 80 + i*10)]
+        tracks = tracker.update(packet, dets)
+        assert len(tracks) >= 1
+        assert tracks[0].camera_id == cam_ids[i]
+        assert tracks[0].stream_epoch == 1
+
+
+def test_tracker_long_soak_lifecycle_and_pruning():
+    tracker = CameraByteTracker(camera_id='cam_soak_long')
+
+    # Simulate 2000 sequential frames over 120 seconds
+    for f in range(2000):
+        pts = f * 40.0 # 25 fps = 40ms per frame
+        packet = FramePacket('cam_soak_long', pts, np.zeros((100, 100, 3), dtype=np.uint8), stream_epoch=0)
+        # Vehicle 1 is persistent throughout entire 2000 frames
+        # Vehicle 2 appears only between frames 100 and 200
+        # Vehicle 3 appears only between frames 500 and 600
+        dets = [VehicleDetection('cam_soak_long', pts, 0, 2, 'car', 0.95, 100, 100, 200, 200)]
+        if 100 <= f <= 200:
+            dets.append(VehicleDetection('cam_soak_long', pts, 0, 2, 'car', 0.90, 300, 300, 400, 400))
+        if 500 <= f <= 600:
+            dets.append(VehicleDetection('cam_soak_long', pts, 0, 7, 'truck', 0.90, 400, 400, 500, 500))
+
+        tracker.update(packet, dets)
+
+    # State dictionaries must remain bounded (no memory leak)
+    assert len(tracker.first_seen_pts) < 50
+    assert len(tracker.last_seen_pts) < 50

@@ -1,0 +1,36 @@
+server:
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+  title: "SentinelTrack Intelligence API"
+  version: "1.0.0"
+  description: "Real-time Vehicle Trajectory, Target Matching & Alert Intelligence Engine"
+
+cors:
+  allowed_origins:
+    - "http://localhost:3000"
+    - "http://localhost:5173"
+    - "http://127.0.0.1:3000"
+    - "http://127.0.0.1:5173"
+  allow_credentials: true
+  allow_methods: ["*"]
+  allow_headers: ["*"]
+
+database:
+  health_timeout_seconds: 3.0
+  max_connections: 20
+
+pagination:
+  default_limit: 50
+  max_limit: 500
+
+websocket:
+  client_queue_size: 100
+  heartbeat_interval_seconds: 15.0
+  disconnect_timeout_seconds: 30.0
+
+analytics_worker:
+  micro_batch_size: 4
+  max_batch_wait_ms: 10.0
+  queue_max_size: 100
+  enable_cuda_fp16: true

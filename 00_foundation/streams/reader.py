@@ -139,12 +139,37 @@ class RTSPReader:
 
     def packets(self) -> Generator[FramePacket, None, None]:
         """Yields standardized FramePacket instances."""
+        from datetime import datetime, timezone, timedelta
+        epoch_anchor_wall_utc = datetime.now(timezone.utc)
+        epoch_anchor_pts_ms: Optional[float] = None
+        last_epoch = self.stream_epoch
+
         for frame, pts_ms in self.frames():
+            now_utc = datetime.now(timezone.utc)
+            if self.stream_epoch != last_epoch or epoch_anchor_pts_ms is None:
+                last_epoch = self.stream_epoch
+                epoch_anchor_wall_utc = now_utc
+                epoch_anchor_pts_ms = pts_ms if pts_ms >= 0 else 0.0
+
+            if pts_ms >= 0:
+                delta_ms = max(0.0, pts_ms - epoch_anchor_pts_ms)
+                ev_time = epoch_anchor_wall_utc + timedelta(milliseconds=delta_ms)
+                ev_source = 'PTS_ANCHORED_ESTIMATE'
+                ev_quality = 'MEDIUM'
+            else:
+                ev_time = now_utc
+                ev_source = 'INGEST_TIME'
+                ev_quality = 'LOW'
+
             yield FramePacket(
                 camera_id=self.camera_id,
                 pts_ms=pts_ms,
                 frame=frame,
                 stream_epoch=self.stream_epoch,
+                ingest_time_utc=now_utc,
+                event_time_utc=ev_time,
+                event_time_source=ev_source,
+                event_time_quality=ev_quality
             )
 
     def release(self):

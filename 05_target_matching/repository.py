@@ -119,7 +119,11 @@ class SQLiteTargetMatchingRepository(BaseTargetMatchingRepository):
                     match_class TEXT NOT NULL,
                     target_id TEXT,
                     created_at TEXT NOT NULL,
-                    raw_evidence TEXT
+                    raw_evidence TEXT,
+                    event_time_utc TEXT,
+                    event_time_source TEXT,
+                    event_time_quality TEXT,
+                    ingest_time_utc TEXT
                 )
             ''')
             cur.execute('''
@@ -226,8 +230,8 @@ class SQLiteTargetMatchingRepository(BaseTargetMatchingRepository):
             cur = self._conn.cursor()
             cur.execute('''
                 INSERT OR REPLACE INTO vehicle_sightings
-                (sighting_id, camera_id, stream_epoch, track_id, first_pts_ms, last_pts_ms, registration_candidate, confidence, match_score, match_class, target_id, created_at, raw_evidence)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (sighting_id, camera_id, stream_epoch, track_id, first_pts_ms, last_pts_ms, registration_candidate, confidence, match_score, match_class, target_id, created_at, raw_evidence, event_time_utc, event_time_source, event_time_quality, ingest_time_utc)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 sighting.sighting_id,
                 sighting.camera_id,
@@ -241,7 +245,11 @@ class SQLiteTargetMatchingRepository(BaseTargetMatchingRepository):
                 sighting.match_class.value if hasattr(sighting.match_class, 'value') else str(sighting.match_class),
                 sighting.target_id,
                 sighting.created_at.isoformat(),
-                json.dumps(sighting.raw_evidence)
+                json.dumps(sighting.raw_evidence),
+                sighting.event_time_utc.isoformat() if sighting.event_time_utc else None,
+                sighting.event_time_source,
+                sighting.event_time_quality,
+                sighting.ingest_time_utc.isoformat() if sighting.ingest_time_utc else None
             ))
             self._conn.commit()
 
@@ -324,7 +332,7 @@ class SQLiteTargetMatchingRepository(BaseTargetMatchingRepository):
                 query.append('AND registration_candidate LIKE ?')
                 params.append(sql_pat)
 
-            query.append('ORDER BY created_at DESC LIMIT ?')
+            query.append('ORDER BY COALESCE(event_time_utc, created_at) DESC LIMIT ?')
             params.append(limit)
 
             cur.execute(' '.join(query), params)
@@ -489,12 +497,16 @@ class PostgresTargetMatchingRepository(BaseTargetMatchingRepository):
         with conn.cursor() as cur:
             cur.execute('''
                 INSERT INTO vehicle_sightings
-                (sighting_id, camera_id, stream_epoch, track_id, first_pts_ms, last_pts_ms, registration_candidate, confidence, match_score, match_class, target_id, created_at, raw_evidence)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                (sighting_id, camera_id, stream_epoch, track_id, first_pts_ms, last_pts_ms, registration_candidate, confidence, match_score, match_class, target_id, created_at, raw_evidence, event_time_utc, event_time_source, event_time_quality, ingest_time_utc)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (sighting_id) DO UPDATE SET
                     match_score = EXCLUDED.match_score,
                     match_class = EXCLUDED.match_class,
-                    raw_evidence = EXCLUDED.raw_evidence;
+                    raw_evidence = EXCLUDED.raw_evidence,
+                    event_time_utc = EXCLUDED.event_time_utc,
+                    event_time_source = EXCLUDED.event_time_source,
+                    event_time_quality = EXCLUDED.event_time_quality,
+                    ingest_time_utc = EXCLUDED.ingest_time_utc;
             ''', (
                 sighting.sighting_id,
                 sighting.camera_id,
@@ -508,7 +520,11 @@ class PostgresTargetMatchingRepository(BaseTargetMatchingRepository):
                 sighting.match_class.value if hasattr(sighting.match_class, 'value') else str(sighting.match_class),
                 sighting.target_id,
                 sighting.created_at,
-                json.dumps(sighting.raw_evidence)
+                json.dumps(sighting.raw_evidence),
+                sighting.event_time_utc,
+                sighting.event_time_source,
+                sighting.event_time_quality,
+                sighting.ingest_time_utc
             ))
         conn.commit()
         conn.close()
@@ -583,7 +599,7 @@ class PostgresTargetMatchingRepository(BaseTargetMatchingRepository):
         limit: int = 100
     ) -> list[dict[str, Any]]:
         conn = self._get_connection()
-        query = ['SELECT sighting_id, camera_id, stream_epoch, track_id, first_pts_ms, last_pts_ms, registration_candidate, confidence, match_score, match_class, target_id, created_at, raw_evidence FROM vehicle_sightings WHERE match_score >= %s']
+        query = ['SELECT sighting_id, camera_id, stream_epoch, track_id, first_pts_ms, last_pts_ms, registration_candidate, confidence, match_score, match_class, target_id, created_at, raw_evidence, event_time_utc, event_time_source, event_time_quality, ingest_time_utc FROM vehicle_sightings WHERE match_score >= %s']
         params = [min_score]
 
         if camera_id:
@@ -591,11 +607,11 @@ class PostgresTargetMatchingRepository(BaseTargetMatchingRepository):
             params.append(camera_id)
 
         if created_after:
-            query.append('AND created_at >= %s')
+            query.append('AND COALESCE(event_time_utc, created_at) >= %s')
             params.append(created_after)
 
         if created_before:
-            query.append('AND created_at <= %s')
+            query.append('AND COALESCE(event_time_utc, created_at) <= %s')
             params.append(created_before)
 
         if registration_pattern:
@@ -603,7 +619,7 @@ class PostgresTargetMatchingRepository(BaseTargetMatchingRepository):
             query.append('AND registration_candidate LIKE %s')
             params.append(sql_pat)
 
-        query.append('ORDER BY created_at DESC LIMIT %s')
+        query.append('ORDER BY COALESCE(event_time_utc, created_at) DESC LIMIT %s')
         params.append(limit)
 
         with conn.cursor() as cur:
@@ -624,7 +640,11 @@ class PostgresTargetMatchingRepository(BaseTargetMatchingRepository):
                     'match_class': r[9],
                     'target_id': r[10],
                     'created_at': r[11].isoformat() if hasattr(r[11], 'isoformat') else str(r[11]),
-                    'raw_evidence': r[12] if isinstance(r[12], dict) else (json.loads(r[12]) if r[12] else {})
+                    'raw_evidence': r[12] if isinstance(r[12], dict) else (json.loads(r[12]) if r[12] else {}),
+                    'event_time_utc': r[13].isoformat() if hasattr(r[13], 'isoformat') and r[13] else (str(r[13]) if r[13] else None),
+                    'event_time_source': r[14],
+                    'event_time_quality': r[15],
+                    'ingest_time_utc': r[16].isoformat() if hasattr(r[16], 'isoformat') and r[16] else (str(r[16]) if r[16] else None)
                 })
         conn.close()
         return results

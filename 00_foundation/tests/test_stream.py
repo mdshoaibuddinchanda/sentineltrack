@@ -176,3 +176,77 @@ def test_rtsp_reader_runtime_failover_to_hls():
         assert reader.is_using_fallback is True
         assert reader.active_url == "https://mock.stream/live.m3u8"
 
+
+def test_frame_packet_timing_utc_and_provenance():
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    dummy_frame = np.zeros((10, 10, 3), dtype=np.uint8)
+    packet = FramePacket(
+        camera_id="cam_time",
+        pts_ms=5000.0,
+        frame=dummy_frame,
+        stream_epoch=1,
+        ingest_time_utc=now,
+        event_time_utc=now,
+        event_time_source="PTS_ANCHORED_ESTIMATE",
+        event_time_quality="MEDIUM"
+    )
+    assert packet.ingest_time_utc.tzinfo is not None
+    assert packet.event_time_source == "PTS_ANCHORED_ESTIMATE"
+    assert packet.event_time_quality == "MEDIUM"
+
+
+def test_reader_packets_anchored_pts_calculation():
+    reader = RTSPReader(url="rtsp://mock.stream/live", camera_id="cam_anchored")
+    mock_cap = MagicMock()
+    mock_cap.isOpened.return_value = True
+    pts_sequence = [1000.0, 2000.0, 3000.0]
+    mock_cap.read.side_effect = [(True, np.zeros((10, 10, 3), dtype=np.uint8))] * len(pts_sequence)
+    mock_cap.get.side_effect = pts_sequence
+
+    with patch("cv2.VideoCapture", return_value=mock_cap):
+        gen = reader.packets()
+        packets = [next(gen) for _ in range(3)]
+        assert len(packets) == 3
+        p1, p2, p3 = packets
+        assert p1.event_time_source == 'PTS_ANCHORED_ESTIMATE'
+        assert p1.event_time_quality == 'MEDIUM'
+        # Event time delta must reflect PTS delta (1000ms = 1s)
+        delta_1_2 = (p2.event_time_utc - p1.event_time_utc).total_seconds()
+        assert abs(delta_1_2 - 1.0) < 0.05
+
+
+def test_reader_packets_unknown_pts_handling():
+    reader = RTSPReader(url="rtsp://mock.stream/live", camera_id="cam_unknown_pts")
+    mock_cap = MagicMock()
+    mock_cap.isOpened.return_value = True
+    pts_sequence = [-1.0, -1.0]
+    mock_cap.read.side_effect = [(True, np.zeros((10, 10, 3), dtype=np.uint8))] * len(pts_sequence)
+    mock_cap.get.side_effect = pts_sequence
+
+    with patch("cv2.VideoCapture", return_value=mock_cap):
+        gen = reader.packets()
+        packets = [next(gen) for _ in range(2)]
+        assert len(packets) == 2
+        for p in packets:
+            assert p.pts_ms == -1.0
+            assert p.event_time_source == 'INGEST_TIME'
+            assert p.event_time_quality == 'LOW'
+
+
+def test_bounded_stream_queue_drop_behavior():
+    from streams.bounded_stream_queue import BoundedStreamQueue
+    bq = BoundedStreamQueue(maxsize=3)
+    for i in range(10):
+        bq.put_latest(f"frame_{i}")
+
+    assert bq.qsize() == 3
+    metrics = bq.get_metrics()
+    assert metrics['total_enqueued'] == 10
+    assert metrics['total_dropped'] == 7
+    assert metrics['qsize'] == 3
+    # Verify latest frames were kept: 7, 8, 9
+    assert bq.get() == "frame_7"
+    assert bq.get() == "frame_8"
+    assert bq.get() == "frame_9"
+

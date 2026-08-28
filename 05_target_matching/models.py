@@ -73,6 +73,10 @@ class MatchCandidate:
     reasons: list[str] = field(default_factory=list)
     alternatives: list[tuple[str, float]] = field(default_factory=list)
     reid_score: Optional[float] = None  # Reserved for Priority 6
+    event_time_utc: Optional[datetime] = None
+    event_time_source: Optional[str] = None
+    event_time_quality: Optional[str] = None
+    ingest_time_utc: Optional[datetime] = None
 
 
 @dataclass
@@ -91,6 +95,10 @@ class Sighting:
     target_id: Optional[str] = None
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     raw_evidence: dict[str, Any] = field(default_factory=dict)
+    event_time_utc: Optional[datetime] = None
+    event_time_source: Optional[str] = None
+    event_time_quality: Optional[str] = None
+    ingest_time_utc: Optional[datetime] = None
 
 
 @dataclass

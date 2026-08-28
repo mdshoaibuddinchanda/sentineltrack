@@ -39,7 +39,11 @@ CREATE TABLE IF NOT EXISTS vehicle_sightings (
     match_class TEXT NOT NULL,
     target_id TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    raw_evidence JSONB DEFAULT '{}'::jsonb
+    raw_evidence JSONB DEFAULT '{}'::jsonb,
+    event_time_utc TIMESTAMPTZ,
+    event_time_source TEXT,
+    event_time_quality TEXT,
+    ingest_time_utc TIMESTAMPTZ
 );
 
 CREATE INDEX IF NOT EXISTS idx_sightings_reg_candidate
@@ -50,6 +54,9 @@ ON vehicle_sightings(camera_id, stream_epoch, track_id);
 
 CREATE INDEX IF NOT EXISTS idx_sightings_created_at
 ON vehicle_sightings(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_sightings_event_time
+ON vehicle_sightings(COALESCE(event_time_utc, created_at));
 
 CREATE INDEX IF NOT EXISTS idx_sightings_match_score
 ON vehicle_sightings(match_score);

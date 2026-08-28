@@ -44,7 +44,8 @@ class SightingRepository:
         """
         Retrieves matching vehicle sightings from PostgreSQL database.
         """
-        norm_reg = registration.strip().upper().replace(' ', '').replace('-', '')
+        import re
+        norm_reg = re.sub(r'[^A-Z0-9]', '', registration.strip().upper())
         query = """
             SELECT s.sighting_id, s.camera_id, s.stream_epoch, s.track_id,
                    s.first_pts_ms, s.last_pts_ms, s.registration_candidate,
@@ -54,10 +55,13 @@ class SightingRepository:
                    s.event_time_utc, s.event_time_source, s.event_time_quality, s.ingest_time_utc
             FROM vehicle_sightings s
             LEFT JOIN cameras c ON s.camera_id = c.camera_id
-            WHERE (s.registration_candidate = %s OR s.raw_evidence->>'target_registration' = %s)
+            WHERE (s.registration_candidate = %s 
+                   OR s.raw_evidence->>'target_registration' = %s 
+                   OR s.raw_evidence->>'top_target' = %s
+                   OR s.target_id = %s)
               AND s.match_score >= %s
         """
-        params: List[Any] = [norm_reg, norm_reg, min_match_score]
+        params: List[Any] = [norm_reg, norm_reg, norm_reg, norm_reg, min_match_score]
 
         if start_time_utc:
             query += " AND COALESCE(s.event_time_utc, s.created_at) >= %s"
@@ -153,3 +157,6 @@ class InMemorySightingRepository:
                 if len(results) >= limit:
                     break
         return results
+
+
+PostgresSightingRepository = SightingRepository

@@ -63,6 +63,11 @@ class TargetMatchingPipeline:
         else:
             crop_quality = 0.70  # Explicit documented neutral fallback
 
+        ev_time = getattr(track_result, 'event_time_utc', None)
+        ev_source = getattr(track_result, 'event_time_source', None)
+        ev_quality = getattr(track_result, 'event_time_quality', None)
+        ingest_time = getattr(track_result, 'ingest_time_utc', None)
+
         # 2. Shortlist Watchlist Candidates using Multi-Index Fast Path
         candidates_to_eval = self.watchlist_manager.lookup_candidates(obs_reg)
         if not candidates_to_eval:
@@ -84,7 +89,11 @@ class TargetMatchingPipeline:
                     'total_hypotheses': track_result.total_hypotheses,
                     'status': track_result.status,
                     'crop_quality': crop_quality
-                }
+                },
+                event_time_utc=ev_time,
+                event_time_source=ev_source,
+                event_time_quality=ev_quality,
+                ingest_time_utc=ingest_time
             )
             self.repository.save_sighting(sighting)
             return [], [], sighting
@@ -113,6 +122,10 @@ class TargetMatchingPipeline:
                 alternative_rank=0,
                 alternative_support_score=1.0
             )
+            best_cand.event_time_utc = ev_time
+            best_cand.event_time_source = ev_source
+            best_cand.event_time_quality = ev_quality
+            best_cand.ingest_time_utc = ingest_time
 
             top_cand_for_target = best_cand
 
@@ -138,6 +151,10 @@ class TargetMatchingPipeline:
                         alternative_rank=rank_idx,
                         alternative_support_score=alt_gram_sc
                     )
+                    alt_cand.event_time_utc = ev_time
+                    alt_cand.event_time_source = ev_source
+                    alt_cand.event_time_quality = ev_quality
+                    alt_cand.ingest_time_utc = ingest_time
                     if alt_cand.match_score > top_cand_for_target.match_score:
                         top_cand_for_target = alt_cand
 
@@ -171,7 +188,11 @@ class TargetMatchingPipeline:
                 'top_target': top_w_entry.normalized_registration,
                 'crop_quality': crop_quality,
                 'reasons': top_cand.reasons
-            }
+            },
+            event_time_utc=ev_time,
+            event_time_source=ev_source,
+            event_time_quality=ev_quality,
+            ingest_time_utc=ingest_time
         )
         self.repository.save_sighting(sighting)
 
