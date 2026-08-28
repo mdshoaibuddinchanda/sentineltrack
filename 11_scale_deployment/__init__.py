@@ -4,13 +4,7 @@ SentinelTrack Priority 11 - Scale, Deployment, Scheduling & Performance Module
 try:
     from .config import ScaleDeploymentConfig, get_scale_config, set_scale_config
     from .shard import get_camera_shard, is_camera_assigned_to_shard, filter_cameras_for_shard
-    from .scheduler import FairStreamScheduler
-    from .supervisor import StreamSupervisor, CameraStreamWorker
     from .capacity import CapacityReport, compute_required_aggregate_fps, compute_max_cameras_for_node, evaluate_capacity
-    from .profiling import PipelineProfiler
-    from .resource_monitor import ResourceMonitor
-    from .event_bridge import PostgresEventBridge, get_event_bridge
-    from .health import check_scale_health
 except (ImportError, ValueError):
     import importlib
     _cfg = importlib.import_module("11_scale_deployment.config")
@@ -19,26 +13,8 @@ except (ImportError, ValueError):
     _shd = importlib.import_module("11_scale_deployment.shard")
     get_camera_shard, is_camera_assigned_to_shard, filter_cameras_for_shard = _shd.get_camera_shard, _shd.is_camera_assigned_to_shard, _shd.filter_cameras_for_shard
 
-    _sch = importlib.import_module("11_scale_deployment.scheduler")
-    FairStreamScheduler = _sch.FairStreamScheduler
-
-    _sup = importlib.import_module("11_scale_deployment.supervisor")
-    StreamSupervisor, CameraStreamWorker = _sup.StreamSupervisor, _sup.CameraStreamWorker
-
     _cap = importlib.import_module("11_scale_deployment.capacity")
     CapacityReport, compute_required_aggregate_fps, compute_max_cameras_for_node, evaluate_capacity = _cap.CapacityReport, _cap.compute_required_aggregate_fps, _cap.compute_max_cameras_for_node, _cap.evaluate_capacity
-
-    _prf = importlib.import_module("11_scale_deployment.profiling")
-    PipelineProfiler = _prf.PipelineProfiler
-
-    _res = importlib.import_module("11_scale_deployment.resource_monitor")
-    ResourceMonitor = _res.ResourceMonitor
-
-    _evb = importlib.import_module("11_scale_deployment.event_bridge")
-    PostgresEventBridge, get_event_bridge = _evb.PostgresEventBridge, _evb.get_event_bridge
-
-    _hlth = importlib.import_module("11_scale_deployment.health")
-    check_scale_health = _hlth.check_scale_health
 
 __all__ = [
     "ScaleDeploymentConfig",
@@ -60,3 +36,27 @@ __all__ = [
     "get_event_bridge",
     "check_scale_health"
 ]
+
+
+def __getattr__(name: str):
+    import importlib
+    if name == "FairStreamScheduler":
+        _sch = importlib.import_module("11_scale_deployment.scheduler")
+        return _sch.FairStreamScheduler
+    elif name in ("StreamSupervisor", "CameraStreamWorker"):
+        _sup = importlib.import_module("11_scale_deployment.supervisor")
+        return getattr(_sup, name)
+    elif name == "PipelineProfiler":
+        _prf = importlib.import_module("11_scale_deployment.profiling")
+        return _prf.PipelineProfiler
+    elif name == "ResourceMonitor":
+        _res = importlib.import_module("11_scale_deployment.resource_monitor")
+        return _res.ResourceMonitor
+    elif name in ("PostgresEventBridge", "get_event_bridge"):
+        _evb = importlib.import_module("11_scale_deployment.event_bridge")
+        return getattr(_evb, name)
+    elif name == "check_scale_health":
+        _hlth = importlib.import_module("11_scale_deployment.health")
+        return _hlth.check_scale_health
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+

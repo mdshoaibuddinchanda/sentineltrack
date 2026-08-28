@@ -4,7 +4,6 @@ try:
     from .sighting_service import SightingService
     from .alert_service import AlertService
     from .route_service import RouteService
-    from .analytics_service import AnalyticsWorker, get_analytics_worker
 except (ImportError, ValueError):
     import importlib
     CameraService = importlib.import_module("08_backend.services.camera_service").CameraService
@@ -12,8 +11,6 @@ except (ImportError, ValueError):
     SightingService = importlib.import_module("08_backend.services.sighting_service").SightingService
     AlertService = importlib.import_module("08_backend.services.alert_service").AlertService
     RouteService = importlib.import_module("08_backend.services.route_service").RouteService
-    an_m = importlib.import_module("08_backend.services.analytics_service")
-    AnalyticsWorker, get_analytics_worker = an_m.AnalyticsWorker, an_m.get_analytics_worker
 
 __all__ = [
     "CameraService",
@@ -24,3 +21,12 @@ __all__ = [
     "AnalyticsWorker",
     "get_analytics_worker"
 ]
+
+
+def __getattr__(name: str):
+    import importlib
+    if name in ("AnalyticsWorker", "get_analytics_worker"):
+        an_m = importlib.import_module("08_backend.services.analytics_service")
+        return getattr(an_m, name)
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+

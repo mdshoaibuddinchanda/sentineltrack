@@ -9,7 +9,6 @@ try:
     from .services.sighting_service import SightingService
     from .services.alert_service import AlertService
     from .services.route_service import RouteService
-    from .services.analytics_service import AnalyticsWorker, get_analytics_worker
     from .config import BackendConfig, get_backend_config
     from .metrics import MetricsCollector, get_metrics_collector
     from .event_bus import AsyncEventBus, get_event_bus
@@ -21,8 +20,6 @@ except (ImportError, ValueError):
     SightingService = importlib.import_module("08_backend.services.sighting_service").SightingService
     AlertService = importlib.import_module("08_backend.services.alert_service").AlertService
     RouteService = importlib.import_module("08_backend.services.route_service").RouteService
-    an_m = importlib.import_module("08_backend.services.analytics_service")
-    AnalyticsWorker, get_analytics_worker = an_m.AnalyticsWorker, an_m.get_analytics_worker
     cfg_m = importlib.import_module("08_backend.config")
     BackendConfig, get_backend_config = cfg_m.BackendConfig, cfg_m.get_backend_config
     met_m = importlib.import_module("08_backend.metrics")
@@ -31,6 +28,7 @@ except (ImportError, ValueError):
     AsyncEventBus, get_event_bus = ev_m.AsyncEventBus, ev_m.get_event_bus
     ws_m = importlib.import_module("08_backend.websocket.manager")
     ConnectionManager, get_connection_manager = ws_m.ConnectionManager, ws_m.get_connection_manager
+
 
 
 def get_config() -> BackendConfig:
@@ -69,8 +67,13 @@ def get_route_service() -> RouteService:
     return RouteService()
 
 
-def get_analytics_worker_dep() -> AnalyticsWorker:
+def get_analytics_worker_dep():
+    try:
+        from .services.analytics_service import get_analytics_worker
+    except (ImportError, ValueError):
+        get_analytics_worker = importlib.import_module("08_backend.services.analytics_service").get_analytics_worker
     return get_analytics_worker()
+
 
 
 # ============================================================

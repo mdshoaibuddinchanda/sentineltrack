@@ -5,10 +5,8 @@ from typing import Dict, Any, List
 from collections import deque
 import psutil
 
-try:
-    import torch
-except ImportError:
-    torch = None
+
+
 
 
 
@@ -111,12 +109,15 @@ class MetricsCollector:
                 pass
 
             vram_mb = 0.0
-            if torch is not None:
+            import sys
+            _torch = sys.modules.get("torch")
+            if _torch is not None:
                 try:
-                    if torch.cuda.is_available():
-                        vram_mb = round(torch.cuda.memory_allocated() / (1024.0 * 1024.0), 1)
+                    if _torch.cuda.is_available():
+                        vram_mb = round(_torch.cuda.memory_allocated() / (1024.0 * 1024.0), 1)
                 except Exception:
                     pass
+
 
 
             return {

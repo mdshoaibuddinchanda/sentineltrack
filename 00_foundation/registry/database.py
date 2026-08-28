@@ -9,9 +9,14 @@ from typing import Optional, Dict, Any, Generator
 import psycopg
 from psycopg import rows
 
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+    if os.getenv("SENTINEL_ENV", "development").lower() != "production":
+        load_dotenv()
+except ImportError:
+    pass
 
-load_dotenv()
+
 
 logger = logging.getLogger("sentineltrack.database")
 
@@ -56,6 +61,19 @@ class PooledConnectionWrapper:
         return getattr(self._conn, name)
 
 
+def _get_db_password() -> str:
+    """
+    Safely retrieves database password with strict production fail-closed semantics.
+    """
+    env_name = os.getenv("SENTINEL_ENV", "development").lower()
+    password = os.getenv("DATABASE_PASSWORD")
+    if not password:
+        if env_name == "production":
+            raise RuntimeError("DATABASE_PASSWORD is required in production environment (fail-closed).")
+        return "sentinel_password"
+    return password
+
+
 class BoundedConnectionPool:
     """Thread-safe bounded connection pool with health validation, reuse and telemetry."""
 
@@ -82,10 +100,11 @@ class BoundedConnectionPool:
             port=int(os.getenv("DATABASE_PORT", "5432")),
             dbname=os.getenv("DATABASE_NAME", "sentinel"),
             user=os.getenv("DATABASE_USER", "sentinel"),
-            password=os.getenv("DATABASE_PASSWORD", "sentinel_password"),
+            password=_get_db_password(),
         )
         self._total_created += 1
         return conn
+
 
 
 
@@ -199,9 +218,8 @@ def get_connection(autocommit: bool = False) -> psycopg.Connection:
     port = int(os.getenv("DATABASE_PORT", "5432"))
     dbname = os.getenv("DATABASE_NAME", "sentinel")
     user = os.getenv("DATABASE_USER", "sentinel")
-    password = os.getenv("DATABASE_PASSWORD", "sentinel_password")
+    password = _get_db_password()
     conn = psycopg.connect(
-
         host=host,
         port=port,
         dbname=dbname,
@@ -210,6 +228,7 @@ def get_connection(autocommit: bool = False) -> psycopg.Connection:
         autocommit=autocommit,
     )
     return conn
+
 
 
 @contextmanager

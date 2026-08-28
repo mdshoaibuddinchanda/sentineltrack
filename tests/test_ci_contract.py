@@ -10,7 +10,7 @@ REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 def test_lightweight_api_import_isolation():
     """
     CI Contract 1: In API role, importing 08_backend.app must succeed in a clean process
-    WITHOUT loading heavy/optional OCR or ML dependencies (PIL, easyocr, transformers).
+    WITHOUT loading heavy/optional OCR or ML dependencies (torch, cv2, PIL, easyocr, transformers).
     """
     code = """
 import sys, os
@@ -23,7 +23,7 @@ app_m = importlib.import_module('08_backend.app')
 assert app_m.app is not None
 
 # Verify optional ML packages are NOT eagerly loaded
-for pkg in ['PIL', 'easyocr', 'transformers']:
+for pkg in ['torch', 'cv2', 'PIL', 'easyocr', 'transformers']:
     assert pkg not in sys.modules, f'Package {pkg} was eagerly imported into API process!'
 
 print('API_IMPORT_ISOLATION_PASS')
@@ -49,7 +49,7 @@ norm, valid, _ = norm_m.normalize_target_registration('MH 12 DE 1433')
 assert valid is True
 assert norm == 'MH12DE1433'
 
-for pkg in ['PIL', 'easyocr', 'transformers']:
+for pkg in ['torch', 'cv2', 'PIL', 'easyocr', 'transformers']:
     assert pkg not in sys.modules, f'Package {pkg} leaked during normalizer import!'
 
 print('NORMALIZER_IMPORT_ISOLATION_PASS')
@@ -89,3 +89,16 @@ def test_api_process_role_lifecycle_behavior():
     cfg = scale_cfg_m.get_scale_config()
     assert cfg.is_analytics_enabled() is False
     assert cfg.is_api_enabled() is True
+
+
+def test_database_password_fail_closed_in_production(monkeypatch):
+    """
+    CI Contract 6: In production, missing or empty DATABASE_PASSWORD must fail closed.
+    """
+    monkeypatch.setenv("SENTINEL_ENV", "production")
+    monkeypatch.delenv("DATABASE_PASSWORD", raising=False)
+
+    db_m = importlib.import_module("00_foundation.registry.database")
+    with pytest.raises(RuntimeError, match="DATABASE_PASSWORD is required in production"):
+        db_m._get_db_password()
+
