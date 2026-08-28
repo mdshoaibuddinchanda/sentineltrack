@@ -1,18 +1,19 @@
 import { request } from "./client";
 
 export interface AuditEventItem {
-  event_id: string;
-  timestamp: string;
-  action: string;
-  actor_id?: string | null;
+  audit_id: string;
+  event_time_utc: string;
+  actor_user_id?: string | null;
   actor_username?: string | null;
   actor_role?: string | null;
+  action: string;
   resource_type: string;
   resource_id?: string | null;
   outcome: string;
-  source_ip?: string | null;
   request_id?: string | null;
-  details?: Record<string, any> | null;
+  source_ip?: string | null;
+  user_agent?: string | null;
+  details?: Record<string, unknown> | null;
 }
 
 export interface AuditListResponse {
@@ -21,16 +22,16 @@ export interface AuditListResponse {
 }
 
 export async function listAuditEvents(params?: {
+  actor_username?: string;
   action?: string;
-  actor_id?: string;
   resource_type?: string;
   outcome?: string;
   limit?: number;
   offset?: number;
 }): Promise<AuditListResponse> {
   const query = new URLSearchParams();
+  if (params?.actor_username) query.append("actor_username", params.actor_username);
   if (params?.action) query.append("action", params.action);
-  if (params?.actor_id) query.append("actor_id", params.actor_id);
   if (params?.resource_type) query.append("resource_type", params.resource_type);
   if (params?.outcome) query.append("outcome", params.outcome);
   if (params?.limit !== undefined) query.append("limit", String(params.limit));

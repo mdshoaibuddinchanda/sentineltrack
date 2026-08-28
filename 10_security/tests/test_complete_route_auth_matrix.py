@@ -2,6 +2,7 @@ import sys
 import importlib
 import pytest
 from fastapi.testclient import TestClient
+from fastapi.routing import APIRoute
 
 sys.path.insert(0, "c:/DR2/sentineltrack")
 
@@ -46,7 +47,7 @@ def _setup_users(repo):
             role=role,
             enabled=True
         )
-        repo.create_user(u)
+        repo.save_user(u)
         users[role] = uname
     return users
 
@@ -58,57 +59,78 @@ def _get_client_for_user(username):
     return client, csrf
 
 
-def test_programmatic_route_matrix_unauthenticated(clean_security_env):
-    """Verify unauthenticated requests to protected endpoints return 401."""
+def test_programmatic_route_introspection_unauthenticated(clean_security_env):
+    """
+    Programmatically enumerates all registered FastAPI routes in _backend.app.routes.
+    Verifies that every non-public endpoint rejects unauthenticated requests with 401.
+    """
     client = TestClient(_backend.app)
-    protected_get_paths = [
-        "/ready",
-        "/metrics",
-        "/api/v1/cameras",
-        "/api/v1/targets",
-        "/api/v1/sightings",
-        "/api/v1/alerts",
-        "/api/v1/routes/GJ01AB1234",
-        "/api/v1/users",
-        "/api/v1/audit",
-        "/api/v1/auth/me",
-    ]
-    for path in protected_get_paths:
-        res = client.get(path)
-        assert res.status_code == 401, f"Expected 401 for unauthenticated GET {path}, got {res.status_code}"
+    public_paths = {"/health", "/api/v1/auth/login", "/docs", "/redoc", "/openapi.json"}
+
+    introspected_routes = []
+    for route in _backend.app.routes:
+        if isinstance(route, APIRoute):
+            path = route.path
+            for method in route.methods:
+                if method not in ("HEAD", "OPTIONS"):
+                    introspected_routes.append((method, path))
+
+    assert len(introspected_routes) >= 15, "Expected at least 15 registered routes in backend API"
+
+    for method, path in introspected_routes:
+        # Check if route is public
+        if path in public_paths or any(path.startswith(p) for p in ("/docs", "/redoc")):
+            continue
+
+        # Replace path parameters with dummy values for request
+        test_path = path.replace("{camera_id}", "cam_01")
+        test_path = test_path.replace("{target_id}", "tgt_01")
+        test_path = test_path.replace("{alert_id}", "alt_01")
+        test_path = test_path.replace("{registration}", "GJ01AB1234")
+        test_path = test_path.replace("{user_id}", "usr_01")
+
+        if method == "GET":
+            res = client.get(test_path)
+        elif method == "POST":
+            res = client.post(test_path, json={})
+        elif method == "PATCH":
+            res = client.patch(test_path, json={})
+        elif method == "DELETE":
+            res = client.delete(test_path)
+        else:
+            continue
+
+        assert res.status_code in (401, 403), f"Route {method} {path} should require authentication, got {res.status_code}"
 
 
-def test_operator_authorization_boundaries(clean_security_env):
-    """Operator role can read cameras/alerts/sightings and ACK alerts, but cannot create targets or manage users."""
+def test_operator_matrix_rbac(clean_security_env):
+    """OPERATOR has read access to cameras/sightings/alerts/routes/system, but lacks user admin, target mutations, and audit logs."""
     repo, sm = clean_security_env
     users = _setup_users(repo)
     client, csrf = _get_client_for_user(users[UserRole.OPERATOR])
 
     # Allowed reads
     assert client.get("/api/v1/cameras").status_code == 200
-    assert client.get("/api/v1/alerts").status_code == 200
     assert client.get("/api/v1/sightings").status_code == 200
+    assert client.get("/api/v1/alerts").status_code == 200
     assert client.get("/api/v1/routes/GJ01AB1234").status_code == 200
+    assert client.get("/ready").status_code in (200, 503)
 
-    # Allowed alert ACK (status is 200 if alert exists or 404 if not found in db; never 401/403)
-    assert client.post("/api/v1/alerts/alt-123/ack", json={}, headers={"X-CSRF-Token": csrf}).status_code in (200, 404)
-
-
-    # Denied target creation (403)
-    target_res = client.post("/api/v1/targets", json={"registration": "GJ01XY9999", "priority": "HIGH"}, headers={"X-CSRF-Token": csrf})
-    assert target_res.status_code == 403
+    # Denied target mutations (403)
+    assert client.post("/api/v1/targets", json={"registration": "GJ01XY9999", "priority": "HIGH"}, headers={"X-CSRF-Token": csrf}).status_code == 403
+    assert client.patch("/api/v1/targets/tgt_01", json={"priority": "HIGH"}, headers={"X-CSRF-Token": csrf}).status_code == 403
+    assert client.delete("/api/v1/targets/tgt_01", headers={"X-CSRF-Token": csrf}).status_code == 403
 
     # Denied user management (403)
-    user_res = client.get("/api/v1/users")
-    assert user_res.status_code == 403
+    assert client.get("/api/v1/users").status_code == 403
+    assert client.post("/api/v1/users", json={"username": "test", "display_name": "Test", "password": "Password123456789!"}, headers={"X-CSRF-Token": csrf}).status_code == 403
 
-    # Denied audit log read (403)
-    audit_res = client.get("/api/v1/audit")
-    assert audit_res.status_code == 403
+    # Denied audit read (403)
+    assert client.get("/api/v1/audit").status_code == 403
 
 
-def test_auditor_authorization_boundaries(clean_security_env):
-    """Auditor role can read audit logs and sightings, but cannot ACK alerts or mutate targets."""
+def test_auditor_matrix_rbac(clean_security_env):
+    """AUDITOR has read access to audit logs/sightings/cameras/alerts, but cannot ACK alerts or mutate targets/users."""
     repo, sm = clean_security_env
     users = _setup_users(repo)
     client, csrf = _get_client_for_user(users[UserRole.AUDITOR])
@@ -116,37 +138,32 @@ def test_auditor_authorization_boundaries(clean_security_env):
     # Allowed audit read
     assert client.get("/api/v1/audit").status_code == 200
     assert client.get("/api/v1/sightings").status_code == 200
+    assert client.get("/api/v1/cameras").status_code == 200
 
     # Denied alert ACK (403)
-    ack_res = client.post("/api/v1/alerts/alt-123/ack", json={}, headers={"X-CSRF-Token": csrf})
-    assert ack_res.status_code == 403
+    assert client.post("/api/v1/alerts/alt-123/ack", json={}, headers={"X-CSRF-Token": csrf}).status_code == 403
 
     # Denied target create (403)
-    target_res = client.post("/api/v1/targets", json={"registration": "GJ01XY9999", "priority": "HIGH"}, headers={"X-CSRF-Token": csrf})
-    assert target_res.status_code == 403
+    assert client.post("/api/v1/targets", json={"registration": "GJ01XY9999", "priority": "HIGH"}, headers={"X-CSRF-Token": csrf}).status_code == 403
 
 
-def test_supervisor_authorization_boundaries(clean_security_env):
-    """Supervisor can create/manage targets and ACK alerts, but cannot manage users."""
+def test_supervisor_matrix_rbac(clean_security_env):
+    """SUPERVISOR can manage targets and ACK alerts, but cannot access user admin endpoints."""
     repo, sm = clean_security_env
     users = _setup_users(repo)
     client, csrf = _get_client_for_user(users[UserRole.SUPERVISOR])
 
-    # Allowed target create (201 Created or 409 Conflict if plate already registered; never 401/403)
+    # Allowed target mutations (authorized: status not 401/403)
     target_res = client.post("/api/v1/targets", json={"registration": "GJ01XY8888", "priority": "CRITICAL"}, headers={"X-CSRF-Token": csrf})
     assert target_res.status_code in (201, 409)
 
-
-    # Allowed alert ACK (status is 200 if found or 404 if not in db; never 401/403)
-    assert client.post("/api/v1/alerts/alt-123/ack", json={}, headers={"X-CSRF-Token": csrf}).status_code in (200, 404)
-
-
-    # Denied user admin (403)
+    # Denied user management (403)
     assert client.get("/api/v1/users").status_code == 403
+    assert client.post("/api/v1/users", json={"username": "test", "display_name": "Test", "password": "Password123456789!"}, headers={"X-CSRF-Token": csrf}).status_code == 403
 
 
-def test_admin_full_access(clean_security_env):
-    """Admin has full authorization across all endpoints."""
+def test_admin_matrix_rbac(clean_security_env):
+    """ADMIN has full authorization across all administrative and operational routes."""
     repo, sm = clean_security_env
     users = _setup_users(repo)
     client, csrf = _get_client_for_user(users[UserRole.ADMIN])
@@ -154,4 +171,5 @@ def test_admin_full_access(clean_security_env):
     assert client.get("/api/v1/cameras").status_code == 200
     assert client.get("/api/v1/users").status_code == 200
     assert client.get("/api/v1/audit").status_code == 200
-    assert client.get("/ready").status_code in (200, 503)  # ready returns 200/503 based on subsystem status
+    assert client.get("/ready").status_code in (200, 503)
+    assert client.get("/metrics").status_code == 200

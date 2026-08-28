@@ -172,36 +172,62 @@ async def update_user(
                 )
 
 
+    # Snapshot old state for transactional compensation
+    old_display_name = user.display_name
+    old_role = user.role
+    old_enabled = user.enabled
+    old_must_change = user.must_change_password
+
     changes = {}
+    role_changed = False
     if payload.display_name is not None:
         changes["display_name"] = payload.display_name.strip()
         user.display_name = payload.display_name.strip()
     if payload.role is not None:
-        changes["role"] = payload.role.value
-        user.role = UserRole(payload.role.value)
+        new_role_val = payload.role.value if hasattr(payload.role, "value") else str(payload.role)
+        if new_role_val != (user.role.value if hasattr(user.role, "value") else str(user.role)):
+            role_changed = True
+        changes["role"] = new_role_val
+        user.role = UserRole(new_role_val)
     if payload.enabled is not None:
         changes["enabled"] = payload.enabled
         user.enabled = payload.enabled
-        if not payload.enabled:
-            # Revoke all active sessions immediately
-            session_manager.revoke_all_user_sessions(user.user_id)
     if payload.must_change_password is not None:
         changes["must_change_password"] = payload.must_change_password
         user.must_change_password = payload.must_change_password
 
+    # Revoke all active sessions on role change or account disabling
+    if role_changed or payload.enabled is False:
+        session_manager.revoke_all_user_sessions(user.user_id)
+
     user.updated_at = datetime.now(timezone.utc)
     repo.update_user(user)
 
-    audit.log_event(
-        action="USER_UPDATED",
-        resource_type="user",
-        outcome="SUCCESS",
-        principal=principal,
-        resource_id=user.user_id,
-        request_id=request.headers.get("X-Request-ID"),
-        details=changes,
-        fail_closed=True
-    )
+    try:
+        audit.log_event(
+            action="USER_UPDATED",
+            resource_type="user",
+            outcome="SUCCESS",
+            principal=principal,
+            resource_id=user.user_id,
+            request_id=request.headers.get("X-Request-ID"),
+            details=changes,
+            fail_closed=True
+        )
+    except Exception:
+        # Compensate: restore old user state if audit logging fails
+        try:
+            user.display_name = old_display_name
+            user.role = old_role
+            user.enabled = old_enabled
+            user.must_change_password = old_must_change
+            repo.update_user(user)
+        except Exception:
+            pass
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Security audit trail recording failed; user update aborted."
+        )
 
     return _user_to_response(user)
 
@@ -226,6 +252,9 @@ async def reset_password(
     if not valid:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=err_msg)
 
+    old_password_hash = user.password_hash
+    old_must_change = user.must_change_password
+
     user.password_hash = hash_password(payload.new_password)
     user.must_change_password = payload.must_change_password
     user.updated_at = datetime.now(timezone.utc)
@@ -234,16 +263,30 @@ async def reset_password(
     # Immediately revoke all active sessions for this user
     session_manager.revoke_all_user_sessions(user.user_id)
 
-    audit.log_event(
-        action="USER_PASSWORD_RESET",
-        resource_type="user",
-        outcome="SUCCESS",
-        principal=principal,
-        resource_id=user.user_id,
-        request_id=request.headers.get("X-Request-ID"),
-        details={"must_change_password": payload.must_change_password},
-        fail_closed=True
-    )
+    try:
+        audit.log_event(
+            action="USER_PASSWORD_RESET",
+            resource_type="user",
+            outcome="SUCCESS",
+            principal=principal,
+            resource_id=user.user_id,
+            request_id=request.headers.get("X-Request-ID"),
+            details={"must_change_password": payload.must_change_password},
+            fail_closed=True
+        )
+    except Exception:
+        # Compensate: restore previous password hash if audit logging fails
+        try:
+            user.password_hash = old_password_hash
+            user.must_change_password = old_must_change
+            repo.update_user(user)
+        except Exception:
+            pass
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Security audit trail recording failed; password reset aborted."
+        )
 
     return _user_to_response(user)
+
 

@@ -1,136 +1,80 @@
 {
-  "pass": "Priority 10B Final Security Closure Pass",
-  "baseline_commit": "93f3a1048c5ead27902c147790a75bdc64ac2c48",
-  "audit_date": "2026-08-28T19:52:00Z",
-  "scope": "Authentication, RBAC, Sessions, CSRF, Injection Resistance, WebSocket Auth, Audit Trail, Frontend Access Controls, and Production Hardening",
+  "pass": "Priority 10C Final Security-Integrity Pass",
+  "baseline_commit": "31ecc4cebdf84c34c60b7874920ae946e7e1fa91",
+  "audit_date": "2026-08-28T20:05:00Z",
+  "scope": "WebSocket Topic Authorization, Periodic Session Revalidation, Session Revocation on Role Changes, Audit Contract Alignment, Fail-Closed Compensating Transactions, Programmatic Route Introspection Matrix, and Mass-Assignment Schema Hardening",
   "verdict": "100% HACKATHON-ACCEPTANCE COMPLETE FOR THE DEFINED P10 SECURITY SCOPE",
   "findings_summary": {
     "critical_open": 0,
     "high_open": 0,
     "medium_open": 0,
     "low_open": 0,
-    "closed_findings": 15
+    "closed_findings": 23
   },
   "closed_items": [
     {
-      "id": "A1",
-      "category": "Frontend Authentication & CSRF",
-      "severity": "HIGH",
-      "title": "Unified Frontend API Request Client",
-      "status": "RESOLVED",
-      "description": "Standardized all fetch calls across API modules to include credentials: 'include', automatic X-CSRF-Token header injection on POST/PATCH/DELETE, and distinct handling for 401 AuthenticationError and 403 AuthorizationError."
-    },
-    {
-      "id": "A2",
-      "category": "Frontend Authentication & CSRF",
-      "severity": "MEDIUM",
-      "title": "CSRF Token In-Memory Restoration on Session Refresh",
-      "status": "RESOLVED",
-      "description": "AuthContext mount lifecycle automatically requests a fresh CSRF token into memory when restoring an active session via getMe()."
-    },
-    {
-      "id": "A3",
-      "category": "Session & CSRF Security",
-      "severity": "HIGH",
-      "title": "CSRF Token Rotation Repository Persistence",
-      "status": "RESOLVED",
-      "description": "Updated SQLite and PostgreSQL save_session conflict update clauses to persist rotated csrf_token_hash."
-    },
-    {
-      "id": "A4",
-      "category": "CSRF Security",
-      "severity": "MEDIUM",
-      "title": "CSRF Header Enforcement on POST /auth/logout",
-      "status": "RESOLVED",
-      "description": "Added validate_csrf_token dependency to POST /api/v1/auth/logout to mitigate forced logout CSRF attacks."
-    },
-    {
-      "id": "A5",
+      "id": "C1",
       "category": "WebSocket Security",
       "severity": "HIGH",
-      "title": "WebSocket Handshake Origin Validation",
+      "title": "WebSocket Wildcard Topic Expansion Strictly Excludes Unauthorized Families",
       "status": "RESOLVED",
-      "description": "Enforced exact-match Origin validation against SecurityConfig.allowed_origins. Untrusted origins are terminated with WebSocket close code 4403."
+      "description": "Removed '*' from _TOPIC_PERMISSIONS; wildcard subscriptions expand exclusively into explicit permitted event families (CAMERA, ALERT, SIGHTING, TARGET, ROUTE, SYSTEM). Tested with live event publishing proving unauthorized AUDIT and USER events are never queued for or delivered to lower-privileged connections."
     },
     {
-      "id": "A6",
-      "category": "WebSocket Authorization",
+      "id": "C2",
+      "category": "WebSocket Security & Session Lifecycle",
       "severity": "HIGH",
-      "title": "WebSocket Wildcard Topic Expansion Authorization",
+      "title": "Periodic WebSocket Session & Permission Revalidation",
       "status": "RESOLVED",
-      "description": "Expanded wildcard '*' topic subscriptions into explicit event families and filtered each against the authenticated principal's granted permissions."
+      "description": "Implemented background validation loop in websocket_events_endpoint that re-verifies session validity and user enablement against the repository; terminated sessions close with code 4401."
     },
     {
-      "id": "A7",
-      "category": "Session Management",
+      "id": "C3",
+      "category": "Session Management & RBAC",
       "severity": "HIGH",
-      "title": "Session Revocation Across Devices on Password Change",
+      "title": "Session Revocation Across Devices on Role Mutation",
       "status": "RESOLVED",
-      "description": "Implemented session_manager.revoke_all_user_sessions and cookie clearing upon successful password change."
+      "description": "PATCH /api/v1/users/{id} immediately revokes all active user sessions whenever a user's role is updated, requiring the user to re-authenticate under their new role."
     },
     {
-      "id": "A8",
-      "category": "Database & Production Reliability",
-      "severity": "CRITICAL",
-      "title": "Security Database Fail-Closed in Production Mode",
+      "id": "C4",
+      "category": "Frontend Audit Contract Alignment",
+      "severity": "HIGH",
+      "title": "AuditPage Contract Alignment with Backend Schema",
       "status": "RESOLVED",
-      "description": "Configured get_security_repository to strictly require PostgreSQL in production mode (SENTINEL_ENV=production) and raise RuntimeError on failure without silent fallback to SQLite."
+      "description": "Aligned 09_dashboard/src/api/audit.ts and AuditPage.tsx to use audit_id, event_time_utc, actor_username, and actor_role matching 08_backend/schemas/audit.py. Added dedicated Vitest frontend component test."
     },
     {
-      "id": "A9",
-      "category": "Information Leakage Defense",
-      "severity": "LOW",
-      "title": "Interactive OpenAPI Documentation Disabled in Production",
+      "id": "C5",
+      "category": "Transactional Integrity & Auditing",
+      "severity": "HIGH",
+      "title": "Compensating Transactions on Audit Log Failure",
       "status": "RESOLVED",
-      "description": "Configured FastAPI application to set docs_url=None, redoc_url=None, openapi_url=None in production mode."
+      "description": "Implemented targeted snapshot and compensation logic across target creation, target update, target disabling, user updates, and password resets to restore previous state if fail-closed audit log persistence raises an exception."
     },
     {
-      "id": "A10",
-      "category": "Access Control & Health Endpoints",
+      "id": "C6",
+      "category": "Authorization Testing",
+      "severity": "HIGH",
+      "title": "Programmatic FastAPI Route Introspection Matrix",
+      "status": "RESOLVED",
+      "description": "Dynamic route introspection iterates all registered APIRoute instances in app.routes and verifies 401 unauthenticated and 403 unauthorized boundaries across all 4 roles."
+    },
+    {
+      "id": "C7",
+      "category": "Schema Injection Defense",
       "severity": "MEDIUM",
-      "title": "Protected Readiness & Metrics Endpoints",
+      "title": "Strict Mass-Assignment Rejection via extra='forbid'",
       "status": "RESOLVED",
-      "description": "Enforced Permission.SYSTEM_READ on GET /ready and Permission.METRICS_READ on GET /metrics, while preserving public unauthenticated liveness on GET /health."
+      "description": "Enforced model_config = ConfigDict(extra='forbid') on UserCreateRequest, UserUpdateRequest, UserResetPasswordRequest, TargetCreateRequest, TargetUpdateRequest, AlertAckRequest, LoginRequest, and ChangePasswordRequest."
     },
     {
-      "id": "A11",
-      "category": "Idempotent API Design",
-      "severity": "LOW",
-      "title": "GET /api/v1/routes/{registration} Default Non-Mutating",
-      "status": "RESOLVED",
-      "description": "Set persist=False default on route queries to maintain pure read idempotency on GET requests."
-    },
-    {
-      "id": "A12",
-      "category": "Actor Integrity & Anti-Spoofing",
-      "severity": "HIGH",
-      "title": "Alert Acknowledgement Actor Derived Authoritatively from Session",
-      "status": "RESOLVED",
-      "description": "Overrode client-supplied acknowledged_by payload with principal.username from validated session token."
-    },
-    {
-      "id": "A13",
-      "category": "Access Control & Administrative Safeguards",
-      "severity": "HIGH",
-      "title": "Last Active Administrator Safeguard",
-      "status": "RESOLVED",
-      "description": "Fixed enum comparison to prevent demoting or disabling the last active admin account."
-    },
-    {
-      "id": "A14",
-      "category": "Audit Trail Integrity",
-      "severity": "HIGH",
-      "title": "Compensating Transaction on Audit Failure",
-      "status": "RESOLVED",
-      "description": "Implemented compensating rollback of user creation mutations if fail_closed audit trail recording raises an exception."
-    },
-    {
-      "id": "A15",
-      "category": "Frontend Access Control UX",
+      "id": "C8",
+      "category": "Sink & Attack Surface Audit",
       "severity": "MEDIUM",
-      "title": "Admin User Management and Audit Trail UI",
+      "title": "Truthful Sink Classification and Parameterization Verification",
       "status": "RESOLVED",
-      "description": "Delivered dedicated UsersPage (/admin/users) and AuditPage (/audit), Header user status pill, and RBAC action filtering."
+      "description": "Verified 100% parameterization on SQL queries and documented the complete absence of command/subprocess and path-traversal execution sinks across API routes."
     }
   ]
 }

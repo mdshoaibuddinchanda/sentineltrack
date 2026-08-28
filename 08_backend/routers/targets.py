@@ -50,16 +50,27 @@ async def create_target(
     """Add a target vehicle registration to the active police watchlist (SUPERVISOR, ADMIN)."""
     metrics.inc_requests()
     target = service.create_target(payload)
-    audit.log_event(
-        action="CREATE_TARGET",
-        resource_type="target",
-        outcome="SUCCESS",
-        principal=principal,
-        resource_id=target.target_id,
-        request_id=http_request.headers.get("X-Request-ID"),
-        details={"registration": target.registration, "priority": target.priority.value if hasattr(target.priority, "value") else str(target.priority)},
-        fail_closed=True
-    )
+    try:
+        audit.log_event(
+            action="CREATE_TARGET",
+            resource_type="target",
+            outcome="SUCCESS",
+            principal=principal,
+            resource_id=target.target_id,
+            request_id=http_request.headers.get("X-Request-ID"),
+            details={"registration": target.registration, "priority": target.priority.value if hasattr(target.priority, "value") else str(target.priority)},
+            fail_closed=True
+        )
+    except Exception:
+        # Compensate: disable created target if audit trail recording fails
+        try:
+            service.disable_target(target.target_id)
+        except Exception:
+            pass
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Security audit trail recording failed; target creation aborted."
+        )
     return target
 
 
@@ -104,17 +115,36 @@ async def update_target(
 ):
     """Update target priority, status, notes, or expiry (SUPERVISOR, ADMIN)."""
     metrics.inc_requests()
+    old_target = service.get_target(target_id)
     target = service.update_target(target_id, payload)
-    audit.log_event(
-        action="UPDATE_TARGET",
-        resource_type="target",
-        outcome="SUCCESS",
-        principal=principal,
-        resource_id=target.target_id,
-        request_id=http_request.headers.get("X-Request-ID"),
-        details={"registration": target.registration},
-        fail_closed=True
-    )
+    try:
+        audit.log_event(
+            action="UPDATE_TARGET",
+            resource_type="target",
+            outcome="SUCCESS",
+            principal=principal,
+            resource_id=target.target_id,
+            request_id=http_request.headers.get("X-Request-ID"),
+            details={"registration": target.registration},
+            fail_closed=True
+        )
+    except Exception:
+        # Compensate: restore old state if audit logging fails
+        try:
+            service.update_target(
+                target_id,
+                TargetUpdateRequest(
+                    priority=old_target.priority,
+                    notes=old_target.notes,
+                    is_active=old_target.is_active
+                )
+            )
+        except Exception:
+            pass
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Security audit trail recording failed; target update aborted."
+        )
     return target
 
 
@@ -130,16 +160,32 @@ async def disable_target(
 ):
     """Disable/archive a target from active watchlist monitoring (SUPERVISOR, ADMIN)."""
     metrics.inc_requests()
+    old_target = service.get_target(target_id)
     target = service.disable_target(target_id)
-    audit.log_event(
-        action="DISABLE_TARGET",
-        resource_type="target",
-        outcome="SUCCESS",
-        principal=principal,
-        resource_id=target.target_id,
-        request_id=http_request.headers.get("X-Request-ID"),
-        details={"registration": target.registration},
-        fail_closed=True
-    )
+    try:
+        audit.log_event(
+            action="DISABLE_TARGET",
+            resource_type="target",
+            outcome="SUCCESS",
+            principal=principal,
+            resource_id=target.target_id,
+            request_id=http_request.headers.get("X-Request-ID"),
+            details={"registration": target.registration},
+            fail_closed=True
+        )
+    except Exception:
+        # Compensate: restore old active state if audit logging fails
+        try:
+            service.update_target(
+                target_id,
+                TargetUpdateRequest(is_active=old_target.is_active)
+            )
+        except Exception:
+            pass
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Security audit trail recording failed; target deletion aborted."
+        )
     return target
+
 

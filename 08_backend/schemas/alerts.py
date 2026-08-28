@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
+
 
 
 class AlertResponse(BaseModel):
@@ -28,7 +29,10 @@ class AlertListResponse(BaseModel):
 
 
 class AlertAckRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     acknowledged_by: str = Field(default="operator", description="Operator identity acknowledging the alert")
+
 
 
 class AlertAckResponse(BaseModel):

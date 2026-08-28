@@ -87,7 +87,9 @@ async def acknowledge_alert(
         principal=principal,
         resource_id=alert_id,
         request_id=http_request.headers.get("X-Request-ID"),
-        details={"acknowledged_by": ack_user}
+        details={"acknowledged_by": ack_user},
+        fail_closed=True
     )
     return res
+
 

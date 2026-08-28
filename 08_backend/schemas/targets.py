@@ -1,7 +1,7 @@
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class TargetPriorityEnum(str, Enum):
@@ -12,6 +12,8 @@ class TargetPriorityEnum(str, Enum):
 
 
 class TargetCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     registration: str = Field(..., min_length=4, max_length=20, description="Vehicle license plate registration string")
     priority: TargetPriorityEnum = Field(default=TargetPriorityEnum.NORMAL)
     expires_at: Optional[datetime] = None
@@ -20,11 +22,14 @@ class TargetCreateRequest(BaseModel):
 
 
 class TargetUpdateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     priority: Optional[TargetPriorityEnum] = None
     enabled: Optional[bool] = None
     expires_at: Optional[datetime] = None
     notes: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
+
 
 
 class TargetResponse(BaseModel):

@@ -10,6 +10,7 @@ export function AuditPage() {
 
   const [filterAction, setFilterAction] = useState<string>("");
   const [filterOutcome, setFilterOutcome] = useState<string>("");
+  const [filterUsername, setFilterUsername] = useState<string>("");
   const [selectedEvent, setSelectedEvent] = useState<AuditEventItem | null>(null);
 
   const fetchAudit = useCallback(async () => {
@@ -19,6 +20,7 @@ export function AuditPage() {
       const res = await listAuditEvents({
         action: filterAction || undefined,
         outcome: filterOutcome || undefined,
+        actor_username: filterUsername || undefined,
         limit: 100,
       });
       setEvents(res.items);
@@ -28,7 +30,7 @@ export function AuditPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterAction, filterOutcome]);
+  }, [filterAction, filterOutcome, filterUsername]);
 
   useEffect(() => {
     fetchAudit();
@@ -94,6 +96,16 @@ export function AuditPage() {
         </div>
 
         <div>
+          <input
+            type="text"
+            value={filterUsername}
+            onChange={(e) => setFilterUsername(e.target.value)}
+            placeholder="Filter by operator username..."
+            className="bg-police-900 border border-police-700 rounded px-2.5 py-1 text-slate-200 focus:outline-hidden text-xs"
+          />
+        </div>
+
+        <div>
           <select
             value={filterAction}
             onChange={(e) => setFilterAction(e.target.value)}
@@ -156,9 +168,9 @@ export function AuditPage() {
             </thead>
             <tbody className="divide-y divide-police-750/60 text-slate-200">
               {events.map((ev) => (
-                <tr key={ev.event_id} className="hover:bg-police-800/30 transition-colors">
+                <tr key={ev.audit_id} className="hover:bg-police-800/30 transition-colors">
                   <td className="p-3 text-slate-400 text-[11px]">
-                    {new Date(ev.timestamp).toISOString().replace("T", " ").substring(0, 19)}
+                    {new Date(ev.event_time_utc).toISOString().replace("T", " ").substring(0, 19)}
                   </td>
                   <td className="p-3 font-semibold text-cyan-300">{ev.action}</td>
                   <td className="p-3">{getOutcomeBadge(ev.outcome)}</td>
@@ -205,7 +217,7 @@ export function AuditPage() {
             <div className="flex items-center justify-between border-b border-police-750 pb-3">
               <div className="flex items-center gap-2 text-white font-mono font-bold text-sm">
                 <FileText className="w-4 h-4 text-accent-blue" />
-                <span>AUDIT EVENT: {selectedEvent.event_id}</span>
+                <span>AUDIT EVENT: {selectedEvent.audit_id}</span>
               </div>
               <button
                 onClick={() => setSelectedEvent(null)}
@@ -216,13 +228,14 @@ export function AuditPage() {
             </div>
 
             <div className="space-y-2 font-mono text-xs text-slate-300">
-              <div><span className="text-slate-500">Timestamp:</span> {selectedEvent.timestamp}</div>
+              <div><span className="text-slate-500">Timestamp (UTC):</span> {selectedEvent.event_time_utc}</div>
               <div><span className="text-slate-500">Action:</span> <span className="text-cyan-300 font-bold">{selectedEvent.action}</span></div>
               <div><span className="text-slate-500">Outcome:</span> {selectedEvent.outcome}</div>
               <div><span className="text-slate-500">Actor:</span> {selectedEvent.actor_username || "anonymous"} ({selectedEvent.actor_role || "none"})</div>
               <div><span className="text-slate-500">Resource:</span> {selectedEvent.resource_type} {selectedEvent.resource_id}</div>
               <div><span className="text-slate-500">Source IP:</span> {selectedEvent.source_ip || "N/A"}</div>
               <div><span className="text-slate-500">Request ID:</span> {selectedEvent.request_id || "N/A"}</div>
+              <div><span className="text-slate-500">User Agent:</span> {selectedEvent.user_agent || "N/A"}</div>
               
               <div>
                 <span className="text-slate-500 block mb-1">Details Payload:</span>

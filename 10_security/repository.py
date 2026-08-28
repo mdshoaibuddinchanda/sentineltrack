@@ -65,6 +65,13 @@ class BaseSecurityRepository(ABC):
     def update_user(self, user: User) -> None:
         pass
 
+    def disable_user(self, user_id: str) -> None:
+        user = self.get_user_by_id(user_id)
+        if user:
+            user.enabled = False
+            self.update_user(user)
+
+
     @abstractmethod
     def count_active_admins(self) -> int:
         pass
