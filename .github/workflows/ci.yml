@@ -10,6 +10,30 @@ jobs:
   backend-test:
     name: Backend Tests & Security Gates
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_DB: sentinel
+          POSTGRES_USER: sentinel
+          POSTGRES_PASSWORD: sentinel_test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_HOST: localhost
+      DATABASE_PORT: 5432
+      DATABASE_NAME: sentinel
+      DATABASE_USER: sentinel
+      DATABASE_PASSWORD: sentinel_test_password
+      SENTINEL_ENV: development
+      PYTHONPATH: .
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -27,11 +51,14 @@ jobs:
           pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
           pip install opencv-python-headless pytest pytest-asyncio pytest-timeout httpx
 
+      - name: Initialize PostgreSQL Database Schemas
+        run: |
+          python tools/p11/init_schema.py
+
       - name: Run Backend Pytest Suite
-        env:
-          PYTHONPATH: .
         run: |
           python -m pytest 10_security/tests/ 11_scale_deployment/tests/ -v --timeout=30
+
 
 
   frontend-test:
