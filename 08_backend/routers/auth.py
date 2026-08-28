@@ -29,8 +29,9 @@ _csrf_m = importlib.import_module("10_security.csrf")
 generate_csrf_token = _csrf_m.generate_csrf_token
 hash_csrf_token = _csrf_m.hash_csrf_token
 
-router = APIRouter(prefix="/api/v1/auth", tags=["Authentication & Session Security"])
+DUMMY_PASSWORD_HASH = getattr(importlib.import_module("10_security.password"), "DUMMY_PASSWORD_HASH", "$argon2id$v=19$m=65536,t=3,p=4$dummy$dummy")
 
+router = APIRouter(prefix="/api/v1/auth", tags=["Authentication & Session Security"])
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -41,18 +42,17 @@ async def login(
     config = Depends(get_security_config),
     repo = Depends(get_security_repository),
     session_manager = Depends(get_session_manager),
-    audit = Depends(get_audit_logger),
-    limiter = Depends(get_login_rate_limiter)
+    limiter = Depends(get_login_rate_limiter),
+    audit = Depends(get_audit_logger)
 ):
     """
-    Authenticates operator credentials, sets HttpOnly session cookie,
-    and returns initial per-session CSRF token.
+    Authenticates operator credentials and issues an HttpOnly, SameSite session cookie
+    along with a CSRF synchronizer token for subsequent state mutations.
     """
     client_ip = request.client.host if request.client else "unknown"
-    rate_limit_key = f"{client_ip}:{payload.username.strip().lower()}"
 
-    # 1. Rate Limiting Check
-    allowed, retry_after = limiter.is_allowed(rate_limit_key)
+    # 1. Rate Limiting Check (Dual-Tier: targeted account key + aggregate spray source IP key)
+    allowed, retry_after = limiter.check_login_allowed(payload.username, client_ip)
     if not allowed:
         audit.log_event(
             action="LOGIN_THROTTLED",
@@ -73,20 +73,25 @@ async def login(
     username_norm = payload.username.strip().lower()
     user = repo.get_user_by_username(username_norm)
 
-    # 3. Constant-time password verification check (generic error response on failure)
+    # 3. Constant-time password verification check (timing-equalized via dummy hash for unknown/disabled accounts)
     valid_auth = False
     fail_reason = "USER_NOT_FOUND"
 
-    if user:
-        if not user.enabled:
-            fail_reason = "USER_DISABLED"
-        elif verify_password(payload.password, user.password_hash):
+    if user and user.enabled:
+        if verify_password(payload.password, user.password_hash):
             valid_auth = True
         else:
             fail_reason = "INVALID_PASSWORD"
+    else:
+        # Equalize execution timing: always run Argon2id verify even for nonexistent or disabled accounts
+        verify_password(payload.password, DUMMY_PASSWORD_HASH)
+        if user and not user.enabled:
+            fail_reason = "USER_DISABLED"
+        else:
+            fail_reason = "USER_NOT_FOUND"
 
     if not valid_auth:
-        limiter.record_failure(rate_limit_key)
+        limiter.record_login_failure(payload.username, client_ip)
         audit.log_event(
             action="LOGIN_FAILURE",
             resource_type="auth",
@@ -102,10 +107,11 @@ async def login(
         )
 
     # 4. Successful Authentication
-    limiter.record_success(rate_limit_key)
+    limiter.record_login_success(payload.username, client_ip)
     user.last_login_at = datetime.now(timezone.utc)
     user.failed_login_count = 0
     repo.update_user(user)
+
 
     # 5. Create Server-Side Session & Cookie
     user_agent = request.headers.get("User-Agent")

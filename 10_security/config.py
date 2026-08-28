@@ -24,10 +24,12 @@ class SecurityConfig:
     argon2_memory_cost_kib: int = 19456           # 19 MiB OWASP recommended minimum
     argon2_parallelism: int = 1
     
-    # Rate Limiting (Login Abuse Resistance)
+    # Rate Limiting (Login Abuse Resistance & Password Spray Defense)
     rate_limit_max_attempts: int = 5
+    rate_limit_max_ip_attempts: int = 30
     rate_limit_window_seconds: int = 60
     rate_limit_lockout_seconds: int = 120
+
     
     # CORS & Origins
     allowed_origins: List[str] = field(

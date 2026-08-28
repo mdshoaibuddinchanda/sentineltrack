@@ -1,15 +1,15 @@
 {
-  "pass": "Priority 10D Final Security Freeze & Verification Pass",
-  "baseline_commit": "592ada7d047038e84e66e51616073918a734347e",
-  "freeze_date": "2026-08-28T20:52:00Z",
-  "scope": "Unified Authorized WebSocket Engine, Permission Downgrade Revocation (4403), Structural Topic Invariants, Complete Transactional Audit Compensation Matrix across all mutations including self-service password change, Physical Database Watchlist Deletion on rollback, AST Dangerous Sink Scanner, Parameterization Verification, Mass-Assignment Rejection, Path Portability, and Zero-Warning Clean Build",
+  "pass": "Priority 10 Final Permanent Security Freeze Pass",
+  "baseline_commit": "580f2308811b15fedacd5311707e8d3ece4cd62c",
+  "freeze_date": "2026-08-28T21:02:00Z",
+  "scope": "Unified Authorized WebSocket Engine, Permission Downgrade Revocation (4403), Structural Topic Invariants, Complete Transactional Audit Compensation Matrix across all mutations including self-service password change, Physical Database Watchlist Deletion on rollback, AST Dangerous Sink Scanner, Parameterization Verification, Mass-Assignment Rejection, Constant-Time Login Timing Equalization (Dummy Argon2id Hash), Dual-Tier Brute-Force & Password Spray Defense, and Zero-Warning Clean Build",
   "verdict": "Priority 10 is 100% hackathon-acceptance complete for the defined security scope.",
   "findings_summary": {
     "critical_open": 0,
     "high_open": 0,
     "medium_open": 0,
     "low_open": 0,
-    "closed_findings": 32
+    "closed_findings": 34
   },
   "security_controls_verified": [
     {
@@ -38,11 +38,18 @@
     },
     {
       "id": "D23-D27",
+      "category": "Authentication Hardening & Timing Defense",
+      "status": "VERIFIED",
+      "details": "Precomputed DUMMY_PASSWORD_HASH prevents username enumeration timing side-channels for nonexistent/disabled users; Dual-tier sliding window rate limiter protects against both targeted account brute-force and source IP password spraying."
+    },
+    {
+      "id": "D28-D30",
       "category": "Supply Chain & Build Integrity",
       "status": "VERIFIED",
-      "details": "npm audit --omit=dev passed with 0 vulnerabilities; 301/301 backend tests passed; 47/47 frontend tests passed; eslint passed with 0 errors; Vite production build completed with zero errors."
+      "details": "npm audit --omit=dev passed with 0 vulnerabilities; 305/305 backend tests passed; 47/47 frontend tests passed; eslint passed with 0 errors; Vite production build completed with zero errors."
     }
   ]
 }
+
 
 

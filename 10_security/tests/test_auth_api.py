@@ -1,6 +1,12 @@
 import pytest
 import importlib
+from pathlib import Path
+import sys
 from fastapi.testclient import TestClient
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 _sec = importlib.import_module("10_security")
 User = _sec.User
@@ -14,8 +20,8 @@ SessionManager = _sess_mod.SessionManager
 backend_app = importlib.import_module("08_backend.app")
 app = backend_app.app
 
-
 _aud_mod = importlib.import_module("10_security.audit")
+
 
 
 @pytest.fixture(autouse=True)
@@ -132,3 +138,35 @@ class TestAuthAPI:
         resp = client.get("/api/v1/auth/csrf")
         assert resp.status_code == 200
         assert "csrf_token" in resp.json()
+
+    def test_login_timing_equalization_unknown_user(self):
+        """Nonexistent username executes password verification on dummy hash and returns 401."""
+        client = TestClient(app)
+        resp = client.post(
+            "/api/v1/auth/login",
+            json={"username": "nonexistent_operator_xyz", "password": "SomeRandomPassword123!"}
+        )
+        assert resp.status_code == 401
+        assert resp.json()["detail"] == "Invalid username or password."
+
+    def test_login_timing_equalization_disabled_user(self):
+        """Disabled user executes dummy password verification and returns generic 401 without enumeration."""
+        repo = _repo_mod.get_security_repository()
+        disabled_user = User(
+            user_id="disabled-1",
+            username="disabled_operator",
+            display_name="Disabled Operator",
+            password_hash=hash_password("DisabledPass12345!"),
+            role=UserRole.OPERATOR,
+            enabled=False
+        )
+        repo.save_user(disabled_user)
+
+        client = TestClient(app)
+        resp = client.post(
+            "/api/v1/auth/login",
+            json={"username": "disabled_operator", "password": "DisabledPass12345!"}
+        )
+        assert resp.status_code == 401
+        assert resp.json()["detail"] == "Invalid username or password."
+

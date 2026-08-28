@@ -50,6 +50,12 @@ def verify_password(password: str, password_hash: str) -> bool:
         return False
 
 
+# Pre-computed dummy Argon2id hash for constant-time authentication timing equalization
+_dummy_hasher = PasswordHasher(time_cost=2, memory_cost=19456, parallelism=1, hash_len=32, salt_len=16)
+DUMMY_PASSWORD_HASH = _dummy_hasher.hash("DummyConstantTimingAuthPassword123!")
+
+
+
 def benchmark_argon2_latency(iterations: int = 5) -> float:
     """Measures local Argon2id hashing latency in milliseconds."""
     test_pwd = "A secure multi-word police passphrase 2026!"
