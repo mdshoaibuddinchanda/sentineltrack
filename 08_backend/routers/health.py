@@ -106,6 +106,26 @@ async def get_readiness(response: Response):
     except Exception as e:
         details["error"] = str(e)
 
+    # 2. Check Analytics Worker & Computer Vision Models
+    try:
+        worker_mod = importlib.import_module("08_backend.services.analytics_service")
+        worker = worker_mod.get_analytics_worker()
+        worker._lazy_init_models()
+        worker_status = worker.get_status()
+        models_loaded = worker_status.get("models_loaded", {})
+
+        components["analytics_worker"] = worker is not None
+        components["vehicle_detector"] = models_loaded.get("detector", False)
+        components["tracker"] = models_loaded.get("tracker", False)
+        components["plate_detector"] = models_loaded.get("plate_detector", False)
+        components["ocr_pipeline"] = models_loaded.get("ocr_pipeline", False)
+        components["target_pipeline"] = models_loaded.get("target_pipeline", False)
+        details["models"] = models_loaded
+        details["worker_running"] = worker.is_running()
+    except Exception as e:
+        components["analytics_worker"] = False
+        details["analytics_error"] = str(e)
+
     all_ready = all(components.values())
     if all_ready:
         return ReadinessResponse(status="ready", components=components, details=details)

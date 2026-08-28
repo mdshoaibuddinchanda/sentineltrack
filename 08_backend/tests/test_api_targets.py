@@ -1,6 +1,7 @@
 import uuid
 import pytest
 import importlib
+from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 backend_app = importlib.import_module("08_backend.app")
@@ -47,6 +48,18 @@ def test_create_target_duplicate_rejection():
     assert data["error"]["code"] == "DUPLICATE_TARGET"
 
 
+def test_create_target_database_failure_returns_503():
+    client = TestClient(app)
+    reg = f"GJ01ERR{uuid.uuid4().hex[:4].upper()}"
+    p5_repo = importlib.import_module("05_target_matching.repository")
+
+    with patch.object(p5_repo.PostgresTargetMatchingRepository, "save_watchlist_entry", side_effect=ConnectionError("DB connection lost")):
+        res = client.post("/api/v1/targets", json={"registration": reg, "priority": "HIGH"})
+        assert res.status_code == 503
+        data = res.json()
+        assert data["error"]["code"] == "DATABASE_UNAVAILABLE"
+
+
 def test_list_targets_and_pagination():
     client = TestClient(app)
     response = client.get("/api/v1/targets?limit=10&offset=0")
@@ -89,6 +102,19 @@ def test_update_target_endpoint():
     assert data["notes"] == "Upgraded urgency"
 
 
+def test_update_target_database_failure_returns_503():
+    client = TestClient(app)
+    reg = f"GJ01UPERR{uuid.uuid4().hex[:4].upper()}"
+    res = client.post("/api/v1/targets", json={"registration": reg})
+    target_id = res.json()["target_id"]
+
+    p5_repo = importlib.import_module("05_target_matching.repository")
+    with patch.object(p5_repo.PostgresTargetMatchingRepository, "save_watchlist_entry", side_effect=ConnectionError("DB connection lost")):
+        patch_res = client.patch(f"/api/v1/targets/{target_id}", json={"notes": "Failure test"})
+        assert patch_res.status_code == 503
+        assert patch_res.json()["error"]["code"] == "DATABASE_UNAVAILABLE"
+
+
 def test_disable_target_endpoint():
     client = TestClient(app)
     reg = f"GJ01DIS{uuid.uuid4().hex[:4].upper()}"
@@ -98,3 +124,16 @@ def test_disable_target_endpoint():
     del_res = client.delete(f"/api/v1/targets/{target_id}")
     assert del_res.status_code == 200
     assert del_res.json()["enabled"] is False
+
+
+def test_disable_target_database_failure_returns_503():
+    client = TestClient(app)
+    reg = f"GJ01DISERR{uuid.uuid4().hex[:4].upper()}"
+    res = client.post("/api/v1/targets", json={"registration": reg})
+    target_id = res.json()["target_id"]
+
+    p5_repo = importlib.import_module("05_target_matching.repository")
+    with patch.object(p5_repo.PostgresTargetMatchingRepository, "save_watchlist_entry", side_effect=ConnectionError("DB connection lost")):
+        del_res = client.delete(f"/api/v1/targets/{target_id}")
+        assert del_res.status_code == 503
+        assert del_res.json()["error"]["code"] == "DATABASE_UNAVAILABLE"

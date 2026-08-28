@@ -4,13 +4,20 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 try:
-    from ..errors import TargetNotFoundError, DuplicateTargetError, InvalidQueryParameterError
+    from ..errors import TargetNotFoundError, DuplicateTargetError, InvalidQueryParameterError, DatabaseUnavailableError
     from ..schemas.targets import TargetCreateRequest, TargetUpdateRequest, TargetResponse, TargetPriorityEnum
 except (ImportError, ValueError):
     err_m = importlib.import_module("08_backend.errors")
-    TargetNotFoundError, DuplicateTargetError, InvalidQueryParameterError = err_m.TargetNotFoundError, err_m.DuplicateTargetError, err_m.InvalidQueryParameterError
+    TargetNotFoundError = err_m.TargetNotFoundError
+    DuplicateTargetError = err_m.DuplicateTargetError
+    InvalidQueryParameterError = err_m.InvalidQueryParameterError
+    DatabaseUnavailableError = err_m.DatabaseUnavailableError
+
     tgt_m = importlib.import_module("08_backend.schemas.targets")
-    TargetCreateRequest, TargetUpdateRequest, TargetResponse, TargetPriorityEnum = tgt_m.TargetCreateRequest, tgt_m.TargetUpdateRequest, tgt_m.TargetResponse, tgt_m.TargetPriorityEnum
+    TargetCreateRequest = tgt_m.TargetCreateRequest
+    TargetUpdateRequest = tgt_m.TargetUpdateRequest
+    TargetResponse = tgt_m.TargetResponse
+    TargetPriorityEnum = tgt_m.TargetPriorityEnum
 
 
 def _get_target_matching_modules():
@@ -40,7 +47,7 @@ def get_shared_watchlist_manager(repository=None):
 
 
 class TargetService:
-    """Service managing target watchlists, registration normalization, and target CRUD."""
+    """Service managing target watchlists, registration normalization, and truthful target CRUD."""
 
     def __init__(self, repository=None, watchlist_manager=None):
         models, watchlist_mod, repo_mod, norm_mod = _get_target_matching_modules()
@@ -74,6 +81,8 @@ class TargetService:
         )
 
         if not ok or not entry:
+            if msg and "Database persistence failure" in msg:
+                raise DatabaseUnavailableError(msg)
             raise DuplicateTargetError(msg or "Failed to create target entry.")
 
         return TargetResponse(

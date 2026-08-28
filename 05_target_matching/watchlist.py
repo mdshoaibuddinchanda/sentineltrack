@@ -108,8 +108,10 @@ class WatchlistManager:
             if self.repository:
                 try:
                     self.repository.save_watchlist_entry(entry)
-                except Exception:
-                    pass
+                except Exception as e:
+                    self._entries.pop(w_id, None)
+                    self._rebuild_indices_for_entry(entry, add=False)
+                    return None, False, f"Database persistence failure: {e}"
 
         return entry, True, None
 
