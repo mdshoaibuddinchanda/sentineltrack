@@ -5,6 +5,7 @@ import { TargetListTable } from "../components/targets/TargetListTable";
 import { AddTargetModal } from "../components/targets/AddTargetModal";
 import { EditTargetModal } from "../components/targets/EditTargetModal";
 import { Plus, Search, Activity } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 interface TargetsPageProps {
   targets: Target[];
@@ -23,8 +24,14 @@ export function TargetsPage({
   onInvestigate,
   privacyMode = false,
 }: TargetsPageProps) {
+  const { hasPermission, user } = useAuth();
+  const canCreate = hasPermission("target:create") || user?.role === "ADMIN" || user?.role === "SUPERVISOR";
+  const canEdit = hasPermission("target:update") || user?.role === "ADMIN" || user?.role === "SUPERVISOR";
+  const canDisable = hasPermission("target:disable") || user?.role === "ADMIN" || user?.role === "SUPERVISOR";
+
   const [search, setSearch] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("ALL");
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingTarget, setEditingTarget] = useState<Target | null>(null);
 
@@ -68,12 +75,14 @@ export function TargetsPage({
           </select>
         </div>
 
-        <button
-          onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-accent-blue hover:bg-blue-600 text-white rounded font-bold font-mono tracking-wider transition-colors shadow-lg shadow-accent-blue/20"
-        >
-          <Plus className="w-4 h-4" /> REGISTER TARGET
-        </button>
+        {canCreate && (
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-accent-blue hover:bg-blue-600 text-white rounded font-bold font-mono tracking-wider transition-colors shadow-lg shadow-accent-blue/20"
+          >
+            <Plus className="w-4 h-4" /> REGISTER TARGET
+          </button>
+        )}
       </div>
 
       {/* Target Watchlist Table */}
@@ -86,11 +95,12 @@ export function TargetsPage({
         <TargetListTable
           targets={filteredTargets}
           onInvestigate={onInvestigate}
-          onEdit={(t) => setEditingTarget(t)}
-          onDisable={onDisableTarget}
+          onEdit={canEdit ? (t) => setEditingTarget(t) : undefined}
+          onDisable={canDisable ? onDisableTarget : undefined}
           privacyMode={privacyMode}
         />
       </Card>
+
 
       {/* Add Target Modal */}
       <AddTargetModal

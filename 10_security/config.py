@@ -1,6 +1,7 @@
 import os
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Optional
+
 
 
 @dataclass
@@ -65,3 +66,9 @@ def get_security_config() -> SecurityConfig:
     if _GLOBAL_SECURITY_CONFIG is None:
         _GLOBAL_SECURITY_CONFIG = SecurityConfig()
     return _GLOBAL_SECURITY_CONFIG
+
+
+def set_security_config(cfg: Optional[SecurityConfig] = None) -> None:
+    global _GLOBAL_SECURITY_CONFIG
+    _GLOBAL_SECURITY_CONFIG = cfg
+

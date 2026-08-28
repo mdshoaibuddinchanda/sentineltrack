@@ -77,8 +77,9 @@ async def acknowledge_alert(
 ):
     """Acknowledge an active alert by an authorized operator (OPERATOR, SUPERVISOR, ADMIN)."""
     metrics.inc_requests()
-    ack_user = request.acknowledged_by or principal.username
+    ack_user = principal.username
     res = service.acknowledge_alert(alert_id=alert_id, acknowledged_by=ack_user)
+
     audit.log_event(
         action="ACK_ALERT",
         resource_type="alert",

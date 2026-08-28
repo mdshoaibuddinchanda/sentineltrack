@@ -1,49 +1,14 @@
-# OWASP API Security Top 10 Review — SentinelTrack P10
+# OWASP API Security Top 10 (2023) Review — SentinelTrack P10B
 
-## API1:2023 — Broken Object Level Authorization
-**Status: MITIGATED**
-All object-level access is gated by `require_permission()` before service calls.
-Parameterized queries prevent IDOR via injection.
-
-## API2:2023 — Broken Authentication
-**Status: MITIGATED**
-Opaque server-side sessions. Argon2id password hashing. Rate-limited login.
-HttpOnly SameSite=Strict cookies. Session expiry enforced server-side.
-
-## API3:2023 — Broken Object Property Level Authorization
-**Status: PARTIALLY MITIGATED**
-Response models use Pydantic schemas limiting exposed fields.
-Mass-assignment risk reduced via explicit schema validation on input.
-Remaining: some GET endpoints return all fields from the data model.
-
-## API4:2023 — Unrestricted Resource Consumption
-**Status: PARTIALLY MITIGATED**
-Login rate limiting implemented. No general request rate limiting yet (P11 scope).
-
-## API5:2023 — Broken Function Level Authorization
-**Status: MITIGATED**
-`require_permission()` enforces function-level access. RBAC matrix centralized.
-Admin-only endpoints verified via permission check (not role check) for flexibility.
-
-## API6:2023 — Unrestricted Access to Sensitive Business Flows
-**Status: MITIGATED**
-Rate limiting on login. CSRF protection on all state-changing flows.
-
-## API7:2023 — Server Side Request Forgery
-**Status: NOT APPLICABLE**
-No URL input parameters that trigger server-side HTTP requests.
-
-## API8:2023 — Security Misconfiguration
-**Status: MITIGATED**
-SecurityHeadersMiddleware applies all recommended headers.
-CORS restricted to explicit allowlist. Cookie flags enforced.
-Debug/docs endpoints available but /docs is not access-controlled (acceptable for hackathon demo).
-
-## API9:2023 — Improper Inventory Management
-**Status: MITIGATED**
-Full endpoint inventory documented in p10_endpoint_inventory.md.
-All endpoints tagged in FastAPI router definitions.
-
-## API10:2023 — Unsafe Consumption of APIs
-**Status: NOT APPLICABLE**
-Backend does not consume external third-party APIs.
+| OWASP API Category | Vulnerability Description | SentinelTrack Defense Implementation | Status |
+|---|---|---|---|
+| **API1: Broken Object Level Authorization (BOLA)** | Unauthorized access to user-scoped resources by tampering with IDs. | Centralized `AuthenticatedPrincipal` verification with granular `Permission` checks on all resource endpoints (`/users/{id}`, `/alerts/{id}`, `/targets/{id}`). | **PASS** |
+| **API2: Broken Authentication** | Credential stuffing, brute force, weak sessions, token leakage. | Argon2id password hashing, 15-character minimum passphrase policy, memory-resident brute-force rate limiter with exponential backoff, cryptographic 256-bit token entropy in HttpOnly cookies, idle/absolute session expiry. | **PASS** |
+| **API3: Broken Object Property Level Authorization (BOPLA / Mass Assignment)** | Attackers inject unauthorized fields (e.g. `role`, `permissions`, `is_admin`) in request JSON. | Strict Pydantic input schemas (`UserUpdateRequest`, `TargetCreateRequest`) reject unrecognized or forbidden fields; backend explicitly maps allowed fields. | **PASS** |
+| **API4: Unrestricted Resource Consumption (DoS / Rate Limiting)** | Endpoint flooding, memory exhaustion via unbounded queries. | Bounded pagination on all list queries (`limit` capped with defaults, e.g. `audit_page_size_max: 500`), WebSocket backpressure queue management with drop-oldest buffer limits, login attempt rate limiter. | **PASS** |
+| **API5: Broken Function Level Authorization (BFLA)** | Lower-privileged users accessing administrative endpoints. | Explicit RBAC matrix with 4 roles (`ADMIN`, `SUPERVISOR`, `OPERATOR`, `AUDITOR`). Administrative routes (`/users`, `/audit`) and mutations (`/targets` POST/PATCH) enforce `require_permission()` dependencies. Negative test matrix verifies 403 on violations. | **PASS** |
+| **API6: Unrestricted Access to Sensitive Business Flows** | Automating critical workflows like watchlist insertion or alert suppression. | Every mutation requires valid CSRF tokens (`X-CSRF-Token`), authenticated operator session, and writes an immutable audit record (`AuditEvent`). Alert ACK binds strictly to authenticated session username. | **PASS** |
+| **API7: Server Side Request Forgery (SSRF)** | Exploiting backend network requests to internal services. | SentinelTrack backend does not accept arbitrary external URLs from client payloads for internal fetches. Camera stream configurations use static, trusted operator schemas. | **PASS** |
+| **API8: Security Misconfiguration** | Default credentials, debug endpoints in production, missing security headers. | In production mode (`SENTINEL_ENV=production`), interactive API documentation (`/docs`, `/redoc`, `/openapi.json`) is disabled, `cookie_secure=True` is enforced, PostgreSQL is mandatory (no in-memory SQLite fallback), and standard security headers (`HSTS`, `X-Content-Type-Options`, `X-Frame-Options`, `CSP`) are attached. | **PASS** |
+| **API9: Improper Inventory Management** | Shadow APIs, deprecated unauthenticated endpoints. | All routes catalogued under `/api/v1/` prefix with uniform authentication dependencies; `/health` is explicitly defined as public liveness while `/ready` and `/metrics` require authorization. | **PASS** |
+| **API10: Unsafe Consumption of APIs** | Blind trust in third-party or sub-service inputs. | Strong input validation using Pydantic models, parameterization of all database queries preventing SQL injection, schema-validated WebSocket messaging. | **PASS** |

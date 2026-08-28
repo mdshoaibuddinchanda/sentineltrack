@@ -167,11 +167,12 @@ async def logout(
     request: Request,
     response: Response,
     principal: AuthenticatedPrincipal = Depends(get_current_principal),
+    _csrf = Depends(validate_csrf_token),
     config = Depends(get_security_config),
     session_manager = Depends(get_session_manager),
     audit = Depends(get_audit_logger)
 ):
-    """Terminates active server-side session and clears authentication cookie."""
+    """Terminates active server-side session and clears authentication cookie (requires CSRF)."""
     session = getattr(request.state, "session", None)
     if session:
         session_manager.revoke_session_by_id(session.session_id)
@@ -225,12 +226,11 @@ async def get_csrf_token(
             detail="Active session required for CSRF token retrieval."
         )
     
-    # Generate a fresh CSRF token for the session if needed
+    # Generate a fresh CSRF token for the session and persist its hash
     raw_csrf = generate_csrf_token()
     session.csrf_token_hash = hash_csrf_token(raw_csrf)
     repo = get_security_repository()
     repo.save_session(session)
-
 
     return CsrfResponse(csrf_token=raw_csrf)
 
@@ -238,14 +238,16 @@ async def get_csrf_token(
 @router.post("/change-password")
 async def change_password(
     request: Request,
+    response: Response,
     payload: ChangePasswordRequest,
     principal: AuthenticatedPrincipal = Depends(get_current_principal),
     _csrf = Depends(validate_csrf_token),
+    config = Depends(get_security_config),
     repo = Depends(get_security_repository),
     session_manager = Depends(get_session_manager),
     audit = Depends(get_audit_logger)
 ):
-    """Allows authenticated user to change their own password."""
+    """Allows authenticated user to change their own password, invalidating all active sessions."""
     user = repo.get_user_by_id(principal.user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
@@ -271,9 +273,15 @@ async def change_password(
     user.updated_at = datetime.now(timezone.utc)
     repo.update_user(user)
 
-    # Revoke other sessions to prevent hijacked sessions from persisting
-    session = getattr(request.state, "session", None)
-    current_sess_id = session.session_id if session else None
+    # Invalidate all active sessions for this user across all browsers/devices
+    session_manager.revoke_all_user_sessions(user.user_id)
+
+    # Clear current browser session cookie
+    response.delete_cookie(
+        key=config.cookie_name,
+        path=config.cookie_path,
+        samesite=config.cookie_samesite
+    )
 
     audit.log_event(
         action="PASSWORD_CHANGED",
@@ -285,5 +293,6 @@ async def change_password(
         fail_closed=True
     )
 
-    return {"message": "Password changed successfully."}
+    return {"message": "Password changed successfully. All sessions invalidated, please log in again."}
+
 

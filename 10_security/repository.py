@@ -41,6 +41,10 @@ class BaseSecurityRepository(ABC):
     def save_user(self, user: User) -> None:
         pass
 
+    def create_user(self, user: User) -> None:
+        self.save_user(user)
+
+
     @abstractmethod
     def get_user_by_id(self, user_id: str) -> Optional[User]:
         pass
@@ -283,7 +287,9 @@ class SqliteSecurityRepository(BaseSecurityRepository):
                 ON CONFLICT(session_id) DO UPDATE SET
                     last_seen_at=excluded.last_seen_at,
                     idle_expires_at=excluded.idle_expires_at,
+                    csrf_token_hash=excluded.csrf_token_hash,
                     revoked_at=excluded.revoked_at;
+
             """, (
                 session.session_id,
                 session.session_token_hash,
@@ -631,7 +637,9 @@ class PostgresSecurityRepository(BaseSecurityRepository):
                     ON CONFLICT(session_id) DO UPDATE SET
                         last_seen_at=EXCLUDED.last_seen_at,
                         idle_expires_at=EXCLUDED.idle_expires_at,
+                        csrf_token_hash=EXCLUDED.csrf_token_hash,
                         revoked_at=EXCLUDED.revoked_at;
+
                 """, (
                     session.session_id,
                     session.session_token_hash,
@@ -886,11 +894,22 @@ def get_security_repository() -> BaseSecurityRepository:
         if _GLOBAL_SECURITY_REPO is not None:
             return _GLOBAL_SECURITY_REPO
 
+        env = os.getenv("SENTINEL_ENV", "development").lower()
         use_sqlite = os.getenv("SENTINEL_SECURITY_USE_SQLITE", "").lower() in ("true", "1", "yes")
+
+        if env == "production":
+            # Production MUST fail closed: Postgres is required, NO silent in-memory SQLite fallback
+            if use_sqlite:
+                raise RuntimeError("SENTINEL_SECURITY_USE_SQLITE is strictly forbidden in production environment.")
+            repo = PostgresSecurityRepository()
+            repo.count_users()  # Validates PostgreSQL connectivity
+            _GLOBAL_SECURITY_REPO = repo
+            return _GLOBAL_SECURITY_REPO
+
+        # Development / Testing mode
         if not use_sqlite:
             try:
                 repo = PostgresSecurityRepository()
-                # Test connectivity
                 repo.count_users()
                 _GLOBAL_SECURITY_REPO = repo
                 return _GLOBAL_SECURITY_REPO
@@ -899,6 +918,7 @@ def get_security_repository() -> BaseSecurityRepository:
 
         _GLOBAL_SECURITY_REPO = SqliteSecurityRepository()
         return _GLOBAL_SECURITY_REPO
+
 
 
 def set_security_repository(repo: BaseSecurityRepository | None) -> None:

@@ -14,6 +14,9 @@ import { TargetsPage } from "./pages/TargetsPage";
 import { AlertsPage } from "./pages/AlertsPage";
 import { InvestigationPage } from "./pages/InvestigationPage";
 import { SystemPage } from "./pages/SystemPage";
+import { UsersPage } from "./pages/UsersPage";
+import { AuditPage } from "./pages/AuditPage";
+
 
 import { useSystemStatus } from "./hooks/useSystemStatus";
 import { useWebSocket } from "./hooks/useWebSocket";
@@ -281,7 +284,24 @@ export function App() {
                           />
                         }
                       />
+                      <Route
+                        path="/admin/users"
+                        element={
+                          <ProtectedRoute requiredRole="ADMIN">
+                            <UsersPage />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/audit"
+                        element={
+                          <ProtectedRoute requiredPermission="audit:read">
+                            <AuditPage />
+                          </ProtectedRoute>
+                        }
+                      />
                       <Route path="*" element={<Navigate to="/operations" replace />} />
+
                     </Routes>
                   </ErrorBoundary>
                 </main>

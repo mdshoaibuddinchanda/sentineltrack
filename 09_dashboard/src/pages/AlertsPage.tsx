@@ -6,6 +6,7 @@ import { SeverityBadge, MatchClassBadge } from "../components/common/Badge";
 import { formatDateTime, formatScore, maskRegistration } from "../utils/formatters";
 import { getAlert } from "../api/alerts";
 import { Bell, Check, Compass, Search, Filter, X, Loader2, AlertCircle } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 interface AlertsPageProps {
   alerts: Alert[];
@@ -15,8 +16,11 @@ interface AlertsPageProps {
 }
 
 export function AlertsPage({ alerts, onAcknowledge, onInvestigate, privacyMode = false }: AlertsPageProps) {
+  const { hasPermission, user } = useAuth();
+  const canAck = hasPermission("alert:ack") || user?.role === "ADMIN" || user?.role === "SUPERVISOR" || user?.role === "OPERATOR";
   const { alertId: routeAlertId } = useParams<{ alertId?: string }>();
   const navigate = useNavigate();
+
 
   const [search, setSearch] = useState("");
   const [unackOnly, setUnackOnly] = useState(false);
@@ -234,7 +238,7 @@ export function AlertsPage({ alerts, onAcknowledge, onInvestigate, privacyMode =
                       >
                         <Compass className="w-3.5 h-3.5" /> Trace
                       </button>
-                      {!alt.acknowledged && (
+                      {!alt.acknowledged && canAck && (
                         <button
                           onClick={() => onAcknowledge(alt.alert_id)}
                           className="px-2.5 py-1 bg-emerald-800/80 hover:bg-emerald-700 text-white rounded text-[11px] font-semibold transition-colors flex items-center gap-1"
@@ -245,6 +249,7 @@ export function AlertsPage({ alerts, onAcknowledge, onInvestigate, privacyMode =
                     </div>
                   </td>
                 </tr>
+
               ))}
             </tbody>
           </table>

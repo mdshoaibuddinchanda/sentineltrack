@@ -99,18 +99,32 @@ async def create_user(
         updated_at=now
     )
 
-    repo.save_user(user)
+    try:
+        repo.save_user(user)
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to save user.")
 
-    audit.log_event(
-        action="USER_CREATED",
-        resource_type="user",
-        outcome="SUCCESS",
-        principal=principal,
-        resource_id=user.user_id,
-        request_id=request.headers.get("X-Request-ID"),
-        details={"username": user.username, "role": user.role.value},
-        fail_closed=True
-    )
+    try:
+        audit.log_event(
+            action="USER_CREATED",
+            resource_type="user",
+            outcome="SUCCESS",
+            principal=principal,
+            resource_id=user.user_id,
+            request_id=request.headers.get("X-Request-ID"),
+            details={"username": user.username, "role": user.role.value},
+            fail_closed=True
+        )
+    except Exception as audit_exc:
+        # Compensate: delete/disable user if audit logging fails
+        try:
+            repo.disable_user(user.user_id)
+        except Exception:
+            pass
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Security audit trail recording failed; user creation aborted."
+        )
 
     return _user_to_response(user)
 
@@ -145,8 +159,9 @@ async def update_user(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
 
     # Guard: Prevent disabling or demoting the last active administrator
-    if user.role == UserRole.ADMIN:
-        will_demote = payload.role is not None and payload.role != RoleEnum.ADMIN
+    if user.role == UserRole.ADMIN or user.role.value == UserRole.ADMIN.value:
+        target_role_val = (payload.role.value if hasattr(payload.role, "value") else str(payload.role)) if payload.role is not None else None
+        will_demote = target_role_val is not None and target_role_val != UserRole.ADMIN.value
         will_disable = payload.enabled is False
         if will_demote or will_disable:
             active_admins = repo.count_active_admins()
@@ -155,6 +170,7 @@ async def update_user(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Cannot disable or demote the last remaining active administrator."
                 )
+
 
     changes = {}
     if payload.display_name is not None:

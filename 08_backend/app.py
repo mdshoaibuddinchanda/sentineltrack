@@ -74,15 +74,21 @@ def create_app() -> FastAPI:
     config = get_backend_config()
     sec_config = get_security_config()
 
+    is_prod = sec_config.env == "production"
+    docs_url = None if is_prod else "/docs"
+    redoc_url = None if is_prod else "/redoc"
+    openapi_url = None if is_prod else "/openapi.json"
+
     app = FastAPI(
         title=config.server.title,
         version=config.server.version,
         description=config.server.description,
         lifespan=lifespan,
-        docs_url="/docs",
-        redoc_url="/redoc",
-        openapi_url="/openapi.json"
+        docs_url=docs_url,
+        redoc_url=redoc_url,
+        openapi_url=openapi_url
     )
+
 
     # 1. Security Headers Middleware (outermost so all responses get headers)
     app.add_middleware(SecurityHeadersMiddleware)

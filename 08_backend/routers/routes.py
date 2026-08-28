@@ -35,8 +35,9 @@ async def get_target_route(
     start_time: Optional[datetime] = Query(default=None),
     end_time: Optional[datetime] = Query(default=None),
     min_match_score: float = Query(default=0.60, ge=0.0, le=1.0),
-    persist: bool = Query(default=True, description="Whether to persist this trajectory run in PostgreSQL"),
+    persist: bool = Query(default=False, description="Whether to persist this trajectory run in PostgreSQL"),
     service: RouteService = Depends(get_route_service),
+
     metrics: MetricsCollector = Depends(get_metrics),
     principal: AuthenticatedPrincipal = Depends(require_permission(Permission.ROUTE_READ)),
     audit = Depends(get_audit_logger)

@@ -1,41 +1,70 @@
 import type { AuthUser, LoginResponse, CsrfResponse } from '../types/auth';
+import {
+  request,
+  setCsrfToken,
+  getCsrfToken,
+  AuthenticationError,
+  AuthorizationError,
+} from './client';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
+export { setCsrfToken, getCsrfToken, AuthenticationError, AuthorizationError };
 
-// ---------------------------------------------------------------------------
-// Module-level CSRF token store (never persisted to localStorage)
-// ---------------------------------------------------------------------------
-let _csrfToken: string | null = null;
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? import.meta.env.VITE_SENTINEL_API_URL ?? 'http://localhost:8000';
 
-export function setCsrfToken(token: string): void {
-  _csrfToken = token;
+/**
+ * Fetches a fresh CSRF token from the server and stores it in memory.
+ * Safe to call on page load — the session cookie determines the session context.
+ */
+export async function fetchCsrfToken(): Promise<string> {
+  const data = await request<CsrfResponse>('/api/v1/auth/csrf');
+  setCsrfToken(data.csrf_token);
+  return data.csrf_token;
 }
 
-export function getCsrfToken(): string | null {
-  return _csrfToken;
+/**
+ * Authenticates the user via username + password.
+ * On success, stores the returned CSRF token in memory.
+ */
+export async function login(
+  username: string,
+  password: string
+): Promise<LoginResponse> {
+  const data = await request<LoginResponse>('/api/v1/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ username, password }),
+  });
+  setCsrfToken(data.csrf_token);
+  return data;
 }
 
-// ---------------------------------------------------------------------------
-// Custom error types
-// ---------------------------------------------------------------------------
-
-export class AuthenticationError extends Error {
-  constructor(message = 'Authentication required') {
-    super(message);
-    this.name = 'AuthenticationError';
+/**
+ * Logs the current user out. Sends CSRF token in header, then clears the
+ * memory store regardless of server response.
+ */
+export async function logout(): Promise<void> {
+  try {
+    await request<{ message: string }>('/api/v1/auth/logout', {
+      method: 'POST',
+    });
+  } finally {
+    setCsrfToken(null);
   }
 }
 
-// ---------------------------------------------------------------------------
-// Core fetch helper
-// ---------------------------------------------------------------------------
+/**
+ * Returns the currently authenticated user's profile including permissions.
+ * Throws AuthenticationError on 401.
+ */
+export async function getMe(): Promise<AuthUser> {
+  const data = await request<{ user: AuthUser; role: string; permissions: string[] }>('/api/v1/auth/me');
+  return {
+    ...data.user,
+    permissions: data.permissions,
+  };
+}
 
 /**
- * Wrapper around fetch that:
- * - Always sends credentials (HttpOnly cookie)
- * - Injects X-CSRF-Token for state-changing methods (POST/PATCH/DELETE/PUT)
- * - Throws AuthenticationError on 401
- * - Throws Error on 403 and other non-OK responses
+ * Legacy wrapper for fetch with credentials and CSRF support (for custom calls).
  */
 export async function authedFetch(
   url: string,
@@ -46,9 +75,9 @@ export async function authedFetch(
     method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS';
 
   const headers = new Headers(options.headers);
-
-  if (isStateChanging && _csrfToken) {
-    headers.set('X-CSRF-Token', _csrfToken);
+  const token = getCsrfToken();
+  if (isStateChanging && token) {
+    headers.set('X-CSRF-Token', token);
   }
 
   if (!headers.has('Content-Type') && isStateChanging) {
@@ -70,10 +99,9 @@ export async function authedFetch(
   }
 
   if (response.status === 403) {
-    throw new Error('Access denied: Insufficient permissions');
+    throw new AuthorizationError();
   }
 
-  // Try to extract a meaningful error message from the response body
   let errorMessage: string;
   try {
     const body = await response.json();
@@ -89,89 +117,3 @@ export async function authedFetch(
   throw new Error(errorMessage);
 }
 
-// ---------------------------------------------------------------------------
-// Auth API functions
-// ---------------------------------------------------------------------------
-
-/**
- * Fetches a fresh CSRF token from the server and stores it in the module.
- * Safe to call on page load — the session cookie determines the session context.
- */
-export async function fetchCsrfToken(): Promise<string> {
-  const response = await fetch(`${API_BASE}/api/v1/auth/csrf`, {
-    method: 'GET',
-    credentials: 'include',
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch CSRF token: ${response.statusText}`);
-  }
-
-  const data: CsrfResponse = await response.json();
-  _csrfToken = data.csrf_token;
-  return data.csrf_token;
-}
-
-/**
- * Authenticates the user via username + password.
- * On success, stores the returned CSRF token in the module.
- * Throws a descriptive Error on HTTP failures.
- */
-export async function login(
-  username: string,
-  password: string
-): Promise<LoginResponse> {
-  const response = await fetch(`${API_BASE}/api/v1/auth/login`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
-  });
-
-  if (!response.ok) {
-    let errorMessage: string;
-    try {
-      const body = await response.json();
-      errorMessage =
-        body?.error?.message ??
-        body?.detail ??
-        body?.message ??
-        response.statusText;
-    } catch {
-      errorMessage = response.statusText || `HTTP ${response.status}`;
-    }
-    throw new Error(errorMessage);
-  }
-
-  const data: LoginResponse = await response.json();
-  setCsrfToken(data.csrf_token);
-  return data;
-}
-
-/**
- * Logs the current user out. Sends CSRF token in header, then clears the
- * module store regardless of server response.
- */
-export async function logout(): Promise<void> {
-  try {
-    await authedFetch(`${API_BASE}/api/v1/auth/logout`, {
-      method: 'POST',
-    });
-  } finally {
-    // Always clear the local token even if the request fails
-    _csrfToken = null;
-  }
-}
-
-/**
- * Returns the currently authenticated user's profile including permissions.
- * Throws AuthenticationError on 401.
- */
-export async function getMe(): Promise<AuthUser> {
-  const response = await authedFetch(`${API_BASE}/api/v1/auth/me`, {
-    method: 'GET',
-  });
-
-  const data: AuthUser = await response.json();
-  return data;
-}

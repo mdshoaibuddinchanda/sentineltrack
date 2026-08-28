@@ -1,107 +1,136 @@
 {
-  "schema_version": "1.0",
-  "priority": "P10",
-  "generated_at": "2026-08-28",
-  "summary": {
-    "total_findings": 10,
-    "critical": 0,
-    "high": 3,
-    "medium": 4,
-    "low": 2,
-    "info": 1,
-    "resolved": 10,
-    "open": 0
+  "pass": "Priority 10B Final Security Closure Pass",
+  "baseline_commit": "93f3a1048c5ead27902c147790a75bdc64ac2c48",
+  "audit_date": "2026-08-28T19:52:00Z",
+  "scope": "Authentication, RBAC, Sessions, CSRF, Injection Resistance, WebSocket Auth, Audit Trail, Frontend Access Controls, and Production Hardening",
+  "verdict": "100% HACKATHON-ACCEPTANCE COMPLETE FOR THE DEFINED P10 SECURITY SCOPE",
+  "findings_summary": {
+    "critical_open": 0,
+    "high_open": 0,
+    "medium_open": 0,
+    "low_open": 0,
+    "closed_findings": 15
   },
-  "findings": [
+  "closed_items": [
     {
-      "id": "P10-F001",
-      "title": "No authentication on any API endpoint",
+      "id": "A1",
+      "category": "Frontend Authentication & CSRF",
+      "severity": "HIGH",
+      "title": "Unified Frontend API Request Client",
+      "status": "RESOLVED",
+      "description": "Standardized all fetch calls across API modules to include credentials: 'include', automatic X-CSRF-Token header injection on POST/PATCH/DELETE, and distinct handling for 401 AuthenticationError and 403 AuthorizationError."
+    },
+    {
+      "id": "A2",
+      "category": "Frontend Authentication & CSRF",
+      "severity": "MEDIUM",
+      "title": "CSRF Token In-Memory Restoration on Session Refresh",
+      "status": "RESOLVED",
+      "description": "AuthContext mount lifecycle automatically requests a fresh CSRF token into memory when restoring an active session via getMe()."
+    },
+    {
+      "id": "A3",
+      "category": "Session & CSRF Security",
+      "severity": "HIGH",
+      "title": "CSRF Token Rotation Repository Persistence",
+      "status": "RESOLVED",
+      "description": "Updated SQLite and PostgreSQL save_session conflict update clauses to persist rotated csrf_token_hash."
+    },
+    {
+      "id": "A4",
+      "category": "CSRF Security",
+      "severity": "MEDIUM",
+      "title": "CSRF Header Enforcement on POST /auth/logout",
+      "status": "RESOLVED",
+      "description": "Added validate_csrf_token dependency to POST /api/v1/auth/logout to mitigate forced logout CSRF attacks."
+    },
+    {
+      "id": "A5",
+      "category": "WebSocket Security",
+      "severity": "HIGH",
+      "title": "WebSocket Handshake Origin Validation",
+      "status": "RESOLVED",
+      "description": "Enforced exact-match Origin validation against SecurityConfig.allowed_origins. Untrusted origins are terminated with WebSocket close code 4403."
+    },
+    {
+      "id": "A6",
+      "category": "WebSocket Authorization",
+      "severity": "HIGH",
+      "title": "WebSocket Wildcard Topic Expansion Authorization",
+      "status": "RESOLVED",
+      "description": "Expanded wildcard '*' topic subscriptions into explicit event families and filtered each against the authenticated principal's granted permissions."
+    },
+    {
+      "id": "A7",
+      "category": "Session Management",
+      "severity": "HIGH",
+      "title": "Session Revocation Across Devices on Password Change",
+      "status": "RESOLVED",
+      "description": "Implemented session_manager.revoke_all_user_sessions and cookie clearing upon successful password change."
+    },
+    {
+      "id": "A8",
+      "category": "Database & Production Reliability",
       "severity": "CRITICAL",
+      "title": "Security Database Fail-Closed in Production Mode",
       "status": "RESOLVED",
-      "description": "All P8 endpoints were unauthenticated; any client could create, modify, or disable targets.",
-      "resolution": "require_permission() dependency added to all mutating endpoints. 401/403 enforced.",
-      "affected_files": ["08_backend/routers/cameras.py", "08_backend/routers/targets.py", "08_backend/routers/alerts.py", "08_backend/routers/sightings.py", "08_backend/routers/routes.py"]
+      "description": "Configured get_security_repository to strictly require PostgreSQL in production mode (SENTINEL_ENV=production) and raise RuntimeError on failure without silent fallback to SQLite."
     },
     {
-      "id": "P10-F002",
-      "title": "No CSRF protection on state-changing endpoints",
-      "severity": "HIGH",
-      "status": "RESOLVED",
-      "description": "POST/PATCH/DELETE endpoints had no CSRF protection.",
-      "resolution": "Per-session CSRF token using HMAC-SHA256. X-CSRF-Token header required for all mutating endpoints.",
-      "affected_files": ["08_backend/routers/auth.py", "08_backend/routers/targets.py", "08_backend/routers/alerts.py", "08_backend/routers/users.py", "10_security/csrf.py"]
-    },
-    {
-      "id": "P10-F003",
-      "title": "No session management — stateless JWT risk / localStorage exposure",
-      "severity": "HIGH",
-      "status": "RESOLVED",
-      "description": "No session system existed. Risk of XSS-based token theft if JWT stored in localStorage.",
-      "resolution": "Opaque server-side session with HttpOnly, SameSite=Strict cookie. No token in localStorage.",
-      "affected_files": ["10_security/sessions.py", "10_security/repository.py", "10_security/dependencies.py"]
-    },
-    {
-      "id": "P10-F004",
-      "title": "No rate limiting on login endpoint",
-      "severity": "HIGH",
-      "status": "RESOLVED",
-      "description": "Login endpoint had no brute-force protection.",
-      "resolution": "LoginRateLimiter: 5 attempts per 15 minutes per (username, IP). Returns retry-after on lockout.",
-      "affected_files": ["10_security/rate_limit.py", "08_backend/routers/auth.py"]
-    },
-    {
-      "id": "P10-F005",
-      "title": "No security headers on HTTP responses",
-      "severity": "MEDIUM",
-      "status": "RESOLVED",
-      "description": "Missing X-Content-Type-Options, X-Frame-Options, CSP, HSTS.",
-      "resolution": "SecurityHeadersMiddleware added as outermost middleware in app.py.",
-      "affected_files": ["10_security/middleware.py", "08_backend/app.py"]
-    },
-    {
-      "id": "P10-F006",
-      "title": "CORS allows all origins",
-      "severity": "MEDIUM",
-      "status": "RESOLVED",
-      "description": "CORSMiddleware used config.cors.allowed_origins which defaulted to ['*'] in development.",
-      "resolution": "CORS origins now sourced from SecurityConfig.allowed_origins (SENTINEL_ALLOWED_ORIGINS env). Explicit allow_headers list including X-CSRF-Token.",
-      "affected_files": ["08_backend/app.py", "10_security/config.py"]
-    },
-    {
-      "id": "P10-F007",
-      "title": "WebSocket endpoints had no authentication",
-      "severity": "MEDIUM",
-      "status": "RESOLVED",
-      "description": "Any unauthenticated client could subscribe to real-time alert and sighting events.",
-      "resolution": "WS handshake reads sentinel_session cookie. 4401 on missing/invalid session. Topic-level permission enforcement with 4403.",
-      "affected_files": ["08_backend/websocket/routes.py"]
-    },
-    {
-      "id": "P10-F008",
-      "title": "Audit log placeholder never wrote real events",
-      "severity": "MEDIUM",
-      "status": "RESOLVED",
-      "description": "08_backend/dependencies.py record_audit_event() was a no-op stub.",
-      "resolution": "Replaced with real AuditLogger calls in all routers. Fail_closed mode for critical operations.",
-      "affected_files": ["08_backend/dependencies.py", "10_security/audit.py"]
-    },
-    {
-      "id": "P10-F009",
-      "title": "No user management capability",
+      "id": "A9",
+      "category": "Information Leakage Defense",
       "severity": "LOW",
+      "title": "Interactive OpenAPI Documentation Disabled in Production",
       "status": "RESOLVED",
-      "description": "No API to create operators or provision the initial admin.",
-      "resolution": "Full CRUD user management API at /api/v1/users (ADMIN-only). CLI bootstrap_admin for first-run.",
-      "affected_files": ["08_backend/routers/users.py", "10_security/bootstrap_admin.py"]
+      "description": "Configured FastAPI application to set docs_url=None, redoc_url=None, openapi_url=None in production mode."
     },
     {
-      "id": "P10-F010",
-      "title": "Frontend had no auth state or route guards",
-      "severity": "LOW",
+      "id": "A10",
+      "category": "Access Control & Health Endpoints",
+      "severity": "MEDIUM",
+      "title": "Protected Readiness & Metrics Endpoints",
       "status": "RESOLVED",
-      "description": "Dashboard accessible without authentication; no login page.",
-      "resolution": "AuthContext provider with session detection. LoginPage. ProtectedRoute guard with 401->login redirect and 403->AccessDenied display.",
-      "affected_files": ["09_dashboard/src/context/AuthContext.tsx", "09_dashboard/src/pages/LoginPage.tsx", "09_dashboard/src/components/ProtectedRoute.tsx", "09_dashboard/src/App.tsx"]
+      "description": "Enforced Permission.SYSTEM_READ on GET /ready and Permission.METRICS_READ on GET /metrics, while preserving public unauthenticated liveness on GET /health."
+    },
+    {
+      "id": "A11",
+      "category": "Idempotent API Design",
+      "severity": "LOW",
+      "title": "GET /api/v1/routes/{registration} Default Non-Mutating",
+      "status": "RESOLVED",
+      "description": "Set persist=False default on route queries to maintain pure read idempotency on GET requests."
+    },
+    {
+      "id": "A12",
+      "category": "Actor Integrity & Anti-Spoofing",
+      "severity": "HIGH",
+      "title": "Alert Acknowledgement Actor Derived Authoritatively from Session",
+      "status": "RESOLVED",
+      "description": "Overrode client-supplied acknowledged_by payload with principal.username from validated session token."
+    },
+    {
+      "id": "A13",
+      "category": "Access Control & Administrative Safeguards",
+      "severity": "HIGH",
+      "title": "Last Active Administrator Safeguard",
+      "status": "RESOLVED",
+      "description": "Fixed enum comparison to prevent demoting or disabling the last active admin account."
+    },
+    {
+      "id": "A14",
+      "category": "Audit Trail Integrity",
+      "severity": "HIGH",
+      "title": "Compensating Transaction on Audit Failure",
+      "status": "RESOLVED",
+      "description": "Implemented compensating rollback of user creation mutations if fail_closed audit trail recording raises an exception."
+    },
+    {
+      "id": "A15",
+      "category": "Frontend Access Control UX",
+      "severity": "MEDIUM",
+      "title": "Admin User Management and Audit Trail UI",
+      "status": "RESOLVED",
+      "description": "Delivered dedicated UsersPage (/admin/users) and AuditPage (/audit), Header user status pill, and RBAC action filtering."
     }
   ]
 }

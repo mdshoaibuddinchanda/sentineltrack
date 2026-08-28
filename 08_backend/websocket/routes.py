@@ -14,9 +14,11 @@ _sec = importlib.import_module("10_security")
 Permission = _sec.Permission
 get_session_manager = _sec.get_session_manager
 get_security_repository = _sec.get_security_repository
+get_security_config = _sec.get_security_config
 _perms_m = importlib.import_module("10_security.permissions")
 has_permission = _perms_m.has_permission
 get_permissions_for_role = _perms_m.get_permissions_for_role
+
 
 logger = logging.getLogger("sentineltrack.ws")
 
@@ -34,10 +36,18 @@ router = APIRouter(tags=["WebSocket Real-Time Events"])
 
 async def _authenticate_ws(websocket: WebSocket):
     """
-    Validate the session cookie on a WebSocket handshake.
-    Returns (user_id, role, permissions_set) or raises WebSocketDisconnect(4401).
-    WebSocket upgrade headers include cookies — we read the sentinel_session cookie.
+    Validate Origin and session cookie on a WebSocket handshake.
+    Returns (user_id, role, permissions_set) or raises WebSocketDisconnect(4401/4403).
     """
+    # 1. Validate Origin header if present
+    origin = websocket.headers.get("origin")
+    if origin:
+        sec_config = get_security_config()
+        if origin not in sec_config.allowed_origins:
+            logger.warning("WS handshake rejected: forbidden Origin '%s'", origin)
+            await websocket.close(code=4403, reason="Forbidden Origin")
+            return None, None, set()
+
     # Check if testing override is present on the app
     _dep_mod = importlib.import_module("10_security.dependencies")
     _get_prin = _dep_mod.get_current_principal
@@ -68,22 +78,30 @@ async def _authenticate_ws(websocket: WebSocket):
         return None, None, set()
 
 
-
-
-def _filter_topics_for_permissions(requested: list, permissions: Set) -> list:
-    """Return only those topics the principal has permission for."""
-    allowed = []
+def _filter_topics_for_permissions(requested: list, permissions: Set) -> Optional[list]:
+    """
+    Expand and filter requested topics against the principal's permission set.
+    Never returns literal '*' wildcard; expands into permitted topic families.
+    Returns list of authorized topic strings, or None if no topics are authorized.
+    """
+    allowed_topics = set()
     for topic in requested:
         topic_upper = topic.upper()
-        allowed_flag = False
-        for prefix, perm in _TOPIC_PERMISSIONS.items():
-            if topic_upper == "*" or topic_upper.startswith(prefix):
+        if topic_upper == "*":
+            # Wildcard: expand into all topic families the user has permission for
+            for prefix, perm in _TOPIC_PERMISSIONS.items():
                 if perm in permissions:
-                    allowed_flag = True
+                    allowed_topics.add(prefix)
+        else:
+            # Specific topic or prefix
+            for prefix, perm in _TOPIC_PERMISSIONS.items():
+                if topic_upper.startswith(prefix):
+                    if perm in permissions:
+                        allowed_topics.add(topic)
                     break
-        if allowed_flag:
-            allowed.append(topic)
-    return allowed if allowed else None  # None → no authorized topics
+
+    return list(allowed_topics) if allowed_topics else None
+
 
 
 @router.websocket("/ws/events")

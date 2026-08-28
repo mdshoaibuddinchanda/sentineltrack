@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Shield, Radio, Activity, Eye, AlertOctagon, Video, RefreshCw, Lock } from "lucide-react";
+import { Shield, Radio, Activity, AlertOctagon, Video, RefreshCw, Lock, LogOut, User as UserIcon } from "lucide-react";
 import { SystemStatusType } from "../../hooks/useSystemStatus";
 import { WebSocketConnectionStatus } from "../../types/websocket";
+import { useAuth } from "../../context/AuthContext";
+
 
 interface HeaderProps {
   systemStatus: SystemStatusType;
@@ -28,8 +30,10 @@ export function Header({
   privacyMode,
   onTogglePrivacyMode,
 }: HeaderProps) {
+  const { user, logout } = useAuth();
   const [timeUtc, setTimeUtc] = useState("");
   const [timeLocal, setTimeLocal] = useState("");
+
 
   useEffect(() => {
     const updateTime = () => {
@@ -191,7 +195,26 @@ export function Header({
         >
           <RefreshCw className="w-4 h-4" />
         </button>
+
+        {/* Authenticated User & Logout */}
+        {user && (
+          <div className="flex items-center gap-2 pl-2 border-l border-police-700">
+            <div className="hidden sm:flex flex-col text-right font-mono">
+              <span className="text-xs font-bold text-slate-200">{user.username}</span>
+              <span className="text-[10px] text-cyan-400 font-semibold">{user.role}</span>
+            </div>
+            <button
+              onClick={() => logout()}
+              title="Sign Out / Terminate Session"
+              className="p-1.5 bg-rose-950/60 hover:bg-rose-900 border border-rose-700/60 rounded text-rose-300 hover:text-white transition-colors flex items-center gap-1 text-xs font-mono"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden md:inline text-[11px]">Logout</span>
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );
 }
+

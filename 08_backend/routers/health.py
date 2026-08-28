@@ -62,9 +62,20 @@ async def get_health(metrics: MetricsCollector = Depends(get_metrics)):
 
 
 
+# --- Security imports ---
+_sec_m = importlib.import_module("10_security")
+Permission = _sec_m.Permission
+AuthenticatedPrincipal = _sec_m.AuthenticatedPrincipal
+_dep_m = importlib.import_module("10_security.dependencies")
+require_permission = _dep_m.require_permission
+
+
 @router.get("/ready", response_model=ReadinessResponse)
-async def get_readiness(response: Response):
-    """Deep readiness probe checking PostgreSQL/PostGIS, camera registry, and route engine dependencies."""
+async def get_readiness(
+    response: Response,
+    principal: AuthenticatedPrincipal = Depends(require_permission(Permission.SYSTEM_READ))
+):
+    """Deep readiness probe checking PostgreSQL/PostGIS, camera registry, and route engine dependencies (SYSTEM_READ)."""
     components = {
         "database": False,
         "postgis": False,
@@ -149,6 +160,10 @@ async def get_readiness(response: Response):
 
 
 @router.get("/metrics", response_model=MetricsResponse)
-async def get_metrics_snapshot(metrics: MetricsCollector = Depends(get_metrics)):
-    """Returns operational JSON metrics snapshot."""
+async def get_metrics_snapshot(
+    metrics: MetricsCollector = Depends(get_metrics),
+    principal: AuthenticatedPrincipal = Depends(require_permission(Permission.METRICS_READ))
+):
+    """Returns operational JSON metrics snapshot (METRICS_READ)."""
     return MetricsResponse(metrics=metrics.snapshot())
+

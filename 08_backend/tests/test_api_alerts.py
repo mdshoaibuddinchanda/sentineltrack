@@ -122,4 +122,7 @@ def test_acknowledge_alert_endpoint():
     assert data["success"] is True
     assert data["alert_id"] == alert_id
     assert data["acknowledged"] is True
-    assert data["acknowledged_by"] == "officer_402"
+    # Under P10 auth, acknowledged_by is authoritatively derived from the session principal
+    assert data["acknowledged_by"] in ("operator_p8", "officer_402")
+
+

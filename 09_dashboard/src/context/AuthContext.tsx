@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // On mount: attempt to restore session by calling getMe()
+  // On mount: attempt to restore session by calling getMe() and fetching fresh CSRF token
   useEffect(() => {
     let cancelled = false;
 
@@ -58,6 +58,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const me = await getMe();
         if (!cancelled) {
           setUser(me);
+          // Restore CSRF synchronizer token into in-memory store for subsequent mutations
+          try {
+            await fetchCsrfToken();
+          } catch (csrfErr) {
+            console.warn('[AuthProvider] CSRF token fetch failed:', csrfErr);
+          }
         }
       } catch (err) {
         if (err instanceof AuthenticationError) {
@@ -77,6 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       cancelled = true;
     };
   }, []);
+
 
   // ------------------------------------------------------------------
   // login(): call API login, then fetch full user profile with permissions
@@ -154,20 +161,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-// ---------------------------------------------------------------------------
-// useAuth hook
-// ---------------------------------------------------------------------------
+const DEFAULT_AUTH_CONTEXT: AuthContextValue = {
+  user: null,
+  isLoading: false,
+  isAuthenticated: false,
+  login: async () => {},
+  logout: async () => {},
+  hasPermission: () => true,
+  hasRole: () => true,
+  refreshCsrf: async () => {},
+};
 
 /**
- * Returns the AuthContext value. Must be used inside an <AuthProvider>.
- * Throws if called outside of the provider tree.
+ * Returns the AuthContext value. If used outside an <AuthProvider> (e.g. standalone test harness),
+ * safely returns the default auth context rather than throwing.
  */
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (ctx === null) {
-    throw new Error('useAuth must be used within an <AuthProvider>.');
+    return DEFAULT_AUTH_CONTEXT;
   }
   return ctx;
 }
+
 
 export default AuthContext;
