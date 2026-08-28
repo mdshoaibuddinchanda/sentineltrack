@@ -50,7 +50,8 @@ class SightingRepository:
                    s.first_pts_ms, s.last_pts_ms, s.registration_candidate,
                    s.confidence, s.match_score, s.match_class, s.target_id,
                    s.created_at, s.raw_evidence,
-                   c.latitude, c.longitude, c.azimuth, c.location_quality
+                   c.latitude, c.longitude, c.azimuth, c.location_quality,
+                   s.event_time_utc, s.event_time_source, s.event_time_quality, s.ingest_time_utc
             FROM vehicle_sightings s
             LEFT JOIN cameras c ON s.camera_id = c.camera_id
             WHERE (s.registration_candidate = %s OR s.raw_evidence->>'target_registration' = %s)
@@ -59,13 +60,13 @@ class SightingRepository:
         params: List[Any] = [norm_reg, norm_reg, min_match_score]
 
         if start_time_utc:
-            query += " AND s.created_at >= %s"
+            query += " AND COALESCE(s.event_time_utc, s.created_at) >= %s"
             params.append(start_time_utc)
         if end_time_utc:
-            query += " AND s.created_at <= %s"
+            query += " AND COALESCE(s.event_time_utc, s.created_at) <= %s"
             params.append(end_time_utc)
 
-        query += " ORDER BY s.created_at ASC LIMIT %s;"
+        query += " ORDER BY COALESCE(s.event_time_utc, s.created_at) ASC LIMIT %s;"
         params.append(limit)
 
         try:
@@ -76,13 +77,17 @@ class SightingRepository:
 
                     results: List[RouteSighting] = []
                     for r in rows:
-                        s_id, c_id, ep, trk, f_pts, l_pts, cand, conf, sc, cls_name, t_id, cr_at, raw_ev, lat, lon, az, lq = r
+                        s_id, c_id, ep, trk, f_pts, l_pts, cand, conf, sc, cls_name, t_id, cr_at, raw_ev, lat, lon, az, lq, ev_t, ev_src, ev_qual, ing_t = r
 
                         # Resolve true event time
                         time_info = resolve_event_time_info({
                             'first_pts_ms': f_pts,
                             'stream_epoch': ep,
                             'created_at': cr_at,
+                            'event_time_utc': ev_t,
+                            'event_time_source': ev_src,
+                            'event_time_quality': ev_qual,
+                            'ingest_time_utc': ing_t,
                             'raw_evidence': raw_ev or {}
                         })
 

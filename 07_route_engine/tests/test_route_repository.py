@@ -47,3 +47,33 @@ def test_in_memory_route_repository_crud():
 
     # Non-existent target
     assert repo.get_latest_trajectory_run('NONEXISTENT') is None
+
+
+def test_postgres_route_repository_raises_persistence_error_on_bad_connection():
+    import pytest
+    PostgresRouteRepository = repo_mod.PostgresRouteRepository
+    RoutePersistenceError = repo_mod.RoutePersistenceError
+
+    # Faulty connection factory
+    def faulty_conn():
+        raise ConnectionError("Simulated DB connection failure")
+
+    repo = PostgresRouteRepository(connection_factory=faulty_conn)
+    traj = TargetTrajectory(
+        target_id='GJ01ERR',
+        registration='GJ01ERR',
+        sightings=[],
+        segments=[],
+        trajectory_confidence=0.90,
+        status=TrajectoryStatus.SINGLE_SIGHTING,
+        start_time_utc=None,
+        end_time_utc=None,
+        duration_seconds=0.0,
+        total_lower_bound_distance_m=0.0,
+        minimum_average_speed_kmh=0.0,
+        geojson={'type': 'FeatureCollection', 'features': []}
+    )
+
+    with pytest.raises(RoutePersistenceError) as exc_info:
+        repo.save_trajectory_run(traj)
+    assert "Failed to persist route" in str(exc_info.value)

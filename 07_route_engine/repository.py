@@ -27,6 +27,11 @@ def get_default_connection():
         return psycopg.connect('dbname=sentinel user=sentinel host=localhost port=5432')
 
 
+class RoutePersistenceError(Exception):
+    """Raised when route analysis persistence fails."""
+    pass
+
+
 class BaseRouteRepository(ABC):
     @abstractmethod
     def save_trajectory_run(self, trajectory: TargetTrajectory) -> str:
@@ -105,8 +110,8 @@ class PostgresRouteRepository(BaseRouteRepository):
 
                 conn.commit()
             return route_id
-        except Exception:
-            return route_id
+        except Exception as e:
+            raise RoutePersistenceError(f"Failed to persist route analysis run '{route_id}': {e}") from e
 
     def get_trajectory_run(self, route_id: str) -> Optional[TargetTrajectory]:
         try:

@@ -129,8 +129,8 @@ class RouteEnginePipeline:
         if persist and self.route_repo:
             try:
                 self.route_repo.save_trajectory_run(trajectory)
-            except Exception:
-                pass
+            except Exception as e:
+                trajectory.warnings.append(f"Persistence warning: {e}")
 
         return trajectory
 

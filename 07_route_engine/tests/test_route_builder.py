@@ -104,3 +104,56 @@ def test_route_with_missing_camera_geolocation():
     assert len(traj.sightings) == 2
     # Warning must be generated for unknown camera location
     assert any('unknown' in w.lower() for w in traj.warnings)
+    # Feasibility must be UNKNOWN, not FEASIBLE
+    assert len(traj.segments) == 1
+    assert traj.segments[0].feasibility == models_mod.FeasibilityClass.UNKNOWN
+
+
+def test_ambiguity_status_and_alternative_paths():
+    # Vehicle has two competing plausible branches with near-identical scores
+    cam_repo = InMemoryCameraRepository()
+    cam_repo.save_camera(CameraGeo('C_START', 'Start', 23.0000, 72.5000))
+    cam_repo.save_camera(CameraGeo('C_BR_A', 'Branch A', 23.0200, 72.5100))
+    cam_repo.save_camera(CameraGeo('C_BR_B', 'Branch B', 23.0200, 72.4900))
+
+    t0 = datetime(2026, 8, 28, 15, 0, 0, tzinfo=timezone.utc)
+    sightings = [
+        RouteSighting('s1', 'GJ01AMB', 'GJ01AMB', 'C_START', 1, 1, 0.0, 100.0, t0, match_score=0.95),
+        RouteSighting('s2a', 'GJ01AMB', 'GJ01AMB', 'C_BR_A', 1, 1, 0.0, 100.0, t0 + timedelta(minutes=5), match_score=0.95),
+        RouteSighting('s2b', 'GJ01AMB', 'GJ01AMB', 'C_BR_B', 1, 1, 0.0, 100.0, t0 + timedelta(minutes=5), match_score=0.95),
+    ]
+
+    pipeline = RouteEnginePipeline(
+        camera_repo=cam_repo,
+        sighting_repo=InMemorySightingRepository(sightings),
+        route_repo=InMemoryRouteRepository()
+    )
+
+    traj = pipeline.build_target_trajectory('GJ01AMB')
+    assert traj.status == TrajectoryStatus.AMBIGUOUS
+    assert len(traj.alternative_trajectories) >= 1
+    assert any('ambiguity' in w.lower() for w in traj.warnings)
+
+
+def test_high_confidence_conflicting_sightings_detection():
+    # Two high-confidence sightings separated by 800km in 3 minutes (impossible speed)
+    cam_repo = InMemoryCameraRepository()
+    cam_repo.save_camera(CameraGeo('C_AHM', 'Ahmedabad Junction', 23.0225, 72.5714))
+    cam_repo.save_camera(CameraGeo('C_DEL', 'Delhi Toll', 28.6139, 77.2090))
+
+    t0 = datetime(2026, 8, 28, 16, 0, 0, tzinfo=timezone.utc)
+    sightings = [
+        RouteSighting('s1', 'GJ01CONF', 'GJ01CONF', 'C_AHM', 1, 1, 0.0, 100.0, t0, match_score=0.98),
+        RouteSighting('s2', 'GJ01CONF', 'GJ01CONF', 'C_DEL', 1, 1, 0.0, 100.0, t0 + timedelta(minutes=3), match_score=0.97),
+    ]
+
+    pipeline = RouteEnginePipeline(
+        camera_repo=cam_repo,
+        sighting_repo=InMemorySightingRepository(sightings),
+        route_repo=InMemoryRouteRepository()
+    )
+
+    traj = pipeline.build_target_trajectory('GJ01CONF')
+    assert traj.status == TrajectoryStatus.CONFLICTING_SIGHTINGS
+    assert any('conflict' in w.lower() for w in traj.warnings)
+    assert any('exceeds physical limit' in w.lower() for w in traj.warnings)

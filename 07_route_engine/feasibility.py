@@ -43,6 +43,11 @@ def evaluate_segment_feasibility(
         feasibility = FeasibilityClass.IMPOSSIBLE
         segment_score = 0.0
         warnings.append(f"Non-positive delta_seconds ({delta_s:.2f}s) implies impossible backwards transition.")
+    elif loc_qual == LocationQuality.UNKNOWN or from_sighting.time_quality == TimeQuality.UNKNOWN or to_sighting.time_quality == TimeQuality.UNKNOWN:
+        req_speed_kmh = 0.0
+        feasibility = FeasibilityClass.UNKNOWN
+        segment_score = 0.40
+        warnings.append("Unknown camera location or timing quality prevents definitive feasibility assessment.")
     elif dist_m == 0.0:
         req_speed_kmh = 0.0
         feasibility = FeasibilityClass.FEASIBLE
@@ -53,11 +58,7 @@ def evaluate_segment_feasibility(
         # Apply soft / highway speed threshold depending on distance
         soft_speed = cfg.highway_soft_speed_kmh if dist_m >= 10000.0 else cfg.urban_soft_speed_kmh
 
-        if loc_qual == LocationQuality.UNKNOWN or from_sighting.time_quality == TimeQuality.UNKNOWN or to_sighting.time_quality == TimeQuality.UNKNOWN:
-            feasibility = FeasibilityClass.UNKNOWN
-            segment_score = 0.50
-            warnings.append("Unknown location or timing quality prevents definitive feasibility assessment.")
-        elif req_speed_kmh > cfg.hard_max_speed_kmh:
+        if req_speed_kmh > cfg.hard_max_speed_kmh:
             feasibility = FeasibilityClass.IMPOSSIBLE
             segment_score = 0.0
             warnings.append(f"Minimum required speed ({req_speed_kmh:.1f} km/h) exceeds physical limit ({cfg.hard_max_speed_kmh} km/h).")
