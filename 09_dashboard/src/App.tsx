@@ -74,7 +74,7 @@ export function App() {
         // Show toast immediately with truthful received payload information
         setToastMessage({
           title: `TARGET ALERT: ${displayReg}`,
-          desc: `Camera ${payload.camera_id || "N/A"} (${payload.severity || "CRITICAL"})`,
+          desc: `Camera ${payload.camera_id || "N/A"}${payload.severity ? ` (${payload.severity})` : ""}`,
           registration: rawReg,
         });
         setTimeout(() => setToastMessage(null), 7000);

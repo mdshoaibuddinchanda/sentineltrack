@@ -1,12 +1,17 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { AlertsPage } from "../pages/AlertsPage";
 import { LiveAlertFeed } from "../components/operations/LiveAlertFeed";
+import * as alertsApi from "../api/alerts";
 import { Alert } from "../types/api";
 
 describe("Alert Triage & Workflow Tests", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
   const mockAlerts: Alert[] = [
     {
       alert_id: "alt_01",
@@ -96,5 +101,73 @@ describe("Alert Triage & Workflow Tests", () => {
 
     expect(screen.getByText("GJ01AB1234")).toBeDefined();
     expect(screen.queryByText("GJ18XY5678")).toBeNull();
+  });
+
+  it("authoritatively fetches remote alert when deep-linked alertId is not in local cache", async () => {
+    const remoteAlert: Alert = {
+      alert_id: "alt_historical_99",
+      watchlist_id: "tgt_99",
+      sighting_id: "sight_99",
+      camera_id: "cam_ring_rd_01",
+      stream_epoch: 1,
+      track_id: 19,
+      registration: "GJ27ZZ9999",
+      match_score: 0.97,
+      match_class: "EXACT",
+      severity: "CRITICAL",
+      created_at: new Date().toISOString(),
+      acknowledged: false,
+      explanation: ["Exact OCR plate match confirmed"],
+    };
+
+    vi.spyOn(alertsApi, "getAlert").mockResolvedValue(remoteAlert);
+
+    render(
+      <MemoryRouter initialEntries={["/alerts/alt_historical_99"]}>
+        <Routes>
+          <Route
+            path="/alerts/:alertId"
+            element={
+              <AlertsPage
+                alerts={mockAlerts}
+                onAcknowledge={() => {}}
+                onInvestigate={() => {}}
+              />
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(alertsApi.getAlert).toHaveBeenCalledWith("alt_historical_99");
+      expect(screen.getByText("GJ27ZZ9999")).toBeDefined();
+      expect(screen.getByText("cam_ring_rd_01")).toBeDefined();
+    });
+  });
+
+  it("displays truthful not-found state when deep-linked alertId does not exist in backend", async () => {
+    vi.spyOn(alertsApi, "getAlert").mockRejectedValue(new Error("Alert not found (404)"));
+
+    render(
+      <MemoryRouter initialEntries={["/alerts/nonexistent_alt_404"]}>
+        <Routes>
+          <Route
+            path="/alerts/:alertId"
+            element={
+              <AlertsPage
+                alerts={mockAlerts}
+                onAcknowledge={() => {}}
+                onInvestigate={() => {}}
+              />
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Alert 'nonexistent_alt_404' not found in database.")).toBeDefined();
+    });
   });
 });

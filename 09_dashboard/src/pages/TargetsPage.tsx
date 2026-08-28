@@ -3,7 +3,8 @@ import { Target, TargetCreateRequest, TargetUpdateRequest } from "../types/api";
 import { Card } from "../components/common/Card";
 import { TargetListTable } from "../components/targets/TargetListTable";
 import { AddTargetModal } from "../components/targets/AddTargetModal";
-import { Plus, Search, Shield, Activity } from "lucide-react";
+import { EditTargetModal } from "../components/targets/EditTargetModal";
+import { Plus, Search, Activity } from "lucide-react";
 
 interface TargetsPageProps {
   targets: Target[];
@@ -25,6 +26,7 @@ export function TargetsPage({
   const [search, setSearch] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("ALL");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingTarget, setEditingTarget] = useState<Target | null>(null);
 
   const filteredTargets = targets.filter((t) => {
     const matchesSearch =
@@ -84,6 +86,7 @@ export function TargetsPage({
         <TargetListTable
           targets={filteredTargets}
           onInvestigate={onInvestigate}
+          onEdit={(t) => setEditingTarget(t)}
           onDisable={onDisableTarget}
           privacyMode={privacyMode}
         />
@@ -95,6 +98,17 @@ export function TargetsPage({
         onClose={() => setIsAddModalOpen(false)}
         onSubmit={onCreateTarget}
       />
+
+      {/* Edit Target Modal */}
+      {editingTarget && (
+        <EditTargetModal
+          isOpen={Boolean(editingTarget)}
+          onClose={() => setEditingTarget(null)}
+          target={editingTarget}
+          onSubmit={onUpdateTarget || (async () => {})}
+          privacyMode={privacyMode}
+        />
+      )}
     </div>
   );
 }

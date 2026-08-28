@@ -40,8 +40,11 @@ export function useAlerts(params?: { unacknowledged?: boolean; limit?: number },
   }, [fetchAlerts]);
 
   const handleAcknowledge = async (alertId: string, operator = "operator") => {
+    // Capture only the specific alert snapshot for targeted rollback
+    const originalAlert = alerts.find((a) => a.alert_id === alertId);
+    if (!originalAlert || originalAlert.acknowledged) return;
+
     // Optimistic UI update
-    const previousAlerts = [...alerts];
     setAlerts((prev) =>
       prev.map((a) =>
         a.alert_id === alertId
@@ -56,8 +59,10 @@ export function useAlerts(params?: { unacknowledged?: boolean; limit?: number },
     try {
       await acknowledgeAlert(alertId, operator);
     } catch (e: any) {
-      // Rollback on failure
-      setAlerts(previousAlerts);
+      // Targeted rollback on failure: revert only this specific alert without wiping concurrently received alerts
+      setAlerts((prev) =>
+        prev.map((a) => (a.alert_id === alertId ? originalAlert : a))
+      );
       setUnackCount((prev) => prev + 1);
       throw e;
     }

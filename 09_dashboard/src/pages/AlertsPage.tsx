@@ -4,7 +4,8 @@ import { Alert } from "../types/api";
 import { Card } from "../components/common/Card";
 import { SeverityBadge, MatchClassBadge } from "../components/common/Badge";
 import { formatDateTime, formatScore, maskRegistration } from "../utils/formatters";
-import { Bell, Check, Compass, Search, Filter, X } from "lucide-react";
+import { getAlert } from "../api/alerts";
+import { Bell, Check, Compass, Search, Filter, X, Loader2, AlertCircle } from "lucide-react";
 
 interface AlertsPageProps {
   alerts: Alert[];
@@ -20,8 +21,63 @@ export function AlertsPage({ alerts, onAcknowledge, onInvestigate, privacyMode =
   const [search, setSearch] = useState("");
   const [unackOnly, setUnackOnly] = useState(false);
   const [severityFilter, setSeverityFilter] = useState("ALL");
+  const [directAlert, setDirectAlert] = useState<Alert | null>(null);
+  const [loadingDirectAlert, setLoadingDirectAlert] = useState(false);
+  const [directAlertNotFound, setDirectAlertNotFound] = useState(false);
 
-  const filteredAlerts = alerts.filter((a) => {
+  // Authoritative fetch for routeAlertId if absent from preloaded list
+  useEffect(() => {
+    if (!routeAlertId) {
+      setDirectAlert(null);
+      setDirectAlertNotFound(false);
+      setLoadingDirectAlert(false);
+      return;
+    }
+
+    const cached = alerts.find((a) => a.alert_id === routeAlertId);
+    if (cached) {
+      setDirectAlert(cached);
+      setDirectAlertNotFound(false);
+      setLoadingDirectAlert(false);
+      return;
+    }
+
+    // Not in current local state cache -> fetch authoritative record from PostgreSQL via P8 API
+    let isCancelled = false;
+    setLoadingDirectAlert(true);
+    setDirectAlertNotFound(false);
+
+    getAlert(routeAlertId)
+      .then((fetched) => {
+        if (!isCancelled) {
+          setDirectAlert(fetched);
+          setDirectAlertNotFound(false);
+        }
+      })
+      .catch(() => {
+        if (!isCancelled) {
+          setDirectAlert(null);
+          setDirectAlertNotFound(true);
+        }
+      })
+      .finally(() => {
+        if (!isCancelled) {
+          setLoadingDirectAlert(false);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [routeAlertId, alerts]);
+
+  // Combine loaded alerts and direct alert if fetched
+  const combinedAlerts =
+    directAlert && !alerts.some((a) => a.alert_id === directAlert.alert_id)
+      ? [directAlert, ...alerts]
+      : alerts;
+
+  const filteredAlerts = combinedAlerts.filter((a) => {
     if (routeAlertId && a.alert_id !== routeAlertId) {
       return false;
     }
@@ -42,7 +98,14 @@ export function AlertsPage({ alerts, onAcknowledge, onInvestigate, privacyMode =
         <div className="bg-police-800 border border-cyan-500/60 p-3 rounded-lg flex items-center justify-between font-mono text-xs text-slate-200">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-cyan-400" />
-            <span>Filtering by Alert ID: <strong className="text-white">{routeAlertId}</strong></span>
+            <span>
+              Filtering by Alert ID: <strong className="text-white">{routeAlertId}</strong>
+            </span>
+            {loadingDirectAlert && (
+              <span className="flex items-center gap-1 text-cyan-300 text-[11px] ml-2">
+                <Loader2 className="w-3 h-3 animate-spin" /> Querying backend...
+              </span>
+            )}
           </div>
           <button
             onClick={() => navigate("/alerts")}
@@ -82,11 +145,11 @@ export function AlertsPage({ alerts, onAcknowledge, onInvestigate, privacyMode =
             onChange={(e) => setSeverityFilter(e.target.value)}
             className="bg-police-900 border border-police-700 rounded px-2.5 py-1 text-slate-200 focus:outline-none"
           >
-            <option value="ALL">ALL SEVERITY ({alerts.length})</option>
-            <option value="CRITICAL">CRITICAL ({alerts.filter((a) => a.severity === "CRITICAL").length})</option>
-            <option value="HIGH">HIGH ({alerts.filter((a) => a.severity === "HIGH").length})</option>
-            <option value="NORMAL">NORMAL ({alerts.filter((a) => a.severity === "NORMAL").length})</option>
-            <option value="LOW">LOW ({alerts.filter((a) => a.severity === "LOW").length})</option>
+            <option value="ALL">ALL SEVERITY ({combinedAlerts.length})</option>
+            <option value="CRITICAL">CRITICAL ({combinedAlerts.filter((a) => a.severity === "CRITICAL").length})</option>
+            <option value="HIGH">HIGH ({combinedAlerts.filter((a) => a.severity === "HIGH").length})</option>
+            <option value="NORMAL">NORMAL ({combinedAlerts.filter((a) => a.severity === "NORMAL").length})</option>
+            <option value="LOW">LOW ({combinedAlerts.filter((a) => a.severity === "LOW").length})</option>
           </select>
         </div>
       </div>
@@ -98,9 +161,23 @@ export function AlertsPage({ alerts, onAcknowledge, onInvestigate, privacyMode =
         icon={<Bell className="w-4 h-4 text-rose-500" />}
         bodyClassName="p-0 overflow-x-auto"
       >
-        {filteredAlerts.length === 0 ? (
+        {loadingDirectAlert ? (
+          <div className="p-12 text-center text-slate-400 font-mono text-xs flex items-center justify-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+            <span>Fetching authoritative alert record from database...</span>
+          </div>
+        ) : filteredAlerts.length === 0 ? (
           <div className="p-12 text-center text-slate-500 font-mono text-xs">
-            {routeAlertId ? `Alert '${routeAlertId}' not found.` : "No incident alerts matching selected criteria."}
+            {directAlertNotFound ? (
+              <div className="flex items-center justify-center gap-2 text-amber-400">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>Alert '{routeAlertId}' not found in database.</span>
+              </div>
+            ) : routeAlertId ? (
+              `Alert '${routeAlertId}' not found.`
+            ) : (
+              "No incident alerts matching selected criteria."
+            )}
           </div>
         ) : (
           <table className="w-full text-left text-xs font-mono">

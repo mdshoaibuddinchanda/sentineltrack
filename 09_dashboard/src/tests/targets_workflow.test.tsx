@@ -3,6 +3,8 @@ import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { TargetListTable } from "../components/targets/TargetListTable";
 import { AddTargetModal } from "../components/targets/AddTargetModal";
+import { EditTargetModal } from "../components/targets/EditTargetModal";
+import { TargetsPage } from "../pages/TargetsPage";
 import { Target } from "../types/api";
 
 describe("Target Watchlist Workflow Tests", () => {
@@ -30,12 +32,14 @@ describe("Target Watchlist Workflow Tests", () => {
 
   it("renders target list with plate, normalization, priority, and actions", () => {
     const handleInvestigate = vi.fn();
+    const handleEdit = vi.fn();
     const handleDisable = vi.fn();
 
     render(
       <TargetListTable
         targets={mockTargets}
         onInvestigate={handleInvestigate}
+        onEdit={handleEdit}
         onDisable={handleDisable}
       />
     );
@@ -99,5 +103,87 @@ describe("Target Watchlist Workflow Tests", () => {
     await waitFor(() => {
       expect(screen.getByText("Database unavailable (503)")).toBeDefined();
     });
+  });
+
+  it("EditTargetModal allows updating priority, notes, and case ID, and calls onUpdateTarget", async () => {
+    const handleUpdate = vi.fn().mockResolvedValue({ target_id: "tgt_02" });
+    const handleClose = vi.fn();
+
+    render(
+      <EditTargetModal
+        isOpen={true}
+        onClose={handleClose}
+        target={mockTargets[1]}
+        onSubmit={handleUpdate}
+      />
+    );
+
+    // Verify immutable plate display
+    expect(screen.getByText("GJ05CD9999")).toBeDefined();
+
+    // Change priority NORMAL -> CRITICAL
+    const prioritySelect = screen.getByDisplayValue("NORMAL — Standard BOLO / Surveillance");
+    fireEvent.change(prioritySelect, { target: { value: "CRITICAL" } });
+
+    // Change notes
+    const notesInput = screen.getByPlaceholderText("Operational notes, suspect details, vehicle make/model...");
+    fireEvent.change(notesInput, { target: { value: "Updated note: Armed robbery" } });
+
+    // Submit edit
+    const saveBtn = screen.getByText("SAVE CHANGES");
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(handleUpdate).toHaveBeenCalledWith(
+        "tgt_02",
+        expect.objectContaining({
+          priority: "CRITICAL",
+          notes: "Updated note: Armed robbery",
+        })
+      );
+    });
+  });
+
+  it("EditTargetModal displays error banner if target update fails with 503", async () => {
+    const handleUpdate = vi.fn().mockRejectedValue(new Error("Database unavailable (503)"));
+    const handleClose = vi.fn();
+
+    render(
+      <EditTargetModal
+        isOpen={true}
+        onClose={handleClose}
+        target={mockTargets[0]}
+        onSubmit={handleUpdate}
+      />
+    );
+
+    const saveBtn = screen.getByText("SAVE CHANGES");
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText("Database unavailable (503)")).toBeDefined();
+    });
+  });
+
+  it("TargetsPage opens EditTargetModal when edit button is clicked in table", () => {
+    const handleUpdate = vi.fn();
+
+    render(
+      <TargetsPage
+        targets={mockTargets}
+        onCreateTarget={vi.fn()}
+        onUpdateTarget={handleUpdate}
+        onInvestigate={vi.fn()}
+      />
+    );
+
+    const editButtons = screen.getAllByTitle("Edit Target Entry");
+    expect(editButtons.length).toBe(2);
+
+    // Click edit on first target
+    fireEvent.click(editButtons[0]);
+
+    // Modal should be visible with target plate
+    expect(screen.getByText("EDIT TARGET WATCHLIST ENTRY")).toBeDefined();
   });
 });

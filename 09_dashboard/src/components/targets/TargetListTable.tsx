@@ -78,6 +78,15 @@ export function TargetListTable({
                   >
                     <Compass className="w-3.5 h-3.5" />
                   </button>
+                  {onEdit && (
+                    <button
+                      onClick={() => onEdit(t)}
+                      title="Edit Target Entry"
+                      className="p-1.5 bg-police-750 hover:bg-police-600 text-slate-300 hover:text-white rounded transition-colors"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                   {onDisable && t.enabled && (
                     <button
                       onClick={() => onDisable(t.target_id)}

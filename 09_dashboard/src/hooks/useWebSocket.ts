@@ -14,6 +14,8 @@ export function useWebSocket(topics: string[] | string = "*") {
 
   const topicKey = Array.isArray(topics) ? topics.slice().sort().join(",") : String(topics || "*");
 
+  const shouldReconnectRef = useRef(true);
+
   const connect = useCallback(() => {
     if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
       return;
@@ -64,6 +66,7 @@ export function useWebSocket(topics: string[] | string = "*") {
       ws.onclose = () => {
         setStatus("OFFLINE");
         if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
+        if (!shouldReconnectRef.current) return;
 
         // Exponential backoff reconnection (1s, 2s, 4s, 8s, max 30s)
         const delay = Math.min(1000 * Math.pow(2, reconnectAttemptRef.current), 30000);
@@ -71,7 +74,9 @@ export function useWebSocket(topics: string[] | string = "*") {
 
         if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = setTimeout(() => {
-          connect();
+          if (shouldReconnectRef.current) {
+            connect();
+          }
         }, delay);
       };
 
@@ -85,8 +90,10 @@ export function useWebSocket(topics: string[] | string = "*") {
   }, [topicKey]);
 
   useEffect(() => {
+    shouldReconnectRef.current = true;
     connect();
     return () => {
+      shouldReconnectRef.current = false;
       if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
       if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
       if (wsRef.current) {

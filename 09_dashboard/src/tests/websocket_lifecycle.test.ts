@@ -120,11 +120,19 @@ describe("WebSocket Lifecycle & Stability Tests", () => {
     expect(createdSockets.length).toBe(2);
   });
 
-  it("unmounting hook closes socket cleanly", () => {
+  it("unmounting hook closes socket cleanly and does not reconnect after timers advance", () => {
     const { unmount } = renderHook(() => useWebSocket("*"));
     expect(createdSockets.length).toBe(1);
 
     unmount();
     expect(createdSockets[0].close).toHaveBeenCalledTimes(1);
+
+    // Advance fake timers by 60 seconds
+    act(() => {
+      vi.advanceTimersByTime(60000);
+    });
+
+    // No secondary reconnect socket must have been spawned after unmount
+    expect(createdSockets.length).toBe(1);
   });
 });
