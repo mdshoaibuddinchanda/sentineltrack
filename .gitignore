@@ -4,6 +4,12 @@
 *.env
 !.env.example
 
+# Node / Frontend
+node_modules/
+dist/
+.vite/
+09_dashboard/node_modules/
+09_dashboard/dist/
 
 # Data & Datasets
 data/
