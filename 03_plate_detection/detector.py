@@ -91,10 +91,6 @@ class PlateDetector:
                     bw = max(0.0, x2 - x1)
                     bh = max(0.0, y2 - y1)
 
-                    # Sanity filter: Plates cannot be taller than they are wide
-                    if bh > 0 and (bw / bh) < 0.9:
-                        continue
-
                     plates.append({
                         "confidence": conf,
                         "x1": x1,

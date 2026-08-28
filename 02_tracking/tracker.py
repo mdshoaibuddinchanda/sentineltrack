@@ -105,12 +105,14 @@ class CameraByteTracker:
         self.last_pts_ms: Optional[float] = None
         self.last_epoch: int = 0
         self.first_seen_pts: dict[int, float] = {}
+        self.last_seen_pts: dict[int, float] = {}
 
     def reset(self):
         """Resets tracker state, clearing active tracklets and internal Kalman filters."""
         self.tracker.reset()
         self.last_pts_ms = None
         self.first_seen_pts.clear()
+        self.last_seen_pts.clear()
 
     def update(self, packet, detections: list) -> list[VehicleTrack]:
         """
@@ -143,6 +145,14 @@ class CameraByteTracker:
         if tracked_np is None or len(tracked_np) == 0:
             return tracks
 
+        # Periodic cleanup of inactive tracks (prune tracks not seen in the last 60 seconds)
+        if len(self.last_seen_pts) > 1000:
+            cutoff = packet.pts_ms - 60000.0
+            inactive_ids = [tid for tid, last_pts in self.last_seen_pts.items() if last_pts < cutoff]
+            for tid in inactive_ids:
+                self.last_seen_pts.pop(tid, None)
+                self.first_seen_pts.pop(tid, None)
+
         for row in tracked_np:
             # row: [x1, y1, x2, y2, track_id, conf, cls_id, det_idx]
             x1, y1, x2, y2, track_id, conf, cls_id = row[:7]
@@ -152,11 +162,7 @@ class CameraByteTracker:
 
             if track_id not in self.first_seen_pts:
                 self.first_seen_pts[track_id] = packet.pts_ms
-
-            # Prune ancient track IDs to prevent memory leaks in 24/7 deployments
-            if len(self.first_seen_pts) > 1000:
-                cutoff = packet.pts_ms - 60000.0
-                self.first_seen_pts = {tid: pts for tid, pts in self.first_seen_pts.items() if pts >= cutoff}
+            self.last_seen_pts[track_id] = packet.pts_ms
 
             class_name = VEHICLE_CLASSES.get(cls_id, f'vehicle_{cls_id}')
 

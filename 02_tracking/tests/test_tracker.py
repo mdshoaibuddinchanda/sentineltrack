@@ -106,3 +106,33 @@ def test_tracking_pipeline_end_to_end():
     assert tracks[0].class_name == 'car'
     assert tracks[0].age_frames == 1
     assert len(tracks[0].trail) == 1
+
+
+def test_tracker_active_long_lived_track_not_pruned():
+    tracker = CameraByteTracker(camera_id='cam_soak')
+
+    # Seed 1050 old inactive tracks
+    for i in range(1050):
+        tracker.first_seen_pts[i] = 100.0
+        tracker.last_seen_pts[i] = 500.0
+
+    # Active track started 120 seconds ago (pts 0ms), currently active at 120,000ms
+    active_tid = 9999
+    tracker.first_seen_pts[active_tid] = 0.0
+    tracker.last_seen_pts[active_tid] = 119960.0
+
+    # Update tracker at pts_ms = 120,000ms
+    packet = FramePacket('cam_soak', 120000.0, np.zeros((100, 100, 3), dtype=np.uint8), 0)
+    dets = [VehicleDetection('cam_soak', 120000.0, 0, 2, 'car', 0.95, 50, 50, 100, 100)]
+    
+    # Update tracker
+    tracks = tracker.update(packet, dets)
+
+    # Inactive tracks should have been pruned (< 100 remaining)
+    assert len(tracker.last_seen_pts) <= 10
+    assert len(tracker.first_seen_pts) <= 10
+
+    # The active track started at 0.0 should still be intact in first_seen_pts and last_seen_pts
+    assert active_tid in tracker.first_seen_pts
+    assert tracker.first_seen_pts[active_tid] == 0.0
+    assert tracker.last_seen_pts[active_tid] == 119960.0

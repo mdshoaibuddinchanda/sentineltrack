@@ -60,18 +60,19 @@ class PyAVReader:
                 video_stream = self.container.streams.video[0]
                 time_base = video_stream.time_base
                 for frame in self.container.decode(video=0):
-                    # Compute source presentation timestamp (PTS)
+                    # Compute source presentation timestamp (PTS) directly from packet
                     if frame.pts is not None and time_base is not None:
                         pts_ms = float(frame.pts * time_base * 1000.0)
                     else:
-                        # Fallback to estimated frame timing
-                        pts_ms = (self.last_pts_ms + 40.0) if self.last_pts_ms >= 0 else 0.0
+                        # Explicitly indicate missing source PTS (-1.0) rather than fabricating fake timestamps
+                        pts_ms = -1.0
 
-                    # Loop / epoch reset detection
-                    if self.last_pts_ms > 0 and pts_ms < (self.last_pts_ms - 2000.0):
+                    # Loop / epoch reset detection (only on valid positive PTS)
+                    if pts_ms >= 0 and self.last_pts_ms >= 0 and pts_ms < (self.last_pts_ms - 2000.0):
                         self.stream_epoch += 1
 
-                    self.last_pts_ms = pts_ms
+                    if pts_ms >= 0:
+                        self.last_pts_ms = pts_ms
                     frame_bgr = frame.to_ndarray(format='bgr24')
                     yield frame_bgr, pts_ms
 

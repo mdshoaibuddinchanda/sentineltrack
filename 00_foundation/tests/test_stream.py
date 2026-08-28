@@ -145,3 +145,34 @@ def test_rtsp_reader_epoch_reset():
         # Epoch should have incremented on loop!
         assert reader.stream_epoch == 1
 
+
+def test_rtsp_reader_runtime_failover_to_hls():
+    reader = RTSPReader(
+        url="rtsp://mock.stream/live",
+        fallback_url="https://mock.stream/live.m3u8",
+        camera_id="cam_failover",
+        failover_threshold=2
+    )
+
+    mock_cap_fail = MagicMock()
+    mock_cap_fail.isOpened.return_value = False
+
+    mock_cap_hls = MagicMock()
+    mock_cap_hls.isOpened.return_value = True
+
+    # First 2 connect attempts fail on primary RTSP -> Failover to HLS succeeds
+    def mock_videocapture_factory(url, *args, **kwargs):
+        if "rtsp://" in url:
+            return mock_cap_fail
+        else:
+            return mock_cap_hls
+
+    with patch("cv2.VideoCapture", side_effect=mock_videocapture_factory):
+        # Trigger connects to hit failure threshold
+        assert reader.connect() is False
+        assert reader.is_using_fallback is False
+
+        assert reader.connect() is True
+        assert reader.is_using_fallback is True
+        assert reader.active_url == "https://mock.stream/live.m3u8"
+
