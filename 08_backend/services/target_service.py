@@ -1,7 +1,9 @@
+import copy
 import importlib
 import threading
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+
 
 try:
     from ..errors import TargetNotFoundError, DuplicateTargetError, InvalidQueryParameterError, DatabaseUnavailableError
@@ -221,4 +223,85 @@ class TargetService:
             notes=entry.notes,
             metadata=entry.metadata
         )
+
+    def get_target_snapshot(self, target_id: str) -> dict:
+        """Captures an exact, deep snapshot of target state for transactional compensation."""
+        entry = self.watchlist_manager.get_entry(target_id)
+        if not entry:
+            raise TargetNotFoundError(f"Target '{target_id}' not found.")
+        return {
+            "target_id": entry.watchlist_id,
+            "registration": entry.registration,
+            "normalized_registration": entry.normalized_registration,
+            "priority": entry.priority,
+            "enabled": entry.enabled,
+            "created_at": entry.created_at,
+            "expires_at": entry.expires_at,
+            "notes": entry.notes,
+            "metadata": copy.deepcopy(entry.metadata) if entry.metadata else {},
+        }
+
+    def restore_target_snapshot(self, target_id: str, snapshot: dict) -> TargetResponse:
+        """Internal service method to exactly restore a target snapshot upon audit failure."""
+        entry = self.watchlist_manager.get_entry(target_id)
+        if not entry:
+            raise TargetNotFoundError(f"Target '{target_id}' not found.")
+
+        entry.priority = snapshot["priority"]
+        old_enabled = entry.enabled
+        new_enabled = snapshot["enabled"]
+        if old_enabled != new_enabled:
+            self.watchlist_manager.set_enabled(target_id, new_enabled)
+        entry.expires_at = snapshot["expires_at"]
+        entry.notes = snapshot["notes"]
+        entry.metadata = copy.deepcopy(snapshot.get("metadata", {}))
+
+        if self.repository:
+            try:
+                self.repository.save_watchlist_entry(entry)
+            except Exception:
+                pass
+
+        return TargetResponse(
+            target_id=entry.watchlist_id,
+            registration=entry.registration,
+            normalized_registration=entry.normalized_registration,
+            priority=entry.priority.value,
+            enabled=entry.enabled,
+            created_at=entry.created_at,
+            expires_at=entry.expires_at,
+            notes=entry.notes,
+            metadata=entry.metadata
+        )
+
+    def delete_target_permanently(self, target_id: str) -> None:
+        """Physically removes a newly created target from the in-memory index and repository."""
+        entry = self.watchlist_manager.get_entry(target_id)
+        if not entry:
+            return
+        norm_reg = entry.normalized_registration
+        with self.watchlist_manager._lock:
+            if target_id in self.watchlist_manager._entries:
+                del self.watchlist_manager._entries[target_id]
+            if norm_reg in self.watchlist_manager._exact_index:
+                self.watchlist_manager._exact_index[norm_reg].discard(target_id)
+                if not self.watchlist_manager._exact_index[norm_reg]:
+                    del self.watchlist_manager._exact_index[norm_reg]
+            if norm_reg in self.watchlist_manager._active_index:
+                self.watchlist_manager._active_index[norm_reg].discard(target_id)
+                if not self.watchlist_manager._active_index[norm_reg]:
+                    del self.watchlist_manager._active_index[norm_reg]
+
+        if self.repository and hasattr(self.repository, "delete_watchlist_entry"):
+            try:
+                self.repository.delete_watchlist_entry(target_id)
+            except Exception:
+                pass
+        elif self.repository:
+            entry.enabled = False
+            try:
+                self.repository.save_watchlist_entry(entry)
+            except Exception:
+                pass
+
 

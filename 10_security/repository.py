@@ -71,10 +71,14 @@ class BaseSecurityRepository(ABC):
             user.enabled = False
             self.update_user(user)
 
+    @abstractmethod
+    def delete_user(self, user_id: str) -> None:
+        pass
 
     @abstractmethod
     def count_active_admins(self) -> int:
         pass
+
 
     # Sessions
     @abstractmethod
@@ -276,12 +280,19 @@ class SqliteSecurityRepository(BaseSecurityRepository):
     def update_user(self, user: User) -> None:
         self.save_user(user)
 
+    def delete_user(self, user_id: str) -> None:
+        with self._lock:
+            self._conn.execute("DELETE FROM security_sessions WHERE user_id = ?;", (user_id,))
+            self._conn.execute("DELETE FROM security_users WHERE user_id = ?;", (user_id,))
+            self._conn.commit()
+
     def count_active_admins(self) -> int:
         with self._lock:
             cur = self._conn.execute(
                 "SELECT COUNT(*) FROM security_users WHERE role = 'ADMIN' AND enabled = 1;"
             )
             return cur.fetchone()[0]
+
 
     def save_session(self, session: Session) -> None:
         with self._lock, self._conn:
@@ -620,6 +631,16 @@ class PostgresSecurityRepository(BaseSecurityRepository):
     def update_user(self, user: User) -> None:
         self.save_user(user)
 
+    def delete_user(self, user_id: str) -> None:
+        conn = self._get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM security_sessions WHERE user_id = %s;", (user_id,))
+                cur.execute("DELETE FROM security_users WHERE user_id = %s;", (user_id,))
+            conn.commit()
+        finally:
+            conn.close()
+
     def count_active_admins(self) -> int:
         conn = self._get_connection()
         try:
@@ -630,6 +651,7 @@ class PostgresSecurityRepository(BaseSecurityRepository):
                 return cur.fetchone()[0]
         finally:
             conn.close()
+
 
     def save_session(self, session: Session) -> None:
         conn = self._get_connection()

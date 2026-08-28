@@ -1,6 +1,6 @@
 from typing import List, Optional
 import importlib
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 try:
     from ..schemas.alerts import AlertResponse, AlertListResponse, AlertAckRequest, AlertAckResponse
@@ -77,19 +77,32 @@ async def acknowledge_alert(
 ):
     """Acknowledge an active alert by an authorized operator (OPERATOR, SUPERVISOR, ADMIN)."""
     metrics.inc_requests()
+    snapshot = service.get_alert_snapshot(alert_id)
     ack_user = principal.username
     res = service.acknowledge_alert(alert_id=alert_id, acknowledged_by=ack_user)
 
-    audit.log_event(
-        action="ACK_ALERT",
-        resource_type="alert",
-        outcome="SUCCESS",
-        principal=principal,
-        resource_id=alert_id,
-        request_id=http_request.headers.get("X-Request-ID"),
-        details={"acknowledged_by": ack_user},
-        fail_closed=True
-    )
+    try:
+        audit.log_event(
+            action="ACK_ALERT",
+            resource_type="alert",
+            outcome="SUCCESS",
+            principal=principal,
+            resource_id=alert_id,
+            request_id=http_request.headers.get("X-Request-ID"),
+            details={"acknowledged_by": ack_user},
+            fail_closed=True
+        )
+    except Exception:
+        # Compensate: restore exact prior alert ACK state on audit failure
+        try:
+            service.restore_alert_snapshot(alert_id, snapshot)
+        except Exception:
+            pass
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Security audit trail recording failed; alert acknowledgement aborted."
+        )
     return res
+
 
 

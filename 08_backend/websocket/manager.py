@@ -38,11 +38,14 @@ class ConnectionManager:
     async def connect(self, websocket: WebSocket, topics: Optional[List[str]] = None) -> asyncio.Queue:
         await websocket.accept()
         client_queue: asyncio.Queue = asyncio.Queue(maxsize=self.queue_size)
+        # Structural Invariant: literal "*" can NEVER enter client subscriptions
+        sanitized_topics = {t.upper() for t in (topics or []) if t != "*"}
         async with self._lock:
             self._active_connections[websocket] = client_queue
-            self._client_topics[websocket] = set(topics or ["*"])
+            self._client_topics[websocket] = sanitized_topics
             self.metrics.set_ws_clients(len(self._active_connections))
         return client_queue
+
 
     async def disconnect(self, websocket: WebSocket):
         async with self._lock:

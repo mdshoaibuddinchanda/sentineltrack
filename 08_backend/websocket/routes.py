@@ -107,22 +107,38 @@ def _filter_topics_for_permissions(requested: list, permissions: Set) -> Optiona
     return list(allowed_topics) if allowed_topics else None
 
 
-@router.websocket("/ws/events")
-async def websocket_events_endpoint(
+async def run_authorized_websocket(
     websocket: WebSocket,
-    topics: Optional[str] = Query(default=None, description="Comma-separated topics e.g. alerts,sightings,camera_health")
+    requested_topics: Optional[list] = None,
+    required_permissions: Optional[list] = None,
 ):
+    """
+    Central server-side WebSocket runner handling Origin check, cookie auth,
+    session validation, topic filtering, bounded queue, periodic revalidation,
+    permission downgrade detection (closing 4403), and graceful cleanup.
+    """
     user_id, role, permissions, session_token = await _authenticate_ws(websocket)
     if user_id is None:
-        return  # already closed with 4401
-
-    requested = [t.strip().upper() for t in topics.split(",")] if topics else ["*"]
-    authorized = _filter_topics_for_permissions(requested, permissions)
-    if authorized is None:
-        await websocket.close(code=4403, reason="Insufficient permissions for requested topics")
-        logger.warning("WS 4403 user=%s requested_topics=%s", user_id, requested)
         return
 
+    # Check upfront required permissions if specified
+    perm_values = {p.value if hasattr(p, "value") else str(p) for p in permissions}
+    if required_permissions:
+        for rp in required_permissions:
+            rp_val = rp.value if hasattr(rp, "value") else str(rp)
+            if rp_val not in perm_values and rp not in permissions:
+                await websocket.close(code=4403, reason="Insufficient permissions for endpoint")
+                logger.warning("WS 4403 user=%s missing_perm=%s", user_id, rp_val)
+                return
+
+    topics_to_filter = requested_topics if requested_topics else ["*"]
+    authorized = _filter_topics_for_permissions(topics_to_filter, permissions)
+    if not authorized:
+        await websocket.close(code=4403, reason="Insufficient permissions for requested topics")
+        logger.warning("WS 4403 user=%s requested_topics=%s", user_id, requested_topics)
+        return
+
+    initial_authorized_set = set(authorized)
     manager = get_connection_manager()
     queue = await manager.connect(websocket, topics=authorized)
     logger.info("WS connected user=%s role=%s topics=%s", user_id, role, authorized)
@@ -169,11 +185,25 @@ async def websocket_events_endpoint(
                 else:
                     break
 
-                # Re-verify topic permissions
-                curr_auth = _filter_topics_for_permissions(requested, current_perms)
-                if curr_auth is None:
-                    logger.warning("WS permissions downgraded for user=%s; closing", user_id)
-                    await websocket.close(code=4403, reason="Insufficient permissions")
+                # Verify required permissions are still met
+                curr_perm_values = {p.value if hasattr(p, "value") else str(p) for p in current_perms}
+                if required_permissions:
+                    revoked = False
+                    for rp in required_permissions:
+                        rp_val = rp.value if hasattr(rp, "value") else str(rp)
+                        if rp_val not in curr_perm_values and rp not in current_perms:
+                            revoked = True
+                            break
+                    if revoked:
+                        logger.warning("WS required permission revoked for user=%s; closing", user_id)
+                        await websocket.close(code=4403, reason="Required permission revoked")
+                        break
+
+                # D2: Re-verify topic permissions. If authorized topic set changed/shrunk, close 4403 for reconnect.
+                curr_auth = _filter_topics_for_permissions(topics_to_filter, current_perms)
+                if curr_auth is None or set(curr_auth) != initial_authorized_set:
+                    logger.warning("WS permissions changed/downgraded for user=%s; closing with 4403", user_id)
+                    await websocket.close(code=4403, reason="Permissions updated; reconnect required")
                     break
 
         sender_task = asyncio.create_task(send_loop())
@@ -194,50 +224,31 @@ async def websocket_events_endpoint(
         logger.info("WS disconnected user=%s", user_id)
 
 
+@router.websocket("/ws/events")
+async def websocket_events_endpoint(
+    websocket: WebSocket,
+    topics: Optional[str] = Query(default=None, description="Comma-separated topics e.g. alerts,sightings,camera_health")
+):
+    requested = [t.strip().upper() for t in topics.split(",")] if topics else ["*"]
+    await run_authorized_websocket(websocket, requested_topics=requested)
+
 
 @router.websocket("/ws/alerts")
 async def websocket_alerts_endpoint(websocket: WebSocket):
-    user_id, role, permissions, session_token = await _authenticate_ws(websocket)
-    if user_id is None:
-        return
-
-    perm_vals = {p.value if hasattr(p, "value") else str(p) for p in permissions}
-    if Permission.ALERT_READ.value not in perm_vals and Permission.ALERT_READ not in permissions:
-        await websocket.close(code=4403, reason="alert:read permission required")
-        return
-
-    manager = get_connection_manager()
-    queue = await manager.connect(websocket, topics=["ALERT_CREATED", "ALERTS"])
-    try:
-        while True:
-            msg = await queue.get()
-            await websocket.send_text(msg)
-    except WebSocketDisconnect:
-        pass
-    finally:
-        await manager.disconnect(websocket)
+    await run_authorized_websocket(
+        websocket,
+        requested_topics=["ALERT_CREATED", "ALERTS"],
+        required_permissions=[Permission.ALERT_READ]
+    )
 
 
 @router.websocket("/ws/sightings")
 async def websocket_sightings_endpoint(websocket: WebSocket):
-    user_id, role, permissions, session_token = await _authenticate_ws(websocket)
-    if user_id is None:
-        return
+    await run_authorized_websocket(
+        websocket,
+        requested_topics=["SIGHTING_CREATED", "SIGHTINGS"],
+        required_permissions=[Permission.SIGHTING_READ]
+    )
 
-    perm_vals = {p.value if hasattr(p, "value") else str(p) for p in permissions}
-    if Permission.SIGHTING_READ.value not in perm_vals and Permission.SIGHTING_READ not in permissions:
-        await websocket.close(code=4403, reason="sighting:read permission required")
-        return
-
-    manager = get_connection_manager()
-    queue = await manager.connect(websocket, topics=["SIGHTING_CREATED", "SIGHTINGS"])
-    try:
-        while True:
-            msg = await queue.get()
-            await websocket.send_text(msg)
-    except WebSocketDisconnect:
-        pass
-    finally:
-        await manager.disconnect(websocket)
 
 

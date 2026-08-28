@@ -1,4 +1,4 @@
-# OWASP API Security Top 10 (2023) Review — SentinelTrack P10B
+# OWASP API Security Top 10 (2023) Review — SentinelTrack P10D Final Security Freeze
 
 | OWASP API Category | Vulnerability Description | SentinelTrack Defense Implementation | Status |
 |---|---|---|---|

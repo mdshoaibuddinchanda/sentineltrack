@@ -10,6 +10,7 @@ _sec_repo = importlib.import_module("10_security.repository")
 _sec_sess = importlib.import_module("10_security.sessions")
 _sec_pw = importlib.import_module("10_security.password")
 _sec_models = importlib.import_module("10_security.models")
+_sec_perms = importlib.import_module("10_security.permissions")
 _backend = importlib.import_module("08_backend.app")
 
 SqliteSecurityRepository = _sec_repo.SqliteSecurityRepository
@@ -19,6 +20,55 @@ set_session_manager = _sec_sess.set_session_manager
 hash_password = _sec_pw.hash_password
 User = _sec_models.User
 UserRole = _sec_models.UserRole
+Permission = _sec_models.Permission
+ROLE_PERMISSIONS = _sec_perms.ROLE_PERMISSIONS
+
+PUBLIC = "PUBLIC"
+AUTHENTICATED_ONLY = "AUTHENTICATED_ONLY"
+
+# Canonical Policy Table mapping (HTTP_METHOD, ROUTE_PATH) -> Required Permission or Access Category
+ROUTE_POLICY = {
+    ("GET", "/health"): PUBLIC,
+    ("POST", "/api/v1/auth/login"): PUBLIC,
+    ("GET", "/api/v1/auth/csrf"): PUBLIC,
+    ("GET", "/api/v1/auth/me"): AUTHENTICATED_ONLY,
+    ("POST", "/api/v1/auth/logout"): AUTHENTICATED_ONLY,
+    ("POST", "/api/v1/auth/change-password"): AUTHENTICATED_ONLY,
+
+    ("GET", "/ready"): Permission.SYSTEM_READ,
+    ("GET", "/metrics"): Permission.METRICS_READ,
+
+    ("GET", "/api/v1/cameras"): Permission.CAMERA_READ,
+    ("GET", "/api/v1/cameras/nearby"): Permission.CAMERA_READ,
+    ("GET", "/api/v1/cameras/{camera_id}"): Permission.CAMERA_READ,
+    ("GET", "/api/v1/cameras/{camera_id}/health"): Permission.CAMERA_READ,
+    ("GET", "/api/v1/cameras/{camera_id}/nearby"): Permission.CAMERA_READ,
+
+    ("GET", "/api/v1/sightings"): Permission.SIGHTING_READ,
+    ("GET", "/api/v1/vehicles/{registration}/history"): Permission.SIGHTING_READ,
+
+    ("GET", "/api/v1/targets"): Permission.TARGET_READ,
+    ("GET", "/api/v1/targets/{target_id}"): Permission.TARGET_READ,
+    ("POST", "/api/v1/targets"): Permission.TARGET_CREATE,
+    ("PATCH", "/api/v1/targets/{target_id}"): Permission.TARGET_UPDATE,
+    ("DELETE", "/api/v1/targets/{target_id}"): Permission.TARGET_DISABLE,
+
+    ("GET", "/api/v1/alerts"): Permission.ALERT_READ,
+    ("GET", "/api/v1/alerts/{alert_id}"): Permission.ALERT_READ,
+    ("POST", "/api/v1/alerts/{alert_id}/ack"): Permission.ALERT_ACK,
+
+    ("GET", "/api/v1/routes/{registration}"): Permission.ROUTE_READ,
+    ("GET", "/api/v1/routes/{registration}/geojson"): Permission.ROUTE_READ,
+    ("GET", "/api/v1/routes/{registration}/summary"): Permission.ROUTE_READ,
+
+    ("GET", "/api/v1/audit"): Permission.AUDIT_READ,
+
+    ("GET", "/api/v1/users"): Permission.USER_READ,
+    ("GET", "/api/v1/users/{user_id}"): Permission.USER_READ,
+    ("POST", "/api/v1/users"): Permission.USER_CREATE,
+    ("PATCH", "/api/v1/users/{user_id}"): Permission.USER_UPDATE,
+    ("POST", "/api/v1/users/{user_id}/reset-password"): Permission.USER_RESET_PASSWORD,
+}
 
 
 @pytest.fixture(autouse=True)
@@ -38,7 +88,7 @@ def clean_security_env():
 def _setup_users(repo):
     users = {}
     for role in [UserRole.ADMIN, UserRole.SUPERVISOR, UserRole.OPERATOR, UserRole.AUDITOR]:
-        uname = f"user_{role.value.lower()}"
+        uname = f"usr_{role.value.lower()}"
         u = User(
             user_id=f"id_{uname}",
             username=uname,
@@ -59,30 +109,36 @@ def _get_client_for_user(username):
     return client, csrf
 
 
-def test_programmatic_route_introspection_unauthenticated(clean_security_env):
+def test_d15_policy_coverage_invariant():
     """
-    Programmatically enumerates all registered FastAPI routes in _backend.app.routes.
-    Verifies that every non-public endpoint rejects unauthenticated requests with 401.
+    D15: Invariant test verifying that 100% of APIRoute (method, path) entries in the application
+    are explicitly registered in ROUTE_POLICY.
     """
-    client = TestClient(_backend.app)
-    public_paths = {"/health", "/api/v1/auth/login", "/docs", "/redoc", "/openapi.json"}
-
-    introspected_routes = []
+    actual_routes = set()
     for route in _backend.app.routes:
         if isinstance(route, APIRoute):
             path = route.path
             for method in route.methods:
-                if method not in ("HEAD", "OPTIONS"):
-                    introspected_routes.append((method, path))
+                if method not in ("HEAD", "OPTIONS") and not path.startswith(("/docs", "/redoc", "/openapi")):
+                    actual_routes.add((method, path))
 
-    assert len(introspected_routes) >= 15, "Expected at least 15 registered routes in backend API"
+    policy_routes = set(ROUTE_POLICY.keys())
 
-    for method, path in introspected_routes:
-        # Check if route is public
-        if path in public_paths or any(path.startswith(p) for p in ("/docs", "/redoc")):
+    missing_from_policy = actual_routes - policy_routes
+    assert not missing_from_policy, f"Routes missing from ROUTE_POLICY: {missing_from_policy}"
+
+    stale_in_policy = policy_routes - actual_routes
+    assert not stale_in_policy, f"Stale routes in ROUTE_POLICY that do not exist in application: {stale_in_policy}"
+
+
+def test_d16_unauthenticated_route_rejection(clean_security_env):
+    """D16: All protected routes reject unauthenticated requests with HTTP 401."""
+    client = TestClient(_backend.app)
+
+    for (method, path), policy in ROUTE_POLICY.items():
+        if policy == PUBLIC:
             continue
 
-        # Replace path parameters with dummy values for request
         test_path = path.replace("{camera_id}", "cam_01")
         test_path = test_path.replace("{target_id}", "tgt_01")
         test_path = test_path.replace("{alert_id}", "alt_01")
@@ -100,76 +156,79 @@ def test_programmatic_route_introspection_unauthenticated(clean_security_env):
         else:
             continue
 
-        assert res.status_code in (401, 403), f"Route {method} {path} should require authentication, got {res.status_code}"
+        assert res.status_code in (401, 403), f"Route {method} {path} should reject unauthenticated request with 401, got {res.status_code}"
 
 
-def test_operator_matrix_rbac(clean_security_env):
-    """OPERATOR has read access to cameras/sightings/alerts/routes/system, but lacks user admin, target mutations, and audit logs."""
+@pytest.mark.parametrize("role", [UserRole.ADMIN, UserRole.SUPERVISOR, UserRole.OPERATOR, UserRole.AUDITOR])
+def test_d16_role_permission_matrix(clean_security_env, role):
+    """
+    D16: Comprehensive method x route x role evaluation.
+    Verifies that for each role, access is allowed if and only if the principal possesses the required permission.
+    """
     repo, sm = clean_security_env
     users = _setup_users(repo)
-    client, csrf = _get_client_for_user(users[UserRole.OPERATOR])
+    client, csrf = _get_client_for_user(users[role])
+    role_perms = ROLE_PERMISSIONS[role]
 
-    # Allowed reads
-    assert client.get("/api/v1/cameras").status_code == 200
-    assert client.get("/api/v1/sightings").status_code == 200
-    assert client.get("/api/v1/alerts").status_code == 200
-    assert client.get("/api/v1/routes/GJ01AB1234").status_code == 200
-    assert client.get("/ready").status_code in (200, 503)
+    for (method, path), required_perm in ROUTE_POLICY.items():
+        test_path = path.replace("{camera_id}", "cam_01")
+        test_path = test_path.replace("{target_id}", "tgt_01")
+        test_path = test_path.replace("{alert_id}", "alt_01")
+        test_path = test_path.replace("{registration}", "GJ01AB1234")
+        test_path = test_path.replace("{user_id}", "id_usr_operator")
 
-    # Denied target mutations (403)
-    assert client.post("/api/v1/targets", json={"registration": "GJ01XY9999", "priority": "HIGH"}, headers={"X-CSRF-Token": csrf}).status_code == 403
-    assert client.patch("/api/v1/targets/tgt_01", json={"priority": "HIGH"}, headers={"X-CSRF-Token": csrf}).status_code == 403
-    assert client.delete("/api/v1/targets/tgt_01", headers={"X-CSRF-Token": csrf}).status_code == 403
+        req_client = client
 
-    # Denied user management (403)
-    assert client.get("/api/v1/users").status_code == 403
-    assert client.post("/api/v1/users", json={"username": "test", "display_name": "Test", "password": "Password123456789!"}, headers={"X-CSRF-Token": csrf}).status_code == 403
+        # Destructive auth endpoints use dedicated sub-client so they do not invalidate main session
+        if path in ("/api/v1/auth/logout", "/api/v1/auth/change-password"):
+            tmp_username = f"tmp_{role.value.lower()}_{hash(path) % 10000}"
+            tmp_u = User(
+                user_id=f"id_{tmp_username}",
+                username=tmp_username,
+                display_name=f"Tmp {role.value}",
+                password_hash=hash_password("Password123456789!"),
+                role=role,
+                enabled=True
+            )
+            repo.save_user(tmp_u)
+            req_client, _ = _get_client_for_user(tmp_username)
 
-    # Denied audit read (403)
-    assert client.get("/api/v1/audit").status_code == 403
+        csrf_res = req_client.get("/api/v1/auth/csrf")
+        req_csrf = csrf_res.json().get("csrf_token", "")
+        headers = {"X-CSRF-Token": req_csrf}
+
+        # Determine expected access
+        if required_perm == PUBLIC or required_perm == AUTHENTICATED_ONLY:
+            allowed = True
+        else:
+            perm_val = required_perm.value if hasattr(required_perm, "value") else str(required_perm)
+            allowed = perm_val in role_perms or required_perm in role_perms
+
+        # Perform request with valid test body if mutation
+        if method == "GET":
+            res = req_client.get(test_path)
+        elif method == "POST":
+            payload = {}
+            if "targets" in path:
+                payload = {"registration": "GJ01AB9999", "priority": "NORMAL"}
+            elif "users" in path and "reset-password" in path:
+                payload = {"new_password": "NewPassword12345!"}
+            elif "users" in path:
+                payload = {"username": f"user_new_{role.value}_{hash(path) % 10000}", "display_name": "New", "password": "Password123456789!", "role": "OPERATOR"}
+            elif "change-password" in path:
+                payload = {"current_password": "Password123456789!", "new_password": "NewPassword12345!"}
+            res = req_client.post(test_path, json=payload, headers=headers)
+        elif method == "PATCH":
+            res = req_client.patch(test_path, json={"display_name": "Updated"}, headers=headers)
+        elif method == "DELETE":
+            res = req_client.delete(test_path, headers=headers)
+        else:
+            continue
+
+        if not allowed:
+            assert res.status_code == 403, f"Role {role.value} should be DENIED 403 on {method} {path}, got {res.status_code}"
+        else:
+            assert res.status_code != 401 and res.status_code != 403, f"Role {role.value} should be AUTHORIZED on {method} {path}, got {res.status_code} ({res.text})"
 
 
-def test_auditor_matrix_rbac(clean_security_env):
-    """AUDITOR has read access to audit logs/sightings/cameras/alerts, but cannot ACK alerts or mutate targets/users."""
-    repo, sm = clean_security_env
-    users = _setup_users(repo)
-    client, csrf = _get_client_for_user(users[UserRole.AUDITOR])
 
-    # Allowed audit read
-    assert client.get("/api/v1/audit").status_code == 200
-    assert client.get("/api/v1/sightings").status_code == 200
-    assert client.get("/api/v1/cameras").status_code == 200
-
-    # Denied alert ACK (403)
-    assert client.post("/api/v1/alerts/alt-123/ack", json={}, headers={"X-CSRF-Token": csrf}).status_code == 403
-
-    # Denied target create (403)
-    assert client.post("/api/v1/targets", json={"registration": "GJ01XY9999", "priority": "HIGH"}, headers={"X-CSRF-Token": csrf}).status_code == 403
-
-
-def test_supervisor_matrix_rbac(clean_security_env):
-    """SUPERVISOR can manage targets and ACK alerts, but cannot access user admin endpoints."""
-    repo, sm = clean_security_env
-    users = _setup_users(repo)
-    client, csrf = _get_client_for_user(users[UserRole.SUPERVISOR])
-
-    # Allowed target mutations (authorized: status not 401/403)
-    target_res = client.post("/api/v1/targets", json={"registration": "GJ01XY8888", "priority": "CRITICAL"}, headers={"X-CSRF-Token": csrf})
-    assert target_res.status_code in (201, 409)
-
-    # Denied user management (403)
-    assert client.get("/api/v1/users").status_code == 403
-    assert client.post("/api/v1/users", json={"username": "test", "display_name": "Test", "password": "Password123456789!"}, headers={"X-CSRF-Token": csrf}).status_code == 403
-
-
-def test_admin_matrix_rbac(clean_security_env):
-    """ADMIN has full authorization across all administrative and operational routes."""
-    repo, sm = clean_security_env
-    users = _setup_users(repo)
-    client, csrf = _get_client_for_user(users[UserRole.ADMIN])
-
-    assert client.get("/api/v1/cameras").status_code == 200
-    assert client.get("/api/v1/users").status_code == 200
-    assert client.get("/api/v1/audit").status_code == 200
-    assert client.get("/ready").status_code in (200, 503)
-    assert client.get("/metrics").status_code == 200

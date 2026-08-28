@@ -116,11 +116,14 @@ async def create_user(
             fail_closed=True
         )
     except Exception as audit_exc:
-        # Compensate: delete/disable user if audit logging fails
+        # Compensate: delete created user if audit logging fails
         try:
-            repo.disable_user(user.user_id)
+            repo.delete_user(user.user_id)
         except Exception:
-            pass
+            try:
+                repo.disable_user(user.user_id)
+            except Exception:
+                pass
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Security audit trail recording failed; user creation aborted."
@@ -196,10 +199,6 @@ async def update_user(
         changes["must_change_password"] = payload.must_change_password
         user.must_change_password = payload.must_change_password
 
-    # Revoke all active sessions on role change or account disabling
-    if role_changed or payload.enabled is False:
-        session_manager.revoke_all_user_sessions(user.user_id)
-
     user.updated_at = datetime.now(timezone.utc)
     repo.update_user(user)
 
@@ -214,8 +213,11 @@ async def update_user(
             details=changes,
             fail_closed=True
         )
+        # On audit success, execute destructive session revocation
+        if role_changed or payload.enabled is False:
+            session_manager.revoke_all_user_sessions(user.user_id)
     except Exception:
-        # Compensate: restore old user state if audit logging fails
+        # Compensate: restore old user state if audit logging fails (sessions remain intact)
         try:
             user.display_name = old_display_name
             user.role = old_role
@@ -260,9 +262,6 @@ async def reset_password(
     user.updated_at = datetime.now(timezone.utc)
     repo.update_user(user)
 
-    # Immediately revoke all active sessions for this user
-    session_manager.revoke_all_user_sessions(user.user_id)
-
     try:
         audit.log_event(
             action="USER_PASSWORD_RESET",
@@ -274,8 +273,10 @@ async def reset_password(
             details={"must_change_password": payload.must_change_password},
             fail_closed=True
         )
+        # On audit success, revoke all active sessions for this user
+        session_manager.revoke_all_user_sessions(user.user_id)
     except Exception:
-        # Compensate: restore previous password hash if audit logging fails
+        # Compensate: restore previous password hash if audit logging fails (sessions remain intact)
         try:
             user.password_hash = old_password_hash
             user.must_change_password = old_must_change
@@ -288,5 +289,6 @@ async def reset_password(
         )
 
     return _user_to_response(user)
+
 
 

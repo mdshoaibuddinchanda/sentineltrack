@@ -1,3 +1,5 @@
+import os
+import re
 import sys
 import importlib
 import pytest
@@ -27,6 +29,25 @@ SQL_ATTACK_PAYLOADS = [
     "\" OR \"\"=\"",
 ]
 
+DANGEROUS_PATTERNS = {
+    "shell_true": re.compile(r"shell\s*=\s*True"),
+    "os_system": re.compile(r"os\.system\s*\("),
+    "subprocess_popen": re.compile(r"subprocess\.Popen\s*\("),
+    "eval": re.compile(r"(?<![a-zA-Z0-9_])eval\s*\("),
+    "exec": re.compile(r"(?<![a-zA-Z0-9_])exec\s*\("),
+    "pickle_loads": re.compile(r"pickle\.loads\s*\("),
+    "yaml_unsafe_load": re.compile(r"yaml\.load\s*\([^,)]*\)"),
+    "dangerously_set_inner_html": re.compile(r"dangerouslySetInnerHTML"),
+    "inner_html_assignment": re.compile(r"\.innerHTML\s*="),
+    "document_write": re.compile(r"document\.write\s*\("),
+    "new_function": re.compile(r"new\s+Function\s*\("),
+}
+
+# Explicit reviewed allowlist for verified safe occurrences (e.g. tests or build scripts)
+REVIEWED_ALLOWLIST = {
+    # e.g. ("filename.py", "pattern_name", "reason")
+}
+
 
 @pytest.fixture(autouse=True)
 def clean_security_env():
@@ -55,46 +76,126 @@ def _create_user(repo, username="sec_admin", role=UserRole.ADMIN, password="Pass
     return user
 
 
-def test_extra_forbidden_mass_assignment_rejection(clean_security_env):
+def test_d19_source_level_dangerous_sink_scanner():
     """
-    P10C Defense-in-depth: Sensitive mutation schemas enforce extra='forbid'.
-    Attempting to smuggle unexpected fields returns HTTP 422 Unprocessable Entity.
+    D19: Real source-level AST/regex scanner over tracked Python and TypeScript source code.
+    Asserts zero unreviewed dangerous evaluation sinks exist across production modules.
+    """
+    root_dir = "c:/DR2/sentineltrack"
+    scanned_dirs = [
+        "00_ingestion", "01_pipeline", "02_tracking", "03_license_plate",
+        "04_search_ocr", "05_target_matching", "07_trajectory", "08_backend",
+        "09_dashboard/src", "10_security"
+    ]
+
+    violations = []
+    scanned_file_count = 0
+
+    for sdir in scanned_dirs:
+        full_sdir = os.path.join(root_dir, sdir)
+        if not os.path.exists(full_sdir):
+            continue
+        for root, dirs, files in os.walk(full_sdir):
+            # Skip test directories, node_modules, and cache
+            if any(skip in root for skip in ["node_modules", "dist", ".git", "__pycache__", "tests"]):
+                continue
+            for file in files:
+                if not file.endswith((".py", ".ts", ".tsx")):
+                    continue
+                scanned_file_count += 1
+                filepath = os.path.join(root, file)
+                try:
+                    with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
+                        lines = f.readlines()
+                    for line_num, line in enumerate(lines, start=1):
+                        for pattern_name, regex in DANGEROUS_PATTERNS.items():
+                            if regex.search(line):
+                                rel_path = os.path.relpath(filepath, root_dir)
+                                if (rel_path, pattern_name) not in REVIEWED_ALLOWLIST:
+                                    violations.append((rel_path, line_num, pattern_name, line.strip()))
+                except Exception as exc:
+                    violations.append((filepath, 0, "read_error", str(exc)))
+
+    assert scanned_file_count >= 20, f"Expected to scan at least 20 source files, scanned {scanned_file_count}"
+    assert len(violations) == 0, f"Found unreviewed dangerous sink patterns in source code: {violations}"
+
+
+def test_d21_mass_assignment_forbid_on_all_mutation_schemas(clean_security_env):
+    """
+    D21: Enforces that unexpected JSON fields in mutation requests are rejected with HTTP 422
+    across User, Target, Alert, and Auth schemas.
     """
     repo, sm = clean_security_env
-    user = _create_user(repo, "mass_admin", UserRole.ADMIN)
+    user = _create_user(repo, "mass_assign_admin", UserRole.ADMIN)
     client = TestClient(_backend.app)
-    login_res = client.post("/api/v1/auth/login", json={"username": "mass_admin", "password": "Password123456789!"})
+    login_res = client.post("/api/v1/auth/login", json={"username": "mass_assign_admin", "password": "Password123456789!"})
     csrf = login_res.json()["csrf_token"]
 
-    # 1. Smuggling extra fields in UserUpdateRequest -> 422
-    patch_res = client.patch(
-        f"/api/v1/users/{user.user_id}",
-        json={"display_name": "New Name", "password_hash": "malicious_hash", "is_admin": True},
+    # 1. LoginRequest with extra field -> 422
+    res_login = client.post("/api/v1/auth/login", json={"username": "mass_assign_admin", "password": "Password123456789!", "is_admin": True})
+    assert res_login.status_code == 422
+
+    # 2. ChangePasswordRequest with extra field -> 422
+    res_cp = client.post(
+        "/api/v1/auth/change-password",
+        json={"current_password": "Password123456789!", "new_password": "NewSecurePassword12345!", "force": True},
         headers={"X-CSRF-Token": csrf}
     )
-    assert patch_res.status_code == 422
+    assert res_cp.status_code == 422
 
-    # 2. Smuggling extra fields in UserCreateRequest -> 422
-    create_res = client.post(
+    # 3. UserCreateRequest with extra field -> 422
+    res_uc = client.post(
         "/api/v1/users",
-        json={"username": "new_user_xyz", "display_name": "Test", "password": "Password123456789!", "role": "OPERATOR", "hacked_field": "val"},
+        json={"username": "new_op", "display_name": "New", "password": "Password123456789!", "role": "OPERATOR", "permissions": ["*"]},
         headers={"X-CSRF-Token": csrf}
     )
-    assert create_res.status_code == 422
+    assert res_uc.status_code == 422
 
-    # 3. Smuggling extra fields in UserResetPasswordRequest -> 422
-    reset_res = client.post(
+    # 4. UserUpdateRequest with extra field -> 422
+    res_uu = client.patch(
+        f"/api/v1/users/{user.user_id}",
+        json={"display_name": "New Name", "password_hash": "tampered_hash"},
+        headers={"X-CSRF-Token": csrf}
+    )
+    assert res_uu.status_code == 422
+
+    # 5. UserResetPasswordRequest with extra field -> 422
+    res_urp = client.post(
         f"/api/v1/users/{user.user_id}/reset-password",
-        json={"new_password": "NewPassword123456!", "extra_role": "ADMIN"},
+        json={"new_password": "NewResetPassword12345!", "role": "SUPERVISOR"},
         headers={"X-CSRF-Token": csrf}
     )
-    assert reset_res.status_code == 422
+    assert res_urp.status_code == 422
+
+    # 6. TargetCreateRequest with extra field -> 422
+    res_tc = client.post(
+        "/api/v1/targets",
+        json={"registration": "GJ01MASS123", "priority": "NORMAL", "is_admin": True},
+        headers={"X-CSRF-Token": csrf}
+    )
+    assert res_tc.status_code == 422
+
+    # 7. TargetUpdateRequest with extra field -> 422
+    res_tu = client.patch(
+        "/api/v1/targets/tgt_01",
+        json={"priority": "CRITICAL", "raw_sql": "SELECT 1"},
+        headers={"X-CSRF-Token": csrf}
+    )
+    assert res_tu.status_code == 422
+
+    # 8. AlertAckRequest with extra field -> 422
+    res_aa = client.post(
+        "/api/v1/alerts/alt_01/ack",
+        json={"acknowledged_by": "operator", "tampered_score": 0.0},
+        headers={"X-CSRF-Token": csrf}
+    )
+    assert res_aa.status_code == 422
 
 
-def test_sql_parameterization_on_user_repository(clean_security_env):
+def test_d20_sql_parameterization_on_repositories(clean_security_env):
     """
-    SQL injection strings in username queries are safely parameterized and treated as literal strings.
-    No SQL syntax error occurs; nonexistent or malicious usernames simply return None or 401.
+    D20: Verifies that SQL injection strings are safely parameterized and treated as literal values.
+    No SQL syntax error occurs; queries return None or 401 cleanly.
     """
     repo, sm = clean_security_env
     _create_user(repo, "real_admin", UserRole.ADMIN)
@@ -103,22 +204,8 @@ def test_sql_parameterization_on_user_repository(clean_security_env):
     for payload in SQL_ATTACK_PAYLOADS:
         # Repository query treats string as literal
         user = repo.get_user_by_username(payload)
-        assert user is None  # Not found, never raises SQL error
+        assert user is None  # Not found, never raises SQL syntax error
 
         # Login with SQL payload returns 401 or 422, never 500
         res = client.post("/api/v1/auth/login", json={"username": payload, "password": "wrong_password"})
         assert res.status_code in (401, 422)
-
-
-def test_sink_absence_audit_documentation():
-    """
-    Audits and asserts that the API codebase contains zero dangerous evaluation sinks:
-    No shell=True, no os.system, no eval, no exec, no pickle.loads, no dangerouslySetInnerHTML.
-    """
-    import inspect
-    import subprocess
-    import os
-
-    # The API codebase uses pure Python functions, Pydantic validation, and parameterized DB drivers.
-    assert hasattr(subprocess, "run")  # Subprocess exists in stdlib but is not used in backend API routes
-    assert True

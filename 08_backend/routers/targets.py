@@ -1,6 +1,6 @@
 from typing import List, Optional
 import importlib
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 try:
     from ..schemas.targets import (
@@ -62,9 +62,9 @@ async def create_target(
             fail_closed=True
         )
     except Exception:
-        # Compensate: disable created target if audit trail recording fails
+        # Compensate: completely remove created target on audit failure
         try:
-            service.disable_target(target.target_id)
+            service.delete_target_permanently(target.target_id)
         except Exception:
             pass
         raise HTTPException(
@@ -115,7 +115,7 @@ async def update_target(
 ):
     """Update target priority, status, notes, or expiry (SUPERVISOR, ADMIN)."""
     metrics.inc_requests()
-    old_target = service.get_target(target_id)
+    snapshot = service.get_target_snapshot(target_id)
     target = service.update_target(target_id, payload)
     try:
         audit.log_event(
@@ -129,16 +129,9 @@ async def update_target(
             fail_closed=True
         )
     except Exception:
-        # Compensate: restore old state if audit logging fails
+        # Compensate: restore exact snapshot if audit logging fails
         try:
-            service.update_target(
-                target_id,
-                TargetUpdateRequest(
-                    priority=old_target.priority,
-                    notes=old_target.notes,
-                    is_active=old_target.is_active
-                )
-            )
+            service.restore_target_snapshot(target_id, snapshot)
         except Exception:
             pass
         raise HTTPException(
@@ -160,7 +153,7 @@ async def disable_target(
 ):
     """Disable/archive a target from active watchlist monitoring (SUPERVISOR, ADMIN)."""
     metrics.inc_requests()
-    old_target = service.get_target(target_id)
+    snapshot = service.get_target_snapshot(target_id)
     target = service.disable_target(target_id)
     try:
         audit.log_event(
@@ -174,12 +167,9 @@ async def disable_target(
             fail_closed=True
         )
     except Exception:
-        # Compensate: restore old active state if audit logging fails
+        # Compensate: restore exact snapshot if audit logging fails
         try:
-            service.update_target(
-                target_id,
-                TargetUpdateRequest(is_active=old_target.is_active)
-            )
+            service.restore_target_snapshot(target_id, snapshot)
         except Exception:
             pass
         raise HTTPException(
@@ -187,5 +177,6 @@ async def disable_target(
             detail="Security audit trail recording failed; target deletion aborted."
         )
     return target
+
 
 

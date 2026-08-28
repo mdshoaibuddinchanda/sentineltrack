@@ -86,3 +86,25 @@ class AlertService:
             acknowledged_by=acknowledged_by,
             acknowledged_at=now
         )
+
+    def get_alert_snapshot(self, alert_id: str) -> dict:
+        """Captures snapshot of alert acknowledgment state for transactional compensation."""
+        alert = self.get_alert_by_id(alert_id)
+        return {
+            "alert_id": alert.alert_id,
+            "acknowledged": alert.acknowledged,
+            "acknowledged_by": alert.acknowledged_by,
+            "acknowledged_at": alert.acknowledged_at,
+        }
+
+    def restore_alert_snapshot(self, alert_id: str, snapshot: dict) -> None:
+        """Restores alert acknowledgment state to prior snapshot on audit log failure."""
+        conn = self.repository._get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE alerts SET acknowledged = %s, acknowledged_by = %s, acknowledged_at = %s WHERE alert_id = %s;",
+                (snapshot["acknowledged"], snapshot["acknowledged_by"], snapshot["acknowledged_at"], alert_id)
+            )
+        conn.commit()
+        conn.close()
+
