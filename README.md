@@ -57,6 +57,28 @@ SENTINEL STREAM INGESTION (RTSP / HLS)
 * **Coordinate Re-Projection**: Accurately projects local crop coordinates back to full 1920x1080 CCTV space.
 * **Quality & Top-K Accumulation**: Evaluates sharpness (Laplacian variance), contrast, and retains the top candidate crops per track.
 
+### Priority 4: License Plate OCR & Multi-Frame Consensus
+
+* **Production Recognizer:** `PP-OCRv5_mobile_rec` running via ONNX Runtime CPU with genuine tensor batching.
+* **Layout Awareness:** Integrated two-line motorcycle / square plate decomposition and reassembly.
+* **Soft Indian Grammar & Normalization:** Position-specific confusion discounting ($O/0, I/1, A/4, B/8, S/5, Z/2, G/6$) without global string corruption.
+* **Multi-Frame Weighted Voter:** Positional character consensus requiring corroborating support count $\ge 2$ for track resolution.
+
+### Priority 5: Target Registration Matching & Watchlists
+
+* **Multi-Tier Indexing:** Suffix-4 prefix trees and fuzzy distance clustering for sub-millisecond retrieval against 100k+ records.
+* **Confusion Cost Matrix:** Position-aware Levenshtein metric accounting for Indian registration plate fonts (e.g. `DL`, `GJ`, `MH`, `BH` series).
+* **Multi-Frame Corroboration:** Corroborated multi-frame observations receive automated alerts; uncorroborated single observations are gated to `REVIEW`.
+* **PostGIS Historical Search:** Stores raw sightings for non-destructive future rescoring and audit trails.
+
+### Priority 7: Cross-Camera Route / GIS & Spatio-Temporal Trajectory Engine
+
+* **Cross-Camera Sighting Graph:** Dynamic programming DAG solver reconstructing the most plausible chronological trajectory across distributed municipal cameras.
+* **Strict Spatio-Temporal Model:** Strictly avoids invalid global PTS comparison by resolving UTC wall-clock time provenance (`SOURCE_WALLCLOCK`, `PTS_ANCHORED_ESTIMATE`, `DB_PERSISTENCE_FALLBACK`).
+* **Lower-Bound Kinematics Feasibility:** Evaluates inter-camera geodesic distance ($R=6371\text{km}$) and required minimum transit speed to flag and penalize physically impossible jumps ($>220\text{ km/h}$).
+* **Same-Camera Dwell Collapse:** Automatically merges stationary dwell observations into single nodes with dwell durations and aggregated support counts.
+* **PostGIS & RFC-7946 GeoJSON:** Native PostgreSQL 16 + PostGIS storage with `ST_DWithin` spatial indexing and standards-compliant GeoJSON FeatureCollection generation for Control Room mapping UIs.
+
 ---
 
 ## Setup & Installation
@@ -89,39 +111,6 @@ Edit `.env` with your Sentinel host and database credentials.
 ```bash
 docker run -d --name sentinel-postgres -p 5432:5432 -e POSTGRES_USER=sentinel -e POSTGRES_PASSWORD=sentinel_dev -e POSTGRES_DB=sentinel postgis/postgis:16-3.4
 ```
-
-### Priority 4: License Plate OCR & Multi-Frame Consensus
-* **Production Recognizer:** `PP-OCRv5_mobile_rec` running via ONNX Runtime CPU with genuine tensor batching.
-* **Layout Awareness:** Integrated two-line motorcycle / square plate decomposition and reassembly.
-* **Soft Indian Grammar & Normalization:** Position-specific confusion discounting ($O/0, I/1, A/4, B/8, S/5, Z/2, G/6$) without global string corruption.
-* **Multi-Frame Weighted Voter:** Positional character consensus requiring corroborating support count $\ge 2$ for track resolution.
-
----
-
-## Setup & Installation
-
-### 1. Clone Repository & Create Environment
-
-```bash
-git clone https://github.com/mdshoaibuddinchanda/sentineltrack.git
-cd sentineltrack
-
-# Create and activate Python 3.12 environment
-conda create -n py312 python=3.12 -y
-conda activate py312
-pip install -r requirements.txt
-```
-
-### 2. Environment Configuration
-
-Copy the sample environment file:
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` with your Sentinel host and database credentials.
-*(Note: `.env.example` contains development-only default credentials for local Docker Postgres).*
 
 ### 3. Start Database
 
@@ -154,21 +143,25 @@ python -m pytest -v
 ### OCR Testing & Benchmark Scripts
 
 * **Full Quantitative Evaluation (Mobile, Server, Adaptive):**
+
   ```bash
   python -m 04_plate_ocr.training.evaluate
   ```
 
 * **Latency & Batching Benchmark ($B=1, 2, 4, 8$):**
+
   ```bash
   python -m 04_plate_ocr.benchmark
   ```
 
 * **Test Single Plate Crop:**
+
   ```bash
   python -m 04_plate_ocr.scripts.test_crop <path_to_image>
   ```
 
 * **Live Multi-Camera Sentinel OCR Validator:**
+
   ```bash
   python -m 04_plate_ocr.scripts.validate_live_production
   ```
@@ -178,4 +171,3 @@ python -m pytest -v
 ## License
 
 Proprietary / Competition Submission.
-
