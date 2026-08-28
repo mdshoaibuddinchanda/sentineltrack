@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { AlertsPage } from "../pages/AlertsPage";
 import { LiveAlertFeed } from "../components/operations/LiveAlertFeed";
 import { Alert } from "../types/api";
@@ -65,11 +66,13 @@ describe("Alert Triage & Workflow Tests", () => {
     const handleInvestigate = vi.fn();
 
     render(
-      <AlertsPage
-        alerts={mockAlerts}
-        onAcknowledge={handleAck}
-        onInvestigate={handleInvestigate}
-      />
+      <MemoryRouter>
+        <AlertsPage
+          alerts={mockAlerts}
+          onAcknowledge={handleAck}
+          onInvestigate={handleInvestigate}
+        />
+      </MemoryRouter>
     );
 
     const ackButtons = screen.getAllByRole("button", { name: /ack/i });
@@ -79,11 +82,13 @@ describe("Alert Triage & Workflow Tests", () => {
 
   it("filters alerts by unacknowledged only toggle", () => {
     render(
-      <AlertsPage
-        alerts={mockAlerts}
-        onAcknowledge={() => {}}
-        onInvestigate={() => {}}
-      />
+      <MemoryRouter>
+        <AlertsPage
+          alerts={mockAlerts}
+          onAcknowledge={() => {}}
+          onInvestigate={() => {}}
+        />
+      </MemoryRouter>
     );
 
     const checkbox = screen.getByLabelText("Unacknowledged Only");

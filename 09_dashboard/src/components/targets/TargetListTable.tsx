@@ -47,7 +47,9 @@ export function TargetListTable({
                 <div className="font-bold text-slate-100 text-sm">
                   {maskRegistration(t.registration, privacyMode)}
                 </div>
-                <div className="text-[10px] text-slate-500">{t.normalized_registration}</div>
+                <div className="text-[10px] text-slate-500">
+                  {maskRegistration(t.normalized_registration, privacyMode)}
+                </div>
               </td>
               <td className="px-4 py-3">
                 <PriorityBadge priority={t.priority} />

@@ -1,15 +1,16 @@
 import React from "react";
 import { RouteResponse, RouteSummaryResponse } from "../../types/api";
-import { formatDistance, formatDuration, formatScore, formatSpeed } from "../../utils/formatters";
+import { formatDistance, formatDuration, formatScore, formatSpeed, maskRegistration } from "../../utils/formatters";
 import { Badge } from "../common/Badge";
 import { Compass, Clock, MapPin, Gauge, ShieldCheck, AlertTriangle } from "lucide-react";
 
 interface TrajectorySummaryCardProps {
   route: RouteResponse;
   summary?: RouteSummaryResponse | null;
+  privacyMode?: boolean;
 }
 
-export function TrajectorySummaryCard({ route, summary }: TrajectorySummaryCardProps) {
+export function TrajectorySummaryCard({ route, summary: _summary, privacyMode = false }: TrajectorySummaryCardProps) {
   const getStatusBadge = () => {
     switch (route.status) {
       case "PLAUSIBLE_SEQUENCE":
@@ -31,7 +32,9 @@ export function TrajectorySummaryCard({ route, summary }: TrajectorySummaryCardP
       <div className="flex items-start justify-between gap-4 flex-wrap pb-3 border-b border-police-750/80">
         <div>
           <div className="text-xs font-mono text-slate-400">INVESTIGATION TARGET</div>
-          <div className="text-2xl font-bold font-mono text-white tracking-wider">{route.registration}</div>
+          <div className="text-2xl font-bold font-mono text-white tracking-wider">
+            {maskRegistration(route.registration, privacyMode)}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {getStatusBadge()}

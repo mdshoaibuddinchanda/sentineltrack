@@ -3,7 +3,7 @@ import { WebSocketConnectionStatus, WebSocketEventMessage } from "../types/webso
 
 const WS_BASE_URL = import.meta.env.VITE_SENTINEL_WS_URL || "ws://localhost:8000";
 
-export function useWebSocket(topics: string[] = ["*"]) {
+export function useWebSocket(topics: string[] | string = "*") {
   const [status, setStatus] = useState<WebSocketConnectionStatus>("CONNECTING");
   const [events, setEvents] = useState<WebSocketEventMessage[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
@@ -12,14 +12,15 @@ export function useWebSocket(topics: string[] = ["*"]) {
   const pingIntervalRef = useRef<any>(null);
   const seenEventIdsRef = useRef<Set<string>>(new Set());
 
+  const topicKey = Array.isArray(topics) ? topics.slice().sort().join(",") : String(topics || "*");
+
   const connect = useCallback(() => {
     if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
       return;
     }
 
     setStatus((prev) => (prev === "LIVE" ? "RECONNECTING" : "CONNECTING"));
-    const topicParam = topics.join(",");
-    const wsUrl = `${WS_BASE_URL}/ws/events?topics=${encodeURIComponent(topicParam)}`;
+    const wsUrl = `${WS_BASE_URL}/ws/events?topics=${encodeURIComponent(topicKey)}`;
 
     try {
       const ws = new WebSocket(wsUrl);
@@ -81,7 +82,7 @@ export function useWebSocket(topics: string[] = ["*"]) {
     } catch {
       setStatus("OFFLINE");
     }
-  }, [topics]);
+  }, [topicKey]);
 
   useEffect(() => {
     connect();

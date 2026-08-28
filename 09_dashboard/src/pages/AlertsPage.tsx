@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { Alert } from "../types/api";
 import { Card } from "../components/common/Card";
 import { SeverityBadge, MatchClassBadge } from "../components/common/Badge";
-import { formatDateTime, formatRelativeTime, formatScore, maskRegistration } from "../utils/formatters";
-import { Bell, Check, Compass, Search, Filter, Shield } from "lucide-react";
+import { formatDateTime, formatScore, maskRegistration } from "../utils/formatters";
+import { Bell, Check, Compass, Search, Filter, X } from "lucide-react";
 
 interface AlertsPageProps {
   alerts: Alert[];
@@ -13,11 +14,17 @@ interface AlertsPageProps {
 }
 
 export function AlertsPage({ alerts, onAcknowledge, onInvestigate, privacyMode = false }: AlertsPageProps) {
+  const { alertId: routeAlertId } = useParams<{ alertId?: string }>();
+  const navigate = useNavigate();
+
   const [search, setSearch] = useState("");
   const [unackOnly, setUnackOnly] = useState(false);
   const [severityFilter, setSeverityFilter] = useState("ALL");
 
   const filteredAlerts = alerts.filter((a) => {
+    if (routeAlertId && a.alert_id !== routeAlertId) {
+      return false;
+    }
     const matchesSearch =
       a.registration.toLowerCase().includes(search.toLowerCase()) ||
       a.camera_id.toLowerCase().includes(search.toLowerCase());
@@ -30,6 +37,22 @@ export function AlertsPage({ alerts, onAcknowledge, onInvestigate, privacyMode =
 
   return (
     <div className="space-y-4">
+      {/* Route Filter Focus Banner */}
+      {routeAlertId && (
+        <div className="bg-police-800 border border-cyan-500/60 p-3 rounded-lg flex items-center justify-between font-mono text-xs text-slate-200">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-cyan-400" />
+            <span>Filtering by Alert ID: <strong className="text-white">{routeAlertId}</strong></span>
+          </div>
+          <button
+            onClick={() => navigate("/alerts")}
+            className="flex items-center gap-1 px-2 py-0.5 bg-police-700 hover:bg-police-600 rounded text-slate-300 hover:text-white"
+          >
+            <X className="w-3.5 h-3.5" /> Show All Alerts
+          </button>
+        </div>
+      )}
+
       {/* Search & Filters */}
       <div className="flex items-center justify-between gap-4 flex-wrap bg-police-850 p-3 rounded-lg border border-police-750 font-mono text-xs">
         <div className="relative flex-1 min-w-[240px]">
@@ -77,7 +100,7 @@ export function AlertsPage({ alerts, onAcknowledge, onInvestigate, privacyMode =
       >
         {filteredAlerts.length === 0 ? (
           <div className="p-12 text-center text-slate-500 font-mono text-xs">
-            No incident alerts matching selected criteria.
+            {routeAlertId ? `Alert '${routeAlertId}' not found.` : "No incident alerts matching selected criteria."}
           </div>
         ) : (
           <table className="w-full text-left text-xs font-mono">
@@ -97,9 +120,10 @@ export function AlertsPage({ alerts, onAcknowledge, onInvestigate, privacyMode =
               {filteredAlerts.map((alt) => (
                 <tr
                   key={alt.alert_id}
-                  className={`hover:bg-police-800/40 transition-colors ${
+                  onClick={() => navigate(`/alerts/${encodeURIComponent(alt.alert_id)}`)}
+                  className={`hover:bg-police-800/40 transition-colors cursor-pointer ${
                     !alt.acknowledged && alt.severity === "CRITICAL" ? "bg-rose-950/20" : ""
-                  }`}
+                  } ${routeAlertId === alt.alert_id ? "ring-1 ring-cyan-400 bg-police-800/80" : ""}`}
                 >
                   <td className="px-4 py-3">
                     <SeverityBadge severity={alt.severity} />
@@ -125,7 +149,7 @@ export function AlertsPage({ alerts, onAcknowledge, onInvestigate, privacyMode =
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => onInvestigate(alt.registration)}
                         title="Trace Cross-Camera Trajectory"

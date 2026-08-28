@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { Camera } from "../types/api";
 import { Card } from "../components/common/Card";
 import { CameraStatusBadge } from "../components/common/Badge";
-import { formatDateTime } from "../utils/formatters";
 import { searchNearbyCameras } from "../api/cameras";
-import { Video, Search, MapPin, Navigation, Eye, CheckCircle, AlertCircle } from "lucide-react";
+import { Video, Search, MapPin, AlertCircle } from "lucide-react";
 
 interface CamerasPageProps {
   cameras: Camera[];
@@ -12,14 +12,47 @@ interface CamerasPageProps {
   selectedCameraId?: string | null;
 }
 
-export function CamerasPage({ cameras, onSelectCamera, selectedCameraId }: CamerasPageProps) {
+export function CamerasPage({ cameras, onSelectCamera }: CamerasPageProps) {
+  const { cameraId: routeCameraId } = useParams<{ cameraId?: string }>();
+  const navigate = useNavigate();
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
-  const [selectedCam, setSelectedCam] = useState<Camera | null>(
-    cameras.find((c) => c.camera_id === selectedCameraId) || cameras[0] || null
-  );
+  const [selectedCam, setSelectedCam] = useState<Camera | null>(null);
   const [nearbyCams, setNearbyCams] = useState<Camera[]>([]);
   const [searchingNearby, setSearchingNearby] = useState(false);
+
+  // Synchronize routeCameraId with cameras array (handling async load)
+  useEffect(() => {
+    if (routeCameraId) {
+      const match = cameras.find((c) => c.camera_id === routeCameraId);
+      if (match) {
+        setSelectedCam(match);
+        if (match.latitude && match.longitude) {
+          setSearchingNearby(true);
+          searchNearbyCameras(match.latitude, match.longitude, 5000)
+            .then((res) => setNearbyCams(res.filter((c) => c.camera_id !== match.camera_id)))
+            .catch(() => setNearbyCams([]))
+            .finally(() => setSearchingNearby(false));
+        } else {
+          setNearbyCams([]);
+        }
+      } else {
+        setSelectedCam(null);
+        setNearbyCams([]);
+      }
+    } else if (cameras.length > 0 && !selectedCam) {
+      const first = cameras[0];
+      setSelectedCam(first);
+      if (first.latitude && first.longitude) {
+        setSearchingNearby(true);
+        searchNearbyCameras(first.latitude, first.longitude, 5000)
+          .then((res) => setNearbyCams(res.filter((c) => c.camera_id !== first.camera_id)))
+          .catch(() => setNearbyCams([]))
+          .finally(() => setSearchingNearby(false));
+      }
+    }
+  }, [routeCameraId, cameras]);
 
   const filteredCameras = cameras.filter((cam) => {
     const matchesSearch =
@@ -34,13 +67,14 @@ export function CamerasPage({ cameras, onSelectCamera, selectedCameraId }: Camer
   const handleSelectCamera = async (cam: Camera) => {
     setSelectedCam(cam);
     onSelectCamera?.(cam.camera_id);
+    navigate(`/cameras/${encodeURIComponent(cam.camera_id)}`);
 
     if (cam.latitude && cam.longitude) {
       try {
         setSearchingNearby(true);
         const res = await searchNearbyCameras(cam.latitude, cam.longitude, 5000);
         setNearbyCams(res.filter((c) => c.camera_id !== cam.camera_id));
-      } catch (e) {
+      } catch {
         setNearbyCams([]);
       } finally {
         setSearchingNearby(false);
@@ -145,7 +179,7 @@ export function CamerasPage({ cameras, onSelectCamera, selectedCameraId }: Camer
         <div className="lg:col-span-4">
           <Card
             title="CAMERA NODE TELEMETRY"
-            subtitle={selectedCam ? selectedCam.camera_id : "Select a camera"}
+            subtitle={selectedCam ? selectedCam.camera_id : routeCameraId ? `Camera ${routeCameraId}` : "Select a camera"}
             icon={<MapPin className="w-4 h-4 text-accent-blue" />}
             bodyClassName="p-4 space-y-4 font-mono text-xs"
           >
@@ -201,6 +235,12 @@ export function CamerasPage({ cameras, onSelectCamera, selectedCameraId }: Camer
                   )}
                 </div>
               </>
+            ) : routeCameraId ? (
+              <div className="text-center py-8 text-amber-400 font-mono space-y-2">
+                <AlertCircle className="w-6 h-6 mx-auto text-amber-400" />
+                <div className="font-bold">Camera '{routeCameraId}' not found</div>
+                <div className="text-[11px] text-slate-400">This camera ID is not registered in the CCTV network.</div>
+              </div>
             ) : (
               <div className="text-center py-8 text-slate-500">Select a camera from the list to inspect hardware telemetry.</div>
             )}

@@ -78,7 +78,7 @@ export function InvestigationPage({
       {route && !loading && (
         <>
           {/* Summary Metric Strip */}
-          <TrajectorySummaryCard route={route} summary={summary} />
+          <TrajectorySummaryCard route={route} summary={summary} privacyMode={privacyMode} />
 
           {/* Conflict & Ambiguity Warning Panels */}
           <WarningsPanel

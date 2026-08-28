@@ -19,8 +19,9 @@ import { useTargets } from "./hooks/useTargets";
 import { useAlerts } from "./hooks/useAlerts";
 import { listSightings } from "./api/sightings";
 import { getAlert } from "./api/alerts";
-import { Sighting, Alert } from "./types/api";
-import { DEMO_SIGHTINGS, DEMO_ALERTS } from "./utils/demoData";
+import { Sighting } from "./types/api";
+import { DEMO_SIGHTINGS } from "./utils/demoData";
+import { maskRegistration } from "./utils/formatters";
 import { AlertOctagon } from "lucide-react";
 
 export function App() {
@@ -33,9 +34,9 @@ export function App() {
   const [sightings, setSightings] = useState<Sighting[]>([]);
   const [toastMessage, setToastMessage] = useState<{ title: string; desc: string; registration: string } | null>(null);
 
-  // Global Subsystem Hooks
+  // Global Subsystem Hooks (stable topic key to eliminate WebSocket churn)
   const { status: sysStatus, health, readiness, metrics, error: sysError, refresh: refreshSystem } = useSystemStatus(8000);
-  const { status: wsStatus, events: wsEvents } = useWebSocket(["*"]);
+  const { status: wsStatus, events: wsEvents } = useWebSocket("*");
   const { cameras, refresh: refreshCameras } = useCameras(undefined, demoMode);
   const { targets, create: createTarget, update: updateTarget, disable: disableTarget, refresh: refreshTargets } = useTargets(undefined, demoMode);
   const { alerts, unackCount, acknowledge: acknowledgeAlert, prependLiveAlert, refresh: refreshAlerts } = useAlerts(undefined, demoMode);
@@ -60,47 +61,33 @@ export function App() {
     return () => clearInterval(interval);
   }, [fetchSightings]);
 
-  // Handle incoming real-time WebSocket events with AUTHORITATIVE fetching
+  // Handle incoming real-time WebSocket events with STRICT AUTHORITATIVE fetching
   useEffect(() => {
     if (wsEvents.length > 0) {
       const latest = wsEvents[0];
       if (latest.event_type === "ALERT_CREATED" && latest.data) {
         const payload = latest.data;
         const alertId = payload.alert_id;
-        const reg = payload.registration || "UNKNOWN";
+        const rawReg = payload.registration || "UNKNOWN";
+        const displayReg = maskRegistration(rawReg, privacyMode);
 
-        // Show toast immediately
+        // Show toast immediately with truthful received payload information
         setToastMessage({
-          title: `TARGET ALERT: ${reg}`,
+          title: `TARGET ALERT: ${displayReg}`,
           desc: `Camera ${payload.camera_id || "N/A"} (${payload.severity || "CRITICAL"})`,
-          registration: reg,
+          registration: rawReg,
         });
         setTimeout(() => setToastMessage(null), 7000);
 
-        // Fetch authoritative database record from backend
+        // Fetch authoritative database record from backend — never synthesize fake evidence
         if (alertId && !demoMode) {
           getAlert(alertId)
             .then((authAlert) => {
               prependLiveAlert(authAlert);
             })
             .catch(() => {
-              // Fallback with minimal, non-fabricated fields if offline
-              const fallbackAlt: Alert = {
-                alert_id: alertId,
-                watchlist_id: payload.watchlist_id || "",
-                sighting_id: payload.sighting_id || "",
-                camera_id: payload.camera_id || "unknown",
-                stream_epoch: payload.stream_epoch ?? 0,
-                track_id: payload.track_id ?? 0,
-                registration: reg,
-                match_score: payload.match_score ?? 0,
-                match_class: (payload.match_class as any) || "EXACT",
-                severity: (payload.severity as any) || "CRITICAL",
-                created_at: latest.timestamp || new Date().toISOString(),
-                acknowledged: false,
-                explanation: payload.explanation || [],
-              };
-              prependLiveAlert(fallbackAlt);
+              // If single-record fetch fails, trigger normal alerts list refresh
+              refreshAlerts();
             });
         }
       } else if (latest.event_type === "SIGHTING_CREATED") {
@@ -108,7 +95,7 @@ export function App() {
         fetchSightings();
       }
     }
-  }, [wsEvents, prependLiveAlert, fetchSightings, demoMode]);
+  }, [wsEvents, prependLiveAlert, fetchSightings, refreshAlerts, demoMode, privacyMode]);
 
   const handleRefreshAll = () => {
     refreshSystem();
@@ -154,7 +141,7 @@ export function App() {
       {/* Primary Navigation */}
       <Navigation unackAlertsCount={unackCount} />
 
-      {/* Toast Notification Notification */}
+      {/* Toast Notification */}
       {toastMessage && (
         <div
           onClick={() => {
@@ -186,7 +173,7 @@ export function App() {
                   sightings={sightings}
                   unackAlertsCount={unackCount}
                   activeTargetsCount={targets.filter((t) => t.enabled).length}
-                  analyticsWorkerStatus={Boolean(readiness?.components?.analytics_worker ?? true)}
+                  analyticsWorkerStatus={readiness?.components?.analytics_worker === true}
                   workerCount={metrics?.active_camera_workers ?? 0}
                   persistedSightingsTotal={metrics?.total_sightings_persisted}
                   onAcknowledgeAlert={acknowledgeAlert}
@@ -232,6 +219,17 @@ export function App() {
             />
             <Route
               path="/alerts"
+              element={
+                <AlertsPage
+                  alerts={alerts}
+                  onAcknowledge={acknowledgeAlert}
+                  onInvestigate={handleInvestigate}
+                  privacyMode={privacyMode}
+                />
+              }
+            />
+            <Route
+              path="/alerts/:alertId"
               element={
                 <AlertsPage
                   alerts={alerts}

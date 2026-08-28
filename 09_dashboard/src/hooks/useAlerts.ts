@@ -65,13 +65,14 @@ export function useAlerts(params?: { unacknowledged?: boolean; limit?: number },
 
   const prependLiveAlert = useCallback((liveAlert: Alert) => {
     setAlerts((prev) => {
-      if (prev.some((a) => a.alert_id === liveAlert.alert_id)) return prev;
+      const exists = prev.some((a) => a.alert_id === liveAlert.alert_id);
+      if (exists) return prev;
+      if (!liveAlert.acknowledged) {
+        setUnackCount((c) => c + 1);
+      }
+      setTotal((t) => t + 1);
       return [liveAlert, ...prev];
     });
-    if (!liveAlert.acknowledged) {
-      setUnackCount((prev) => prev + 1);
-    }
-    setTotal((prev) => prev + 1);
   }, []);
 
   return { alerts, total, unackCount, loading, error, refresh: fetchAlerts, acknowledge: handleAcknowledge, prependLiveAlert };
