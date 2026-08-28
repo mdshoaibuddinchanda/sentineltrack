@@ -1,0 +1,63 @@
+schema_version: 1
+generated_for_git_sha: 23f575d1ab13b6ce99879763bee4ebdaae864416
+models:
+  - logical_name: vehicle_detector
+    architecture: YOLO11m
+    family: YOLO11
+    source: existing SentinelTrack production artifact
+    source_version: ultralytics-8.3.235
+    license: inherited_source_license_not_recorded
+    weight_path: models/vehicle/yolo11m.pt
+    sha256: d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95
+    input_size: 960
+    precision: runtime_default
+    runtime: Ultralytics/PyTorch
+    dataset_version: existing_production_baseline
+    training_run_id: unknown
+    minimum_vram_mb: 4096
+    recommended_batch: 1
+  - logical_name: plate_detector_baseline
+    architecture: custom YOLO11s
+    family: YOLO11
+    source: existing SentinelTrack production artifact
+    source_version: ultralytics-8.3.235
+    license: inherited_source_license_not_recorded
+    weight_path: models/plate/production/best.pt
+    sha256: 8603afbc9ee2c16f99971898ae98211048c01cc6668bc5d5cc46df13d5f9c8ba
+    input_size: 960
+    precision: fp32
+    runtime: Ultralytics/PyTorch
+    dataset_version: plate_detection_v1
+    training_run_id: unknown
+    minimum_vram_mb: 4096
+    recommended_batch: 1
+  - logical_name: ocr_recognizer_mobile
+    architecture: PP-OCRv5 Mobile recognition
+    family: PP-OCRv5
+    source: existing SentinelTrack production artifact
+    source_version: PP-OCRv5 ONNX export
+    license: inherited_source_license_not_recorded
+    weight_path: models/ocr/PP-OCRv5_mobile_rec_infer.onnx
+    sha256: 4e16deb22c4da6468bdca539b2cd3c8687825538b67109177c47d359ab994cd7
+    input_size: height_48_dynamic_width
+    precision: fp32
+    runtime: ONNX Runtime CPU
+    dataset_version: plate_ocr_v1
+    training_run_id: unknown
+    minimum_vram_mb: 0
+    recommended_batch: 1
+  - logical_name: ocr_recognizer_server
+    architecture: PP-OCRv5 Server recognition
+    family: PP-OCRv5
+    source: existing SentinelTrack production artifact
+    source_version: PP-OCRv5 ONNX export
+    license: inherited_source_license_not_recorded
+    weight_path: models/ocr/PP-OCRv5_server_rec_infer.onnx
+    sha256: 13d0dda27d63dc0f4938af48df2c55b33f3c989a0bd5eacb8410e30f1735f644
+    input_size: height_48_dynamic_width
+    precision: fp32
+    runtime: ONNX Runtime CPU
+    dataset_version: plate_ocr_v1
+    training_run_id: unknown
+    minimum_vram_mb: 0
+    recommended_batch: 1

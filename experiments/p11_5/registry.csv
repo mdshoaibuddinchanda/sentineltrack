@@ -1,0 +1,10 @@
+logical_name,stage,status,artifact,dataset,sha256,measured_metric,notes
+vehicle_detector,P1,NOT_EVALUATED,models/vehicle/yolo11m.pt,,d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95,,No vehicle GT corpus
+plate_detector,P3,PASS,models/plate/production/best.pt,datasets/plate_detection/test,8603afbc9ee2c16f99971898ae98211048c01cc6668bc5d5cc46df13d5f9c8ba,F1=0.8547,Current measured baseline
+ocr_mobile,P4,PASS,models/ocr/PP-OCRv5_mobile_rec_infer.onnx,datasets/plate_ocr/test,4e16deb22c4da6468bdca539b2cd3c8687825538b67109177c47d359ab994cd7,exact=0.5787,Selected current OCR baseline
+ocr_server,P4,PASS,models/ocr/PP-OCRv5_server_rec_infer.onnx,datasets/plate_ocr/test,13d0dda27d63dc0f4938af48df2c55b33f3c989a0bd5eacb8410e30f1735f644,exact=0.5787,Measured alternative; not selected
+plate_detection_v2,P7,DERIVATIVE_READY_NOT_TRAINED,datasets/experiments/plate_detection_v2,datasets/experiments/plate_detection_v2,,,5281 unique images
+plate_detection_obb_v1,P13,DERIVATIVE_READY_NOT_TRAINED,datasets/experiments/plate_detection_obb_v1,datasets/experiments/plate_detection_obb_v1,,,5281 derived OBB labels
+plate_ocr_v2,P18,DERIVATIVE_READY_NOT_TRAINED,datasets/experiments/plate_ocr_v2,datasets/experiments/plate_ocr_v2,,,Legacy test preserved
+temporal_consensus,P22,IMPLEMENTED_NOT_EVALUATED,tools/p11_5/temporal.py,,,,No locked frame-level OCR track
+synthetic_indian_v1,P9,SMOKE_GENERATED,datasets/experiments/synthetic_indian_v1,datasets/experiments/synthetic_indian_v1,,,8 examples seed 115; not used for claims

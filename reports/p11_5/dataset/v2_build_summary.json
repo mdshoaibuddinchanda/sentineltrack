@@ -1,0 +1,83 @@
+{
+  "detection_v2": {
+    "status": "DERIVATIVE_READY_NOT_TRAINED",
+    "source_inventory": "datasets/experiments/manifests/source_inventory.csv",
+    "candidate_records": 6248,
+    "selected_unique_images": 5281,
+    "exact_duplicates_excluded": 967,
+    "split_counts": {
+      "test": 344,
+      "train": 4162,
+      "val": 775
+    },
+    "label_object_counts": {
+      "test": 359,
+      "train": 4290,
+      "val": 800
+    },
+    "source_contribution": {
+      "plate_detection": 2530,
+      "images_and_labels": 1102,
+      "google_images": 395,
+      "State-wise_OLX": 600,
+      "video_images": 654
+    },
+    "link_modes": {
+      "hardlink": 5281
+    },
+    "excluded_original_sources": [
+      "Indian plates",
+      "plate_detection_source_real_public"
+    ],
+    "notes": [
+      "Canonical plate_detection split assignments were preserved.",
+      "Raw sources were grouped by sequence, plate identity, or image hash before deterministic splitting.",
+      "VOC labels were converted to class 0 license_plate bounding boxes.",
+      "The original polygon data remains in the source inventory and was not rewritten."
+    ]
+  },
+  "obb_v1": {
+    "status": "DERIVATIVE_READY_NOT_TRAINED",
+    "selected_unique_images": 5281,
+    "split_counts": {
+      "test": 344,
+      "train": 4162,
+      "val": 775
+    },
+    "candidate_models": [
+      "YOLO11l-obb",
+      "YOLO26l-obb"
+    ],
+    "notes": [
+      "OBB labels are derived from polygon minimum-area rectangles where polygons exist; otherwise axis-aligned rectangles are used.",
+      "No OBB model was promoted or trained by this step."
+    ]
+  },
+  "ocr_v2": {
+    "status": "DERIVATIVE_READY_NOT_TRAINED",
+    "legacy_train": 1382,
+    "legacy_val": 147,
+    "legacy_test": 178,
+    "new_raw_candidates": 19,
+    "new_identity_groups_considered": 17,
+    "new_counts": {
+      "added": 17
+    },
+    "split_counts": {
+      "expanded_test": 178,
+      "train": 1396,
+      "expanded_val": 150
+    },
+    "link_modes": {
+      "hardlink": 1707
+    },
+    "legacy_validation_and_test_preserved": true,
+    "legacy_identity_exclusion_count": 963,
+    "notes": [
+      "Legacy OCR validation and locked test crops were copied by hard link and remain unchanged.",
+      "New OCR crops were generated only from validated VOC boxes and validated plate text.",
+      "Raw candidates sharing a legacy plate identity were excluded from the derived corpus.",
+      "Expanded splits are for development; the legacy test remains the final historical comparison set."
+    ]
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "gate": "P11.5 Gate 1",
+  "status": "NOT_EVALUATED",
+  "scope": "LOCAL / DEVELOPMENT HARDWARE",
+  "git_sha": "23f575d1ab13b6ce99879763bee4ebdaae864416",
+  "model": {
+    "logical_name": "vehicle_detector",
+    "architecture": "YOLO11m",
+    "path": "models/vehicle/yolo11m.pt",
+    "sha256": "d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95",
+    "source": "existing SentinelTrack production model",
+    "runtime": "Ultralytics/PyTorch",
+    "precision": "not changed; existing runtime default",
+    "image_size": 960,
+    "confidence_threshold": 0.25,
+    "classes": ["car", "motorcycle", "bus", "truck"]
+  },
+  "reason_not_evaluated": "No vehicle-detection ground-truth evaluation set is present in the local workspace. Existing local vehicle results are operational probes without ground-truth labels and cannot produce truthful precision, recall, F1, or mAP.",
+  "available_operational_probe": {
+    "artifact": "reports/vehicle_detection/benchmark_camera_01_20260827_202908.json",
+    "frames": 25,
+    "detections": 25,
+    "p50_inference_ms": 51.72,
+    "p95_inference_ms": 58.49,
+    "fps_throughput": 11.14,
+    "warning": "Latency-only probe; not an accuracy benchmark."
+  },
+  "required_next_evidence": "Provide or generate a legitimate vehicle-labelled evaluation set before P1 model promotion or YOLO11/YOLO26 accuracy claims."
+}

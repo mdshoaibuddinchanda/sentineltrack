@@ -1,0 +1,5 @@
+candidate,status,artifact,locked_dataset,precision,latency_p50_ms,latency_p95_ms,throughput_fps,precision_metric,recall_metric,f1_metric,notes
+YOLO11m vehicle,NOT_EVALUATED,models/vehicle/yolo11m.pt,,existing runtime default,,,,,,,No vehicle ground-truth evaluation set
+P3 current custom YOLO11s,PASS,models/plate/production/best.pt,datasets/plate_detection/test,FP32,14.883,17.492,63.774,0.8400,0.8698,0.8547,Fresh locked detector evaluation plus local CUDA probe
+YOLO11l OBB,NOT_TRAINED,,datasets/experiments/plate_detection_obb_v1,FP32,,,,,,,Derivative labels exist; no trained artifact
+YOLO26 OBB,NOT_TRAINED,,datasets/experiments/plate_detection_obb_v1,FP32,,,,,,,Derivative labels exist; no trained artifact

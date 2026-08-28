@@ -1,0 +1,47 @@
+{
+  "gate": "P11.5 Gate 0",
+  "measured_on": "2026-08-29",
+  "hardware_scope": "LOCAL / DEVELOPMENT HARDWARE",
+  "git_sha": "23f575d1ab13b6ce99879763bee4ebdaae864416",
+  "remote_main_sha": "23f575d1ab13b6ce99879763bee4ebdaae864416",
+  "os": "Windows-11-10.0.26200-SP0",
+  "python": "3.12.12",
+  "python_executable": "C:/Users/SHOAIB-CHANDA/miniconda3/envs/py312/python.exe",
+  "conda_environment": "PY312",
+  "cpu": "Intel64 Family 6 Model 141 Stepping 1, GenuineIntel",
+  "cpu_logical_cores": 8,
+  "ram_bytes": 34073251840,
+  "gpu": {
+    "name": "NVIDIA GeForce RTX 3050 Laptop GPU",
+    "count": 1,
+    "vram_bytes": 4294443008,
+    "compute_capability": "8.6",
+    "driver_reported_version": "610.88",
+    "driver_reported_cuda": "13.3"
+  },
+  "cuda": {
+    "torch_cuda": "12.1",
+    "cuda_available": true,
+    "cudnn": "90100"
+  },
+  "software": {
+    "pytorch": "2.5.1+cu121",
+    "ultralytics": "8.3.235",
+    "onnxruntime": "1.24.2",
+    "onnxruntime_providers": ["AzureExecutionProvider", "CPUExecutionProvider"],
+    "opencv": "4.11.0",
+    "numpy": "1.26.4",
+    "easyocr": "1.7.2",
+    "transformers": "4.57.6",
+    "pyyaml": "6.0.1",
+    "psutil": "7.2.2",
+    "paddle": "installed but import failed during compatibility probe",
+    "paddleocr": "installed but import failed during compatibility probe",
+    "openocr": "not installed"
+  },
+  "notes": [
+    "Torch CUDA is available, but this ONNX Runtime installation has no CUDAExecutionProvider.",
+    "P11.5 OCR timing therefore uses the CPU ONNX Runtime path.",
+    "Paddle/PaddleOCR import compatibility requires separate investigation before using Paddle inference directly."
+  ]
+}

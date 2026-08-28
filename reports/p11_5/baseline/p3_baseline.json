@@ -1,0 +1,44 @@
+{
+  "gate": "P11.5 Gate 1",
+  "status": "PASS",
+  "scope": "LOCAL / DEVELOPMENT HARDWARE",
+  "measured_on": "2026-08-29",
+  "git_sha": "23f575d1ab13b6ce99879763bee4ebdaae864416",
+  "model": {
+    "logical_name": "plate_detector",
+    "architecture": "custom YOLO11s",
+    "path": "models/plate/production/best.pt",
+    "sha256": "8603afbc9ee2c16f99971898ae98211048c01cc6668bc5d5cc46df13d5f9c8ba",
+    "source": "existing SentinelTrack production model",
+    "runtime": "Ultralytics/PyTorch",
+    "precision": "FP32 default",
+    "image_size": 960,
+    "confidence_threshold": 0.25,
+    "class_contract": {"0": "license_plate"}
+  },
+  "dataset": {
+    "path": "datasets/plate_detection",
+    "split": "test",
+    "source": "roboflow_quobotic_indian_number_plate_v3",
+    "license": "CC-BY-4.0",
+    "images": 167,
+    "ground_truth_plates": 169
+  },
+  "metrics": {
+    "true_positives": 147,
+    "false_positives": 28,
+    "false_negatives": 22,
+    "precision": 0.84,
+    "recall": 0.8698,
+    "f1": 0.8547,
+    "category_recall": {
+      "standard_aspect": 0.9706,
+      "square_or_tall_aspect": 0.7164,
+      "small_plates_lt_60px": 0.0,
+      "medium_plates_60_to_120px": 0.8125,
+      "large_plates_gt_120px": 0.8933
+    }
+  },
+  "source_artifact": "reports/plate_detection/real_plate_evaluation.json",
+  "reproduction_command": "python -m 03_plate_detection.training.evaluate_real"
+}

@@ -1,0 +1,7 @@
+candidate,status,artifact,locked_dataset,exact_test,char_accuracy_test,cer_test,latency_p50_ms,latency_p95_ms,notes
+PP-OCRv5 mobile,PASS,models/ocr/PP-OCRv5_mobile_rec_infer.onnx,datasets/plate_ocr/test,0.5787,0.7839,0.1557,10.53,24.85,Selected current baseline
+PP-OCRv5 server,PASS,models/ocr/PP-OCRv5_server_rec_infer.onnx,datasets/plate_ocr/test,0.5787,0.7721,0.1652,413.81,594.96,Measured but not selected due speed/character accuracy
+OCR V2 fine-tune,NOT_TRAINED,,datasets/experiments/plate_ocr_v2,,,,,,,Derivative corpus exists; no trained artifact
+SVTRv2,NOT_EVALUATED,,,,,,,,,No local artifact/result in this run
+RepSVTR,NOT_EVALUATED,,,,,,,,,No local artifact/result in this run
+PARSeq,NOT_EVALUATED,,,,,,,,,No local artifact/result in this run

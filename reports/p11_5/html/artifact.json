@@ -1,0 +1,67 @@
+{
+  "surface": "report",
+  "manifest": {
+    "version": 1,
+    "surface": "report",
+    "title": "SentinelTrack P11.5 Evidence Report",
+    "description": "Technical evidence pack for the isolated SentinelTrack P11.5 dataset audit and measured baselines.",
+    "generatedAt": "2026-08-29T00:00:00Z",
+    "sources": [
+      {"id": "dataset_audit", "label": "P11.5 dataset audit", "path": "reports/p11_5/dataset/audit_summary.json"},
+      {"id": "dataset_audit_sql", "label": "P11.5 source-count query definition", "path": "reports/p11_5/html/source_counts.sql"},
+      {"id": "v2_build", "label": "P11.5 V2 build summary", "path": "reports/p11_5/dataset/v2_build_summary.json"},
+      {"id": "p3_baseline", "label": "P3 locked baseline", "path": "reports/p11_5/baseline/p3_baseline.json"},
+      {"id": "ocr_baseline", "label": "OCR locked baseline", "path": "reports/p11_5/baseline/p4_baseline.json"}
+    ],
+    "cards": [],
+    "charts": [
+      {"id": "source_counts_chart", "title": "Audited image records by source", "subtitle": "Source-equivalent copies are retained for audit and excluded from V2 mixing.", "type": "bar", "dataset": "source_counts", "sourceId": "dataset_audit_sql", "valueFormat": "number", "encodings": {"x": {"field": "source", "type": "nominal", "label": "Source"}, "y": {"field": "images", "type": "quantitative", "label": "Image records"}}}
+    ],
+    "tables": [],
+    "blocks": [
+      {"id": "title", "type": "markdown", "body": "# SentinelTrack P11.5 Evidence Report"},
+      {"id": "summary", "type": "markdown", "body": "## Technical Summary\n\nThe strongest measured result is the existing P3 plate detector at **0.8547 F1** on the locked detector test. The selected PP-OCRv5 mobile recognizer reaches **0.5787 exact match** on the locked OCR test and is materially faster than the server alternative.\n\nThe audit also finds substantial source duplication: **3,531 exact-duplicate groups containing 9,593 records**. The isolated V2 derivative removes exact copies and preserves identity/sequence separation. P11.5 remains open because P1 accuracy, model tournaments, fine-tuning, temporal fusion, full end-to-end performance, cloud profiles, and multi-stream capacity do not yet have the required evidence.\n\nEvidence files: `reports/p11_5/baseline/p3_baseline.json`, `reports/p11_5/baseline/p4_baseline.json`, and `reports/p11_5/dataset/audit_summary.json`."},
+      {"id": "findings", "type": "markdown", "body": "## The audit supports controlled derivative training\n\nThe inventory has **13,081 image records plus one orphan XML record**. Sixty-two images have no label, and 137 records carry quality or quarantine flags. The canonical frozen split has zero cross-split exact-image duplicates, and the legacy OCR identity audit has zero train/validation/test overlaps.\n\n| Finding | Evidence | Interpretation |\n|---|---:|---|\n| Exact duplicate groups | 3,531 groups / 9,593 records | Deduplicate before mixing sources |\n| Near-duplicate candidates | 3,514 groups | Review before treating as independent evidence |\n| Unlabeled images | 62 | Exclude until labels are supplied |\n| Detection V2 | 5,281 unique images | Derivative-ready, not trained |\n| OCR V2 | 1,396 train / 150 expanded val / 178 locked test | Historical test preserved, not trained |\n\nThe implication is practical: the existing canonical corpora can remain locked while V2 incorporates validated raw sources under deterministic hash, identity, and sequence grouping."},
+      {"id": "source_chart", "type": "chart", "chartId": "source_counts_chart"},
+      {"id": "definitions", "type": "markdown", "body": "## Definitions and method\n\nThe audit grain is one image/annotation record, with explicit orphan records. Exact duplicates use SHA-256; near-duplicate candidates use perceptual-hash distance. Detection labels are validated for class, normalized coordinates, and box geometry. OCR identity grouping uses the available parent identity/text metadata. Detection V2 excludes source-equivalent copies, preserves canonical splits, and converts validated VOC/polygon annotations to class-0 boxes without rewriting source annotations.\n\nP3 metrics are precision, recall, and F1 from the locked 167-image test split with 169 annotated plates. OCR exact match is the fraction of labelled crops whose normalized predicted string equals the normalized label; character accuracy and CER are reported in the companion OCR report."},
+      {"id": "limitations", "type": "markdown", "body": "## Limitations and open gates\n\nThe workspace has no vehicle-labelled ground-truth corpus, so P1 accuracy and the YOLO11-versus-YOLO26 vehicle tournament are not evaluated. OBB and OCR V2 data are derivative-ready but untrained. Video frames are sequence-capable, but there is no locked frame-level OCR track for temporal evaluation. A local single-frame detector probe cannot establish safe camera capacity, and cloud profiles have no benchmarked artifacts. Unknown or unverified source licensing also limits public-submission readiness."},
+      {"id": "next_steps", "type": "markdown", "body": "## Recommended next steps\n\n1. Obtain or create a legitimate vehicle-labelled locked benchmark with scene, camera, and time-based grouping.\n2. Train the V2 and OBB derivatives, then compare challengers on fixed splits with measured VRAM and latency.\n3. Fine-tune OCR V2 only after validating label provenance and preserving the historical locked test.\n4. Create a frame-level OCR track protocol and measure single-frame versus temporal policies.\n5. Run full end-to-end and multi-stream tests on the target server before promoting any profile."}
+    ]
+  },
+  "snapshot": {
+    "version": 1,
+    "generatedAt": "2026-08-29T00:00:00Z",
+    "status": "partial",
+    "datasets": {
+      "headline": [{"p3_f1": 0.8547, "ocr_exact": 0.5787, "duplicate_rate": 0.7337, "v2_images": 5281}],
+      "source_counts": [
+        {"source": "Indian plates", "images": 2531},
+        {"source": "plate_detection", "images": 2531},
+        {"source": "plate_detection_source_real_public", "images": 2531},
+        {"source": "images_and_labels", "images": 2083},
+        {"source": "video_images", "images": 654},
+        {"source": "State-wise_OLX", "images": 602},
+        {"source": "google_images", "images": 442},
+        {"source": "plate_ocr", "images": 1707}
+      ],
+      "quality_findings": [
+        {"severity": "High", "finding": "Exact duplicate records", "count": 9593, "risk": "Biased training/evaluation if copies are mixed"},
+        {"severity": "High", "finding": "Unlabeled images", "count": 62, "risk": "False negatives or invented labels"},
+        {"severity": "Medium", "finding": "Near-duplicate candidates", "count": 3514, "risk": "Overoptimistic generalization estimate"},
+        {"severity": "Medium", "finding": "Invalid/quarantined records", "count": 137, "risk": "Broken labels or provenance"}
+      ]
+    },
+    "accessIssues": [
+      {"id": "p1_ground_truth", "scope": "P1 vehicle accuracy", "message": "No locked vehicle-labelled evaluation set is available."},
+      {"id": "cloud_benchmarks", "scope": "Cloud profiles", "message": "No benchmarked cloud artifacts or target server are available."},
+      {"id": "temporal_track", "scope": "Temporal OCR", "message": "No locked frame-level OCR ground-truth track is available."}
+    ]
+  },
+  "sources": [
+    {"id": "dataset_audit", "label": "P11.5 dataset audit", "path": "reports/p11_5/dataset/audit_summary.json"},
+    {"id": "dataset_audit_sql", "label": "P11.5 source-count query definition", "path": "reports/p11_5/html/source_counts.sql"},
+    {"id": "v2_build", "label": "P11.5 V2 build summary", "path": "reports/p11_5/dataset/v2_build_summary.json"},
+    {"id": "p3_baseline", "label": "P3 locked baseline", "path": "reports/p11_5/baseline/p3_baseline.json"},
+    {"id": "ocr_baseline", "label": "OCR locked baseline", "path": "reports/p11_5/baseline/p4_baseline.json"}
+  ]
+}

@@ -1,0 +1,191 @@
+{
+  "record_count": 13082,
+  "image_record_count": 13081,
+  "annotation_record_count": 13020,
+  "unlabeled_image_count": 62,
+  "invalid_or_quarantined_count": 137,
+  "by_source": {
+    "Indian plates": {
+      "records": 2531,
+      "images": 2531,
+      "orphan_annotations": 0,
+      "usable_detection": 2530,
+      "usable_ocr": 0,
+      "usable_multiframe": 0,
+      "splits": {
+        "train": 2035,
+        "val": 329,
+        "test": 167
+      },
+      "annotation_formats": {
+        "YOLO": 2531
+      },
+      "quality_flags": {
+        "empty_annotation": 1
+      }
+    },
+    "State-wise_OLX": {
+      "records": 603,
+      "images": 602,
+      "orphan_annotations": 1,
+      "usable_detection": 601,
+      "usable_ocr": 581,
+      "usable_multiframe": 0,
+      "splits": {
+        "unsplit": 603
+      },
+      "annotation_formats": {
+        "Pascal VOC XML": 603
+      },
+      "quality_flags": {
+        "plate_text_invalid": 21,
+        "invalid_bbox_geometry": 1,
+        "orphan_annotation": 1
+      }
+    },
+    "google_images": {
+      "records": 442,
+      "images": 442,
+      "orphan_annotations": 0,
+      "usable_detection": 442,
+      "usable_ocr": 416,
+      "usable_multiframe": 0,
+      "splits": {
+        "unsplit": 442
+      },
+      "annotation_formats": {
+        "Pascal VOC XML": 442
+      },
+      "quality_flags": {
+        "plate_text_invalid": 26
+      }
+    },
+    "images_and_labels": {
+      "records": 2083,
+      "images": 2083,
+      "orphan_annotations": 0,
+      "usable_detection": 2021,
+      "usable_ocr": 0,
+      "usable_multiframe": 0,
+      "splits": {
+        "unsplit": 2083
+      },
+      "annotation_formats": {
+        "YOLO": 2083
+      },
+      "quality_flags": {
+        "image_format_extension_mismatch": 3,
+        "missing_annotation": 62
+      }
+    },
+    "plate_detection": {
+      "records": 2531,
+      "images": 2531,
+      "orphan_annotations": 0,
+      "usable_detection": 2530,
+      "usable_ocr": 0,
+      "usable_multiframe": 0,
+      "splits": {
+        "train": 2035,
+        "val": 329,
+        "test": 167
+      },
+      "annotation_formats": {
+        "YOLO": 2531
+      },
+      "quality_flags": {
+        "empty_annotation": 1
+      }
+    },
+    "plate_detection_source_real_public": {
+      "records": 2531,
+      "images": 2531,
+      "orphan_annotations": 0,
+      "usable_detection": 2530,
+      "usable_ocr": 0,
+      "usable_multiframe": 0,
+      "splits": {
+        "train": 2035,
+        "val": 329,
+        "test": 167
+      },
+      "annotation_formats": {
+        "YOLO": 2531
+      },
+      "quality_flags": {
+        "empty_annotation": 1
+      }
+    },
+    "plate_ocr": {
+      "records": 1707,
+      "images": 1707,
+      "orphan_annotations": 0,
+      "usable_detection": 0,
+      "usable_ocr": 1707,
+      "usable_multiframe": 0,
+      "splits": {
+        "test": 178,
+        "train": 1382,
+        "val": 147
+      },
+      "annotation_formats": {
+        "OCR text": 1707
+      },
+      "quality_flags": {}
+    },
+    "video_images": {
+      "records": 654,
+      "images": 654,
+      "orphan_annotations": 0,
+      "usable_detection": 654,
+      "usable_ocr": 633,
+      "usable_multiframe": 654,
+      "splits": {
+        "unsplit": 654
+      },
+      "annotation_formats": {
+        "Pascal VOC XML": 654
+      },
+      "quality_flags": {
+        "plate_text_invalid": 21
+      }
+    }
+  },
+  "duplicates": {
+    "exact_duplicate_groups": 3531,
+    "exact_duplicate_records": 9593,
+    "near_duplicate_candidate_groups": 3514,
+    "cross_split_exact_duplicate_groups": []
+  },
+  "leakage": {
+    "identity_counts": {
+      "test": 144,
+      "train": 675,
+      "val": 144
+    },
+    "identity_overlap_counts": {
+      "train_val": 0,
+      "train_test": 0,
+      "val_test": 0
+    },
+    "identity_leakage_pass": true,
+    "sequence_counts": {
+      "video10": 50,
+      "video11": 185,
+      "video12": 8,
+      "video2": 76,
+      "video3": 80,
+      "video4": 75,
+      "video5": 33,
+      "video6": 43,
+      "video8": 70,
+      "video9": 20
+    }
+  },
+  "frozen_dataset_observations": {
+    "plate_detection_images": 2531,
+    "plate_ocr_images": 1707,
+    "plate_ocr_legacy_identity_leakage": false,
+    "indian_plates_is_source_equivalent_to_plate_detection": true
+  }
+}

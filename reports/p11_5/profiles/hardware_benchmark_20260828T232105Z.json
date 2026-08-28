@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-08-28T23:21:05.495719+00:00",
+  "records": [
+    {
+      "profile_requested": "baseline",
+      "hardware": {
+        "os": "Windows-11-10.0.26200-SP0",
+        "cpu": "Intel64 Family 6 Model 141 Stepping 1, GenuineIntel",
+        "logical_cpus": 8,
+        "ram_bytes": 34073251840,
+        "cuda_available": true,
+        "gpu_count": 1,
+        "gpu_name": "NVIDIA GeForce RTX 3050 Laptop GPU",
+        "vram_bytes": 4294443008,
+        "compute_capability": [
+          8,
+          6
+        ],
+        "hardware_id": "local-6b2aa9c9b5fb"
+      },
+      "resolved": {
+        "requested": "baseline",
+        "selected": "baseline",
+        "profile": {
+          "status": "validated",
+          "p1": "models/vehicle/yolo11m.pt",
+          "p3": "models/plate/production/best.pt",
+          "ocr": "models/ocr/PP-OCRv5_mobile_rec_infer.onnx",
+          "temporal": "current_multiframe_voter",
+          "runtime": "pytorch_onnx_cpu_mix",
+          "precision": "fp32",
+          "minimum_vram_mb": 0
+        },
+        "hardware": {
+          "os": "Windows-11-10.0.26200-SP0",
+          "cpu": "Intel64 Family 6 Model 141 Stepping 1, GenuineIntel",
+          "logical_cpus": 8,
+          "ram_bytes": 34073251840,
+          "cuda_available": true,
+          "gpu_count": 1,
+          "gpu_name": "NVIDIA GeForce RTX 3050 Laptop GPU",
+          "vram_bytes": 4294443008,
+          "compute_capability": [
+            8,
+            6
+          ],
+          "hardware_id": "local-6b2aa9c9b5fb"
+        },
+        "fallbacks_considered": []
+      },
+      "status": "MEASURED",
+      "model": "models/plate/production/best.pt",
+      "model_sha256": "8603afbc9ee2c16f99971898ae98211048c01cc6668bc5d5cc46df13d5f9c8ba",
+      "precision": "fp32",
+      "batch": 1,
+      "image_size": 640,
+      "device": "cuda:0",
+      "repeats": 3,
+      "warmups": 1,
+      "latency_p50_ms": 14.883,
+      "latency_p95_ms": 17.492,
+      "throughput_fps": 63.774,
+      "safe_camera_capacity": null,
+      "safe_camera_capacity_reason": "Not inferred from a synthetic single-frame probe; validate with the intended stream mix."
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+pipeline,status,vehicle_recall,plate_recall,plate_exact,track_exact,p50_ms,p95_ms,throughput_fps,notes
+Existing production recognition pipeline,NOT_EVALUATED,,,,,,,,Vehicle-labelled end-to-end locked benchmark is unavailable
+P11.5 isolated derivative pipeline,NOT_EVALUATED,,,,,,,,V2/OBB/OCR V2/temporal components are not jointly trained and evaluated

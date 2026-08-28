@@ -1,0 +1,494 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-08-28T23:19:48.121287+00:00",
+  "root": "C:\\DR2\\sentineltrack",
+  "actions": {
+    "dataset_audit": {
+      "status": "AVAILABLE",
+      "path": "reports/p11_5/dataset/audit_summary.json",
+      "value": {
+        "record_count": 13082,
+        "image_record_count": 13081,
+        "annotation_record_count": 13020,
+        "unlabeled_image_count": 62,
+        "invalid_or_quarantined_count": 137,
+        "by_source": {
+          "Indian plates": {
+            "records": 2531,
+            "images": 2531,
+            "orphan_annotations": 0,
+            "usable_detection": 2530,
+            "usable_ocr": 0,
+            "usable_multiframe": 0,
+            "splits": {
+              "train": 2035,
+              "val": 329,
+              "test": 167
+            },
+            "annotation_formats": {
+              "YOLO": 2531
+            },
+            "quality_flags": {
+              "empty_annotation": 1
+            }
+          },
+          "State-wise_OLX": {
+            "records": 603,
+            "images": 602,
+            "orphan_annotations": 1,
+            "usable_detection": 601,
+            "usable_ocr": 581,
+            "usable_multiframe": 0,
+            "splits": {
+              "unsplit": 603
+            },
+            "annotation_formats": {
+              "Pascal VOC XML": 603
+            },
+            "quality_flags": {
+              "plate_text_invalid": 21,
+              "invalid_bbox_geometry": 1,
+              "orphan_annotation": 1
+            }
+          },
+          "google_images": {
+            "records": 442,
+            "images": 442,
+            "orphan_annotations": 0,
+            "usable_detection": 442,
+            "usable_ocr": 416,
+            "usable_multiframe": 0,
+            "splits": {
+              "unsplit": 442
+            },
+            "annotation_formats": {
+              "Pascal VOC XML": 442
+            },
+            "quality_flags": {
+              "plate_text_invalid": 26
+            }
+          },
+          "images_and_labels": {
+            "records": 2083,
+            "images": 2083,
+            "orphan_annotations": 0,
+            "usable_detection": 2021,
+            "usable_ocr": 0,
+            "usable_multiframe": 0,
+            "splits": {
+              "unsplit": 2083
+            },
+            "annotation_formats": {
+              "YOLO": 2083
+            },
+            "quality_flags": {
+              "image_format_extension_mismatch": 3,
+              "missing_annotation": 62
+            }
+          },
+          "plate_detection": {
+            "records": 2531,
+            "images": 2531,
+            "orphan_annotations": 0,
+            "usable_detection": 2530,
+            "usable_ocr": 0,
+            "usable_multiframe": 0,
+            "splits": {
+              "train": 2035,
+              "val": 329,
+              "test": 167
+            },
+            "annotation_formats": {
+              "YOLO": 2531
+            },
+            "quality_flags": {
+              "empty_annotation": 1
+            }
+          },
+          "plate_detection_source_real_public": {
+            "records": 2531,
+            "images": 2531,
+            "orphan_annotations": 0,
+            "usable_detection": 2530,
+            "usable_ocr": 0,
+            "usable_multiframe": 0,
+            "splits": {
+              "train": 2035,
+              "val": 329,
+              "test": 167
+            },
+            "annotation_formats": {
+              "YOLO": 2531
+            },
+            "quality_flags": {
+              "empty_annotation": 1
+            }
+          },
+          "plate_ocr": {
+            "records": 1707,
+            "images": 1707,
+            "orphan_annotations": 0,
+            "usable_detection": 0,
+            "usable_ocr": 1707,
+            "usable_multiframe": 0,
+            "splits": {
+              "test": 178,
+              "train": 1382,
+              "val": 147
+            },
+            "annotation_formats": {
+              "OCR text": 1707
+            },
+            "quality_flags": {}
+          },
+          "video_images": {
+            "records": 654,
+            "images": 654,
+            "orphan_annotations": 0,
+            "usable_detection": 654,
+            "usable_ocr": 633,
+            "usable_multiframe": 654,
+            "splits": {
+              "unsplit": 654
+            },
+            "annotation_formats": {
+              "Pascal VOC XML": 654
+            },
+            "quality_flags": {
+              "plate_text_invalid": 21
+            }
+          }
+        },
+        "duplicates": {
+          "exact_duplicate_groups": 3531,
+          "exact_duplicate_records": 9593,
+          "near_duplicate_candidate_groups": 3514,
+          "cross_split_exact_duplicate_groups": []
+        },
+        "leakage": {
+          "identity_counts": {
+            "test": 144,
+            "train": 675,
+            "val": 144
+          },
+          "identity_overlap_counts": {
+            "train_val": 0,
+            "train_test": 0,
+            "val_test": 0
+          },
+          "identity_leakage_pass": true,
+          "sequence_counts": {
+            "video10": 50,
+            "video11": 185,
+            "video12": 8,
+            "video2": 76,
+            "video3": 80,
+            "video4": 75,
+            "video5": 33,
+            "video6": 43,
+            "video8": 70,
+            "video9": 20
+          }
+        },
+        "frozen_dataset_observations": {
+          "plate_detection_images": 2531,
+          "plate_ocr_images": 1707,
+          "plate_ocr_legacy_identity_leakage": false,
+          "indian_plates_is_source_equivalent_to_plate_detection": true
+        }
+      }
+    },
+    "v2_summary": {
+      "status": "AVAILABLE",
+      "path": "reports/p11_5/dataset/v2_build_summary.json",
+      "value": {
+        "detection_v2": {
+          "status": "DERIVATIVE_READY_NOT_TRAINED",
+          "source_inventory": "datasets/experiments/manifests/source_inventory.csv",
+          "candidate_records": 6248,
+          "selected_unique_images": 5281,
+          "exact_duplicates_excluded": 967,
+          "split_counts": {
+            "test": 344,
+            "train": 4162,
+            "val": 775
+          },
+          "label_object_counts": {
+            "test": 359,
+            "train": 4290,
+            "val": 800
+          },
+          "source_contribution": {
+            "plate_detection": 2530,
+            "images_and_labels": 1102,
+            "google_images": 395,
+            "State-wise_OLX": 600,
+            "video_images": 654
+          },
+          "link_modes": {
+            "hardlink": 5281
+          },
+          "excluded_original_sources": [
+            "Indian plates",
+            "plate_detection_source_real_public"
+          ],
+          "notes": [
+            "Canonical plate_detection split assignments were preserved.",
+            "Raw sources were grouped by sequence, plate identity, or image hash before deterministic splitting.",
+            "VOC labels were converted to class 0 license_plate bounding boxes.",
+            "The original polygon data remains in the source inventory and was not rewritten."
+          ]
+        },
+        "obb_v1": {
+          "status": "DERIVATIVE_READY_NOT_TRAINED",
+          "selected_unique_images": 5281,
+          "split_counts": {
+            "test": 344,
+            "train": 4162,
+            "val": 775
+          },
+          "candidate_models": [
+            "YOLO11l-obb",
+            "YOLO26l-obb"
+          ],
+          "notes": [
+            "OBB labels are derived from polygon minimum-area rectangles where polygons exist; otherwise axis-aligned rectangles are used.",
+            "No OBB model was promoted or trained by this step."
+          ]
+        },
+        "ocr_v2": {
+          "status": "DERIVATIVE_READY_NOT_TRAINED",
+          "legacy_train": 1382,
+          "legacy_val": 147,
+          "legacy_test": 178,
+          "new_raw_candidates": 19,
+          "new_identity_groups_considered": 17,
+          "new_counts": {
+            "added": 17
+          },
+          "split_counts": {
+            "expanded_test": 178,
+            "train": 1396,
+            "expanded_val": 150
+          },
+          "link_modes": {
+            "hardlink": 1707
+          },
+          "legacy_validation_and_test_preserved": true,
+          "legacy_identity_exclusion_count": 963,
+          "notes": [
+            "Legacy OCR validation and locked test crops were copied by hard link and remain unchanged.",
+            "New OCR crops were generated only from validated VOC boxes and validated plate text.",
+            "Raw candidates sharing a legacy plate identity were excluded from the derived corpus.",
+            "Expanded splits are for development; the legacy test remains the final historical comparison set."
+          ]
+        }
+      }
+    },
+    "profile": {
+      "requested": "auto",
+      "selected": "development",
+      "profile": {
+        "status": "validated_baseline_only",
+        "p1": "models/vehicle/yolo11m.pt",
+        "p3": "models/plate/production/best.pt",
+        "ocr": "models/ocr/PP-OCRv5_mobile_rec_infer.onnx",
+        "temporal": "current_multiframe_voter",
+        "runtime": "pytorch_onnx_cpu_mix",
+        "precision": "fp32",
+        "minimum_vram_mb": 0
+      },
+      "hardware": {
+        "gpu_count": 1,
+        "gpu_name": "NVIDIA GeForce RTX 3050 Laptop GPU",
+        "vram_mb": 4095,
+        "cuda": true
+      },
+      "fallbacks_considered": [
+        {
+          "profile": "cloud_accuracy",
+          "reason": "unavailable_not_benchmarked"
+        },
+        {
+          "profile": "cloud_balanced",
+          "reason": "unavailable_not_benchmarked"
+        }
+      ]
+    },
+    "baseline": {
+      "p1": {
+        "status": "AVAILABLE",
+        "path": "reports/p11_5/baseline/p1_baseline.json",
+        "value": {
+          "gate": "P11.5 Gate 1",
+          "status": "NOT_EVALUATED",
+          "scope": "LOCAL / DEVELOPMENT HARDWARE",
+          "git_sha": "23f575d1ab13b6ce99879763bee4ebdaae864416",
+          "model": {
+            "logical_name": "vehicle_detector",
+            "architecture": "YOLO11m",
+            "path": "models/vehicle/yolo11m.pt",
+            "sha256": "d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95",
+            "source": "existing SentinelTrack production model",
+            "runtime": "Ultralytics/PyTorch",
+            "precision": "not changed; existing runtime default",
+            "image_size": 960,
+            "confidence_threshold": 0.25,
+            "classes": [
+              "car",
+              "motorcycle",
+              "bus",
+              "truck"
+            ]
+          },
+          "reason_not_evaluated": "No vehicle-detection ground-truth evaluation set is present in the local workspace. Existing local vehicle results are operational probes without ground-truth labels and cannot produce truthful precision, recall, F1, or mAP.",
+          "available_operational_probe": {
+            "artifact": "reports/vehicle_detection/benchmark_camera_01_20260827_202908.json",
+            "frames": 25,
+            "detections": 25,
+            "p50_inference_ms": 51.72,
+            "p95_inference_ms": 58.49,
+            "fps_throughput": 11.14,
+            "warning": "Latency-only probe; not an accuracy benchmark."
+          },
+          "required_next_evidence": "Provide or generate a legitimate vehicle-labelled evaluation set before P1 model promotion or YOLO11/YOLO26 accuracy claims."
+        }
+      },
+      "p3": {
+        "status": "AVAILABLE",
+        "path": "reports/p11_5/baseline/p3_baseline.json",
+        "value": {
+          "gate": "P11.5 Gate 1",
+          "status": "PASS",
+          "scope": "LOCAL / DEVELOPMENT HARDWARE",
+          "measured_on": "2026-08-29",
+          "git_sha": "23f575d1ab13b6ce99879763bee4ebdaae864416",
+          "model": {
+            "logical_name": "plate_detector",
+            "architecture": "custom YOLO11s",
+            "path": "models/plate/production/best.pt",
+            "sha256": "8603afbc9ee2c16f99971898ae98211048c01cc6668bc5d5cc46df13d5f9c8ba",
+            "source": "existing SentinelTrack production model",
+            "runtime": "Ultralytics/PyTorch",
+            "precision": "FP32 default",
+            "image_size": 960,
+            "confidence_threshold": 0.25,
+            "class_contract": {
+              "0": "license_plate"
+            }
+          },
+          "dataset": {
+            "path": "datasets/plate_detection",
+            "split": "test",
+            "source": "roboflow_quobotic_indian_number_plate_v3",
+            "license": "CC-BY-4.0",
+            "images": 167,
+            "ground_truth_plates": 169
+          },
+          "metrics": {
+            "true_positives": 147,
+            "false_positives": 28,
+            "false_negatives": 22,
+            "precision": 0.84,
+            "recall": 0.8698,
+            "f1": 0.8547,
+            "category_recall": {
+              "standard_aspect": 0.9706,
+              "square_or_tall_aspect": 0.7164,
+              "small_plates_lt_60px": 0.0,
+              "medium_plates_60_to_120px": 0.8125,
+              "large_plates_gt_120px": 0.8933
+            }
+          },
+          "source_artifact": "reports/plate_detection/real_plate_evaluation.json",
+          "reproduction_command": "python -m 03_plate_detection.training.evaluate_real"
+        }
+      },
+      "p4": {
+        "status": "AVAILABLE",
+        "path": "reports/p11_5/baseline/p4_baseline.json",
+        "value": {
+          "gate": "P11.5 Gate 1",
+          "status": "PASS",
+          "scope": "LOCAL / DEVELOPMENT HARDWARE",
+          "measured_on": "2026-08-29",
+          "git_sha": "23f575d1ab13b6ce99879763bee4ebdaae864416",
+          "dataset": {
+            "path": "datasets/plate_ocr",
+            "validation_images": 147,
+            "locked_test_images": 178,
+            "identity_overlap": {
+              "train_val": 0,
+              "train_test": 0,
+              "val_test": 0
+            }
+          },
+          "models": [
+            {
+              "logical_name": "ocr_recognizer_mobile",
+              "architecture": "PP-OCRv5 Mobile recognition",
+              "path": "models/ocr/PP-OCRv5_mobile_rec_infer.onnx",
+              "sha256": "4e16deb22c4da6468bdca539b2cd3c8687825538b67109177c47d359ab994cd7",
+              "runtime": "ONNX Runtime CPU",
+              "precision": "FP32",
+              "validation": {
+                "post_exact": 0.6463,
+                "post_character": 0.8465,
+                "cer": 0.1064,
+                "p50_ms": 10.92,
+                "p95_ms": 25.5,
+                "throughput_crops_per_sec": 76.22
+              },
+              "locked_test": {
+                "post_exact": 0.5787,
+                "post_character": 0.7839,
+                "cer": 0.1557,
+                "p50_ms": 10.53,
+                "p95_ms": 24.85,
+                "throughput_crops_per_sec": 79.54
+              }
+            },
+            {
+              "logical_name": "ocr_recognizer_server",
+              "architecture": "PP-OCRv5 Server recognition",
+              "path": "models/ocr/PP-OCRv5_server_rec_infer.onnx",
+              "sha256": "13d0dda27d63dc0f4938af48df2c55b33f3c989a0bd5eacb8410e30f1735f644",
+              "runtime": "ONNX Runtime CPU",
+              "precision": "FP32",
+              "validation": {
+                "post_exact": 0.6463,
+                "post_character": 0.7944,
+                "cer": 0.147,
+                "p50_ms": 437.83,
+                "p95_ms": 575.91,
+                "throughput_crops_per_sec": 2.31
+              },
+              "locked_test": {
+                "post_exact": 0.5787,
+                "post_character": 0.7721,
+                "cer": 0.1652,
+                "p50_ms": 413.81,
+                "p95_ms": 594.96,
+                "throughput_crops_per_sec": 2.41
+              }
+            }
+          ],
+          "selected_current_baseline": "ocr_recognizer_mobile",
+          "selection_reason": "Mobile and Server tie on postprocessed exact match on the locked test, while Mobile is substantially faster and has higher test character accuracy.",
+          "source_artifacts": [
+            "reports/plate_ocr/ppocr_mobile_val_evaluation.json",
+            "reports/plate_ocr/ppocr_mobile_test_evaluation.json",
+            "reports/plate_ocr/ppocr_server_val_evaluation.json",
+            "reports/plate_ocr/ppocr_server_test_evaluation.json"
+          ],
+          "reproduction_command": "python -m 04_plate_ocr.training.evaluate"
+        }
+      }
+    },
+    "temporal": {
+      "status": "NOT_EVALUATED",
+      "reason": "No locked frame-level OCR ground-truth track is available in the frozen corpus.",
+      "implementation": "tools/p11_5/temporal.py"
+    }
+  }
+}

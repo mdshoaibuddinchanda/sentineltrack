@@ -1,0 +1,44 @@
+{
+  "gate": "P11.5 Gate 1",
+  "status": "PASS",
+  "scope": "LOCAL / DEVELOPMENT HARDWARE",
+  "measured_on": "2026-08-29",
+  "git_sha": "23f575d1ab13b6ce99879763bee4ebdaae864416",
+  "dataset": {
+    "path": "datasets/plate_ocr",
+    "validation_images": 147,
+    "locked_test_images": 178,
+    "identity_overlap": {"train_val": 0, "train_test": 0, "val_test": 0}
+  },
+  "models": [
+    {
+      "logical_name": "ocr_recognizer_mobile",
+      "architecture": "PP-OCRv5 Mobile recognition",
+      "path": "models/ocr/PP-OCRv5_mobile_rec_infer.onnx",
+      "sha256": "4e16deb22c4da6468bdca539b2cd3c8687825538b67109177c47d359ab994cd7",
+      "runtime": "ONNX Runtime CPU",
+      "precision": "FP32",
+      "validation": {"post_exact": 0.6463, "post_character": 0.8465, "cer": 0.1064, "p50_ms": 10.92, "p95_ms": 25.5, "throughput_crops_per_sec": 76.22},
+      "locked_test": {"post_exact": 0.5787, "post_character": 0.7839, "cer": 0.1557, "p50_ms": 10.53, "p95_ms": 24.85, "throughput_crops_per_sec": 79.54}
+    },
+    {
+      "logical_name": "ocr_recognizer_server",
+      "architecture": "PP-OCRv5 Server recognition",
+      "path": "models/ocr/PP-OCRv5_server_rec_infer.onnx",
+      "sha256": "13d0dda27d63dc0f4938af48df2c55b33f3c989a0bd5eacb8410e30f1735f644",
+      "runtime": "ONNX Runtime CPU",
+      "precision": "FP32",
+      "validation": {"post_exact": 0.6463, "post_character": 0.7944, "cer": 0.147, "p50_ms": 437.83, "p95_ms": 575.91, "throughput_crops_per_sec": 2.31},
+      "locked_test": {"post_exact": 0.5787, "post_character": 0.7721, "cer": 0.1652, "p50_ms": 413.81, "p95_ms": 594.96, "throughput_crops_per_sec": 2.41}
+    }
+  ],
+  "selected_current_baseline": "ocr_recognizer_mobile",
+  "selection_reason": "Mobile and Server tie on postprocessed exact match on the locked test, while Mobile is substantially faster and has higher test character accuracy.",
+  "source_artifacts": [
+    "reports/plate_ocr/ppocr_mobile_val_evaluation.json",
+    "reports/plate_ocr/ppocr_mobile_test_evaluation.json",
+    "reports/plate_ocr/ppocr_server_val_evaluation.json",
+    "reports/plate_ocr/ppocr_server_test_evaluation.json"
+  ],
+  "reproduction_command": "python -m 04_plate_ocr.training.evaluate"
+}

@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-08-28T23:19:55.772826+00:00",
+  "records": [
+    {
+      "profile_requested": "cloud_accuracy",
+      "hardware": {
+        "os": "Windows-11-10.0.26200-SP0",
+        "cpu": "Intel64 Family 6 Model 141 Stepping 1, GenuineIntel",
+        "logical_cpus": 8,
+        "ram_bytes": 34073251840,
+        "cuda_available": true,
+        "gpu_count": 1,
+        "gpu_name": "NVIDIA GeForce RTX 3050 Laptop GPU",
+        "vram_bytes": 4294443008,
+        "compute_capability": [
+          8,
+          6
+        ],
+        "hardware_id": "local-6b2aa9c9b5fb"
+      },
+      "resolved": {
+        "requested": "cloud_accuracy",
+        "selected": null,
+        "profile": null,
+        "hardware": {
+          "os": "Windows-11-10.0.26200-SP0",
+          "cpu": "Intel64 Family 6 Model 141 Stepping 1, GenuineIntel",
+          "logical_cpus": 8,
+          "ram_bytes": 34073251840,
+          "cuda_available": true,
+          "gpu_count": 1,
+          "gpu_name": "NVIDIA GeForce RTX 3050 Laptop GPU",
+          "vram_bytes": 4294443008,
+          "compute_capability": [
+            8,
+            6
+          ],
+          "hardware_id": "local-6b2aa9c9b5fb"
+        },
+        "fallbacks_considered": [
+          {
+            "profile": "cloud_accuracy",
+            "reason": "unavailable_not_benchmarked"
+          }
+        ],
+        "error": "No validated profile fits the current hardware/artifacts"
+      },
+      "status": "UNAVAILABLE",
+      "reason": "No validated profile fits the current hardware/artifacts"
+    },
+    {
+      "profile_requested": "cloud_balanced",
+      "hardware": {
+        "os": "Windows-11-10.0.26200-SP0",
+        "cpu": "Intel64 Family 6 Model 141 Stepping 1, GenuineIntel",
+        "logical_cpus": 8,
+        "ram_bytes": 34073251840,
+        "cuda_available": true,
+        "gpu_count": 1,
+        "gpu_name": "NVIDIA GeForce RTX 3050 Laptop GPU",
+        "vram_bytes": 4294443008,
+        "compute_capability": [
+          8,
+          6
+        ],
+        "hardware_id": "local-6b2aa9c9b5fb"
+      },
+      "resolved": {
+        "requested": "cloud_balanced",
+        "selected": null,
+        "profile": null,
+        "hardware": {
+          "os": "Windows-11-10.0.26200-SP0",
+          "cpu": "Intel64 Family 6 Model 141 Stepping 1, GenuineIntel",
+          "logical_cpus": 8,
+          "ram_bytes": 34073251840,
+          "cuda_available": true,
+          "gpu_count": 1,
+          "gpu_name": "NVIDIA GeForce RTX 3050 Laptop GPU",
+          "vram_bytes": 4294443008,
+          "compute_capability": [
+            8,
+            6
+          ],
+          "hardware_id": "local-6b2aa9c9b5fb"
+        },
+        "fallbacks_considered": [
+          {
+            "profile": "cloud_balanced",
+            "reason": "unavailable_not_benchmarked"
+          }
+        ],
+        "error": "No validated profile fits the current hardware/artifacts"
+      },
+      "status": "UNAVAILABLE",
+      "reason": "No validated profile fits the current hardware/artifacts"
+    }
+  ]
+}
