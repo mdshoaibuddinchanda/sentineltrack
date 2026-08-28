@@ -60,11 +60,11 @@ The high precision and ranking metrics in 05_target_matching/benchmark.py repres
 | **P3 Plate Detection** | **95%** | YOLO11s with FP16 parity, motorcycle/square plates preserved without arbitrary filters. |
 | **P4 Plate OCR & Voting** | **95%** | PP-OCRv5 Mobile ONNX with multi-frame voting and grammar alternatives. |
 | **P5 Target Matching** | **95%** | Multi-index shortlisting (92% Recall@100 at 100k), PostGIS persistence. |
-| **P6 Vehicle ReID** | **10%** | Interface contract defined; deferred after P7 GIS. |
-| **P7 Route & GIS Trajectory Engine** | **15%** | **NEXT IMMEDIATE SPRINT: Spatio-temporal trajectory reconstruction & PostGIS maps.** |
-| **P8 Backend API** | **10%** | FastAPI OpenAPI endpoints planned. |
+| **P6 Vehicle ReID** | **10%** | Interface contract defined; deferred after P8/P9. |
+| **P7 Route & GIS Trajectory Engine** | **95%** | **BASELINE LOCKED: Cross-camera spatio-temporal DAG trajectory, kinematics feasibility, PostGIS & RFC-7946 GeoJSON.** |
+| **P8 Backend API** | **10%** | FastAPI OpenAPI endpoints planned (Next Sprint). |
 | **P9 Dashboard** | **5%** | Map & Alert WebSocket UI planned. |
 | **P10 Security & RBAC** | **10%** | Token auth & audit logging planned. |
 
-**Overall Core CV Pipeline Status:** **~95% (FROZEN)**  
-**Complete Hackathon Solution Status:** **~60-65%**
+**Overall Core Intelligence & GIS Pipeline Status:** **~95% (FROZEN)**  
+**Complete Hackathon Solution Status:** **~75%**
