@@ -82,10 +82,11 @@ class BoundedConnectionPool:
             port=int(os.getenv("DATABASE_PORT", "5432")),
             dbname=os.getenv("DATABASE_NAME", "sentinel"),
             user=os.getenv("DATABASE_USER", "sentinel"),
-            password=os.getenv("DATABASE_PASSWORD"),
+            password=os.getenv("DATABASE_PASSWORD", "sentinel_password"),
         )
         self._total_created += 1
         return conn
+
 
 
     def get_connection(self, timeout: Optional[float] = None) -> PooledConnectionWrapper:
@@ -198,8 +199,9 @@ def get_connection(autocommit: bool = False) -> psycopg.Connection:
     port = int(os.getenv("DATABASE_PORT", "5432"))
     dbname = os.getenv("DATABASE_NAME", "sentinel")
     user = os.getenv("DATABASE_USER", "sentinel")
-    password = os.getenv("DATABASE_PASSWORD")
+    password = os.getenv("DATABASE_PASSWORD", "sentinel_password")
     conn = psycopg.connect(
+
         host=host,
         port=port,
         dbname=dbname,
