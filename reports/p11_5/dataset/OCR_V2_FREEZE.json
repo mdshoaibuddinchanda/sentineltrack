@@ -1,0 +1,32 @@
+{
+  "status": "FROZEN",
+  "dataset": "plate_ocr_v2",
+  "root": "datasets/experiments/plate_ocr_v2",
+  "manifest": "datasets/experiments/plate_ocr_v2/manifest.csv",
+  "manifest_sha256": "9ffad4f56f9aa3b6f5041ab33715ef8d2ac684aca231b66e7fe27e7814b486f7",
+  "row_count": 1724,
+  "split_counts": {
+    "expanded_test": 178,
+    "train": 1396,
+    "expanded_val": 150
+  },
+  "expected_count_mismatches": {},
+  "path_integrity": {
+    "rows": 1724,
+    "missing_images": [],
+    "missing_image_count": 0,
+    "missing_labels": [],
+    "missing_label_count": 0
+  },
+  "cross_split_exact_sha256": {},
+  "cross_split_identity": {},
+  "cross_split_phash": {
+    "threshold_bits": 8,
+    "cross_split_pair_count": 0,
+    "cross_split_exact_phash_group_count": 0,
+    "interpretation": "Perceptual hashes are screening evidence, not identity proof; any nonzero count is retained for review."
+  },
+  "source_inventory_sha256": "5e76ab258b19e991d8901aa3af08bf0b7ecb7d95ab9a3289b8266486c15ad6d1",
+  "legacy_locked_test_rows": 178,
+  "legacy_locked_test_sha256": "53c6d76097b9ede4bc86b285a20fc65441bc81982056e45af3b7d0f2b44616e2"
+}

@@ -1,0 +1,30 @@
+{
+  "status": "FROZEN_READY_FOR_TRAINING",
+  "upstream_manifest": "datasets/experiments/plate_detection_v2/manifest.csv",
+  "upstream_manifest_sha256": "f5a95ba304c6bac54e55752cc90f7a1451fe63ae1c1ced66a00ab6044ca34db4",
+  "selected_unique_images": 4854,
+  "excluded_exact_phash_rows": 427,
+  "excluded_exact_phash_groups": 415,
+  "split_counts": {
+    "test": 293,
+    "train": 3924,
+    "val": 637
+  },
+  "source_contribution": {
+    "plate_detection": 2530,
+    "images_and_labels": 1090,
+    "google_images": 277,
+    "State-wise_OLX": 453,
+    "video_images": 504
+  },
+  "link_modes": {
+    "image_hardlink": 4854,
+    "label_hardlink": 4854
+  },
+  "policy": "retain canonical plate_detection rows; exclude non-canonical rows in exact cross-split pHash groups",
+  "notes": [
+    "The upstream plate_detection_v2 derivative was not modified.",
+    "This strict derivative is the training/evaluation dataset for P11.5 detector comparisons.",
+    "pHash-near candidates with nonzero Hamming distance remain screening evidence and are reported separately."
+  ]
+}
