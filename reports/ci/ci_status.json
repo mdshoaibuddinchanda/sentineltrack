@@ -1,0 +1,13 @@
+{
+  "git_sha": "9d788a46ac2e7b75e0003573f29fddd1ebbab86e",
+  "backend_job": "success",
+  "frontend_job": "success",
+  "python_version": "3.12.12",
+  "fastapi_version": "0.135.1",
+  "starlette_version": "0.52.1",
+  "pytest_version": "8.4.2",
+  "dependency_lock": "constraints-ci.txt",
+  "local_ci_equivalent": "pass",
+  "clean_checkout": "pass",
+  "remote_main_synced": true
+}
