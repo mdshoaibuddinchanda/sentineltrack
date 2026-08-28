@@ -51,6 +51,7 @@ def get_current_git_sha() -> str:
 @router.get("/health", response_model=HealthResponse)
 async def get_health(metrics: MetricsCollector = Depends(get_metrics)):
     """Basic process liveness probe."""
+    metrics.inc_requests()
     uptime = time.time() - metrics.start_time
     return HealthResponse(
         status="healthy",
@@ -58,6 +59,7 @@ async def get_health(metrics: MetricsCollector = Depends(get_metrics)):
         git_sha=get_current_git_sha(),
         uptime_seconds=round(uptime, 2)
     )
+
 
 
 @router.get("/ready", response_model=ReadinessResponse)

@@ -1,19 +1,31 @@
 from typing import List, Optional
 import importlib
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 
 try:
     from ..schemas.alerts import AlertResponse, AlertListResponse, AlertAckRequest, AlertAckResponse
     from ..services.alert_service import AlertService
-    from ..dependencies import get_alert_service, get_metrics, record_audit_event, get_current_user_placeholder
+    from ..dependencies import get_alert_service, get_metrics
     from ..metrics import MetricsCollector
 except (ImportError, ValueError):
     alt_m = importlib.import_module("08_backend.schemas.alerts")
-    AlertResponse, AlertListResponse, AlertAckRequest, AlertAckResponse = alt_m.AlertResponse, alt_m.AlertListResponse, alt_m.AlertAckRequest, alt_m.AlertAckResponse
+    AlertResponse, AlertListResponse, AlertAckRequest, AlertAckResponse = (
+        alt_m.AlertResponse, alt_m.AlertListResponse, alt_m.AlertAckRequest, alt_m.AlertAckResponse
+    )
     AlertService = importlib.import_module("08_backend.services.alert_service").AlertService
     dep_m = importlib.import_module("08_backend.dependencies")
-    get_alert_service, get_metrics, record_audit_event, get_current_user_placeholder = dep_m.get_alert_service, dep_m.get_metrics, dep_m.record_audit_event, dep_m.get_current_user_placeholder
+    get_alert_service, get_metrics = dep_m.get_alert_service, dep_m.get_metrics
     MetricsCollector = importlib.import_module("08_backend.metrics").MetricsCollector
+
+# 10_security always via importlib (module name starts with digit)
+_sec_m = importlib.import_module("10_security")
+Permission = _sec_m.Permission
+AuthenticatedPrincipal = _sec_m.AuthenticatedPrincipal
+get_audit_logger = _sec_m.get_audit_logger
+_s_dep = importlib.import_module("10_security.dependencies")
+require_permission = _s_dep.require_permission
+validate_csrf_token = _s_dep.validate_csrf_token
+
 
 router = APIRouter(prefix="/api/v1/alerts", tags=["Target Alerts & Incident Response"])
 
@@ -25,7 +37,8 @@ async def list_alerts(
     limit: int = Query(default=50, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     service: AlertService = Depends(get_alert_service),
-    metrics: MetricsCollector = Depends(get_metrics)
+    metrics: MetricsCollector = Depends(get_metrics),
+    principal: AuthenticatedPrincipal = Depends(require_permission(Permission.ALERT_READ))
 ):
     """List real-time target match alerts with acknowledgement and camera filters."""
     metrics.inc_requests()
@@ -43,7 +56,8 @@ async def list_alerts(
 async def get_alert_detail(
     alert_id: str,
     service: AlertService = Depends(get_alert_service),
-    metrics: MetricsCollector = Depends(get_metrics)
+    metrics: MetricsCollector = Depends(get_metrics),
+    principal: AuthenticatedPrincipal = Depends(require_permission(Permission.ALERT_READ))
 ):
     """Get complete alert details and explainability evidence."""
     metrics.inc_requests()
@@ -52,15 +66,27 @@ async def get_alert_detail(
 
 @router.post("/{alert_id}/ack", response_model=AlertAckResponse)
 async def acknowledge_alert(
+    http_request: Request,
     alert_id: str,
     request: AlertAckRequest = AlertAckRequest(),
     service: AlertService = Depends(get_alert_service),
     metrics: MetricsCollector = Depends(get_metrics),
-    current_user: str = Depends(get_current_user_placeholder)
+    principal: AuthenticatedPrincipal = Depends(require_permission(Permission.ALERT_ACK)),
+    _csrf = Depends(validate_csrf_token),
+    audit = Depends(get_audit_logger)
 ):
-    """Acknowledge an active alert by an authorized operator."""
+    """Acknowledge an active alert by an authorized operator (OPERATOR, SUPERVISOR, ADMIN)."""
     metrics.inc_requests()
-    ack_user = request.acknowledged_by or current_user
+    ack_user = request.acknowledged_by or principal.username
     res = service.acknowledge_alert(alert_id=alert_id, acknowledged_by=ack_user)
-    record_audit_event(action="ACK_ALERT", target=alert_id, actor=ack_user)
+    audit.log_event(
+        action="ACK_ALERT",
+        resource_type="alert",
+        outcome="SUCCESS",
+        principal=principal,
+        resource_id=alert_id,
+        request_id=http_request.headers.get("X-Request-ID"),
+        details={"acknowledged_by": ack_user}
+    )
     return res
+

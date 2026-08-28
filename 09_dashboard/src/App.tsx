@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import { LoginPage } from "./pages/LoginPage";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Header } from "./components/layout/Header";
 import { Navigation } from "./components/layout/Navigation";
 import { OfflineBanner } from "./components/common/OfflineBanner";
@@ -115,163 +118,178 @@ export function App() {
   };
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-police-900 text-slate-100 overflow-hidden font-sans">
-      {/* Top Header */}
-      <Header
-        systemStatus={sysStatus}
-        wsStatus={wsStatus}
-        activeCamerasCount={cameras.filter((c) => c.stream_status === "ONLINE").length}
-        activeTargetsCount={targets.filter((t) => t.enabled).length}
-        unackAlertsCount={unackCount}
-        demoMode={demoMode}
-        onToggleDemoMode={() => setDemoMode((prev) => !prev)}
-        onRefresh={handleRefreshAll}
-        privacyMode={privacyMode}
-        onTogglePrivacyMode={() => setPrivacyMode((prev) => !prev)}
-      />
+    <AuthProvider>
+      <Routes>
+        {/* Public route — accessible without authentication */}
+        <Route path="/login" element={<LoginPage />} />
 
-      {/* Offline / Degraded Banner */}
-      <OfflineBanner
-        status={sysStatus}
-        error={sysError}
-        onRetry={refreshSystem}
-        degradedDetails={readiness?.components}
-      />
-
-      {/* Primary Navigation */}
-      <Navigation unackAlertsCount={unackCount} />
-
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div
-          onClick={() => {
-            handleInvestigate(toastMessage.registration);
-            setToastMessage(null);
-          }}
-          className="fixed top-20 right-4 z-50 p-3 bg-rose-950 border-2 border-rose-600 rounded-lg shadow-2xl text-white cursor-pointer hover:bg-rose-900 transition-all animate-bounce max-w-sm"
-        >
-          <div className="flex items-center gap-2 font-mono font-bold text-xs text-rose-300">
-            <AlertOctagon className="w-4 h-4 text-rose-400 animate-pulse" />
-            <span>{toastMessage.title}</span>
-          </div>
-          <div className="text-[11px] text-slate-200 mt-1 font-mono">{toastMessage.desc}</div>
-          <div className="text-[10px] text-cyan-300 font-semibold mt-1 font-mono">Click to open GIS trajectory &rarr;</div>
-        </div>
-      )}
-
-      {/* Main Content View Container with Router */}
-      <main className="flex-1 p-4 overflow-y-auto bg-police-900/60">
-        <ErrorBoundary fallbackTitle="Page Display Error">
-          <Routes>
-            <Route path="/" element={<Navigate to="/operations" replace />} />
-            <Route
-              path="/operations"
-              element={
-                <OperationsPage
-                  cameras={cameras}
-                  alerts={alerts}
-                  sightings={sightings}
-                  unackAlertsCount={unackCount}
+        {/* All dashboard routes are protected */}
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <div className="h-screen w-screen flex flex-col bg-police-900 text-slate-100 overflow-hidden font-sans">
+                {/* Top Header */}
+                <Header
+                  systemStatus={sysStatus}
+                  wsStatus={wsStatus}
+                  activeCamerasCount={cameras.filter((c) => c.stream_status === "ONLINE").length}
                   activeTargetsCount={targets.filter((t) => t.enabled).length}
-                  analyticsWorkerStatus={readiness?.components?.analytics_worker === true}
-                  workerCount={metrics?.active_camera_workers ?? 0}
-                  persistedSightingsTotal={metrics?.total_sightings_persisted}
-                  onAcknowledgeAlert={acknowledgeAlert}
-                  onInvestigate={handleInvestigate}
-                  onSelectCamera={handleSelectCamera}
-                  selectedCameraId={selectedCameraId}
-                  privacyMode={privacyMode}
-                />
-              }
-            />
-            <Route
-              path="/cameras"
-              element={
-                <CamerasPage
-                  cameras={cameras}
-                  onSelectCamera={handleSelectCamera}
-                  selectedCameraId={selectedCameraId}
-                />
-              }
-            />
-            <Route
-              path="/cameras/:cameraId"
-              element={
-                <CamerasPage
-                  cameras={cameras}
-                  onSelectCamera={handleSelectCamera}
-                  selectedCameraId={selectedCameraId}
-                />
-              }
-            />
-            <Route
-              path="/targets"
-              element={
-                <TargetsPage
-                  targets={targets}
-                  onCreateTarget={createTarget}
-                  onUpdateTarget={updateTarget}
-                  onDisableTarget={disableTarget}
-                  onInvestigate={handleInvestigate}
-                  privacyMode={privacyMode}
-                />
-              }
-            />
-            <Route
-              path="/alerts"
-              element={
-                <AlertsPage
-                  alerts={alerts}
-                  onAcknowledge={acknowledgeAlert}
-                  onInvestigate={handleInvestigate}
-                  privacyMode={privacyMode}
-                />
-              }
-            />
-            <Route
-              path="/alerts/:alertId"
-              element={
-                <AlertsPage
-                  alerts={alerts}
-                  onAcknowledge={acknowledgeAlert}
-                  onInvestigate={handleInvestigate}
-                  privacyMode={privacyMode}
-                />
-              }
-            />
-            <Route
-              path="/investigation"
-              element={
-                <InvestigationPage
+                  unackAlertsCount={unackCount}
                   demoMode={demoMode}
+                  onToggleDemoMode={() => setDemoMode((prev) => !prev)}
+                  onRefresh={handleRefreshAll}
                   privacyMode={privacyMode}
+                  onTogglePrivacyMode={() => setPrivacyMode((prev) => !prev)}
                 />
-              }
-            />
-            <Route
-              path="/investigation/:registration"
-              element={
-                <InvestigationPage
-                  demoMode={demoMode}
-                  privacyMode={privacyMode}
+
+                {/* Offline / Degraded Banner */}
+                <OfflineBanner
+                  status={sysStatus}
+                  error={sysError}
+                  onRetry={refreshSystem}
+                  degradedDetails={readiness?.components}
                 />
-              }
-            />
-            <Route
-              path="/system"
-              element={
-                <SystemPage
-                  health={health}
-                  readiness={readiness}
-                  metrics={metrics}
-                  onRefresh={refreshSystem}
-                />
-              }
-            />
-            <Route path="*" element={<Navigate to="/operations" replace />} />
-          </Routes>
-        </ErrorBoundary>
-      </main>
-    </div>
+
+                {/* Primary Navigation */}
+                <Navigation unackAlertsCount={unackCount} />
+
+                {/* Toast Notification */}
+                {toastMessage && (
+                  <div
+                    onClick={() => {
+                      handleInvestigate(toastMessage.registration);
+                      setToastMessage(null);
+                    }}
+                    className="fixed top-20 right-4 z-50 p-3 bg-rose-950 border-2 border-rose-600 rounded-lg shadow-2xl text-white cursor-pointer hover:bg-rose-900 transition-all animate-bounce max-w-sm"
+                  >
+                    <div className="flex items-center gap-2 font-mono font-bold text-xs text-rose-300">
+                      <AlertOctagon className="w-4 h-4 text-rose-400 animate-pulse" />
+                      <span>{toastMessage.title}</span>
+                    </div>
+                    <div className="text-[11px] text-slate-200 mt-1 font-mono">{toastMessage.desc}</div>
+                    <div className="text-[10px] text-cyan-300 font-semibold mt-1 font-mono">Click to open GIS trajectory &rarr;</div>
+                  </div>
+                )}
+
+                {/* Main Content View Container with Router */}
+                <main className="flex-1 p-4 overflow-y-auto bg-police-900/60">
+                  <ErrorBoundary fallbackTitle="Page Display Error">
+                    <Routes>
+                      <Route path="/" element={<Navigate to="/operations" replace />} />
+                      <Route
+                        path="/operations"
+                        element={
+                          <OperationsPage
+                            cameras={cameras}
+                            alerts={alerts}
+                            sightings={sightings}
+                            unackAlertsCount={unackCount}
+                            activeTargetsCount={targets.filter((t) => t.enabled).length}
+                            analyticsWorkerStatus={readiness?.components?.analytics_worker === true}
+                            workerCount={metrics?.active_camera_workers ?? 0}
+                            persistedSightingsTotal={metrics?.total_sightings_persisted}
+                            onAcknowledgeAlert={acknowledgeAlert}
+                            onInvestigate={handleInvestigate}
+                            onSelectCamera={handleSelectCamera}
+                            selectedCameraId={selectedCameraId}
+                            privacyMode={privacyMode}
+                          />
+                        }
+                      />
+                      <Route
+                        path="/cameras"
+                        element={
+                          <CamerasPage
+                            cameras={cameras}
+                            onSelectCamera={handleSelectCamera}
+                            selectedCameraId={selectedCameraId}
+                          />
+                        }
+                      />
+                      <Route
+                        path="/cameras/:cameraId"
+                        element={
+                          <CamerasPage
+                            cameras={cameras}
+                            onSelectCamera={handleSelectCamera}
+                            selectedCameraId={selectedCameraId}
+                          />
+                        }
+                      />
+                      <Route
+                        path="/targets"
+                        element={
+                          <TargetsPage
+                            targets={targets}
+                            onCreateTarget={createTarget}
+                            onUpdateTarget={updateTarget}
+                            onDisableTarget={disableTarget}
+                            onInvestigate={handleInvestigate}
+                            privacyMode={privacyMode}
+                          />
+                        }
+                      />
+                      <Route
+                        path="/alerts"
+                        element={
+                          <AlertsPage
+                            alerts={alerts}
+                            onAcknowledge={acknowledgeAlert}
+                            onInvestigate={handleInvestigate}
+                            privacyMode={privacyMode}
+                          />
+                        }
+                      />
+                      <Route
+                        path="/alerts/:alertId"
+                        element={
+                          <AlertsPage
+                            alerts={alerts}
+                            onAcknowledge={acknowledgeAlert}
+                            onInvestigate={handleInvestigate}
+                            privacyMode={privacyMode}
+                          />
+                        }
+                      />
+                      <Route
+                        path="/investigation"
+                        element={
+                          <InvestigationPage
+                            demoMode={demoMode}
+                            privacyMode={privacyMode}
+                          />
+                        }
+                      />
+                      <Route
+                        path="/investigation/:registration"
+                        element={
+                          <InvestigationPage
+                            demoMode={demoMode}
+                            privacyMode={privacyMode}
+                          />
+                        }
+                      />
+                      <Route
+                        path="/system"
+                        element={
+                          <SystemPage
+                            health={health}
+                            readiness={readiness}
+                            metrics={metrics}
+                            onRefresh={refreshSystem}
+                          />
+                        }
+                      />
+                      <Route path="*" element={<Navigate to="/operations" replace />} />
+                    </Routes>
+                  </ErrorBoundary>
+                </main>
+              </div>
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </AuthProvider>
   );
 }

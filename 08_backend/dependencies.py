@@ -1,5 +1,7 @@
+import importlib
 from typing import Optional
 from fastapi import Header, Depends
+
 
 try:
     from .services.camera_service import CameraService
@@ -72,27 +74,55 @@ def get_analytics_worker_dep() -> AnalyticsWorker:
 
 
 # ============================================================
-# PRIORITY 10 SECURITY / RBAC / AUDIT HOOKS (DEFERRED INTERFACES)
+# PRIORITY 10 SECURITY / RBAC / AUDIT HOOKS
 # ============================================================
 
+# 10_security always via importlib (module name starts with digit)
+_sec_m = importlib.import_module("10_security")
+UserRole = _sec_m.UserRole
+Permission = _sec_m.Permission
+AuthenticatedPrincipal = _sec_m.AuthenticatedPrincipal
+get_security_config = _sec_m.get_security_config
+get_security_repository = _sec_m.get_security_repository
+get_session_manager = _sec_m.get_session_manager
+get_audit_logger = _sec_m.get_audit_logger
+_dep_m = importlib.import_module("10_security.dependencies")
+get_current_principal = _dep_m.get_current_principal
+get_optional_principal = _dep_m.get_optional_principal
+require_permission = _dep_m.require_permission
+require_role = _dep_m.require_role
+validate_csrf_token = _dep_m.validate_csrf_token
+
+
+
 def get_current_user_placeholder(
-    x_operator_id: Optional[str] = Header(default="operator-default", alias="X-Operator-Id")
+    principal: Optional[AuthenticatedPrincipal] = Depends(get_optional_principal),
+    x_operator_id: Optional[str] = Header(default=None, alias="X-Operator-Id")
 ) -> str:
-    """
-    P10 Authentication Placeholder.
-    Returns caller operator identity from header or default.
-    Full JWT / RBAC authentication is deferred to Priority 10.
-    """
+    """Backward-compatible user identity accessor."""
+    if principal:
+        return principal.username
     return x_operator_id or "operator-default"
 
 
-def require_role(role: str):
-    """P10 Role-Based Access Control decorator placeholder."""
-    def role_checker(user: str = Depends(get_current_user_placeholder)):
-        return user
-    return role_checker
+def record_audit_event(
+    action: str,
+    target: str,
+    actor: str = "system",
+    outcome: str = "SUCCESS",
+    details: Optional[dict] = None
+):
+    """P10 Structured Audit Logger bridge."""
+    try:
+        audit = get_audit_logger()
+        audit.log_event(
+            action=action,
+            resource_type="operation",
+            outcome=outcome,
+            actor_username=actor,
+            resource_id=target,
+            details=details or {}
+        )
+    except Exception:
+        pass
 
-
-def record_audit_event(action: str, target: str, actor: str = "operator-default"):
-    """P10 Audit Logging Hook. Records sensitive operations (target add, history search, alert ack)."""
-    pass

@@ -28,7 +28,10 @@ runs/
 
 # Reports, video chunks & outputs (narrowly scoped to prevent ignoring .ts TypeScript source files)
 reports/
+!reports/security/
+!reports/security/**
 *.jpg
+
 *.jpeg
 *.png
 *.mp4

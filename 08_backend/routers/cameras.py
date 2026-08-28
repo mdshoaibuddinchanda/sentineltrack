@@ -15,7 +15,18 @@ except (ImportError, ValueError):
     get_camera_service, get_metrics = dep_m.get_camera_service, dep_m.get_metrics
     MetricsCollector = importlib.import_module("08_backend.metrics").MetricsCollector
 
-router = APIRouter(prefix="/api/v1/cameras", tags=["Camera Registry & PostGIS"])
+# 10_security always via importlib (module name starts with digit)
+_sec_m = importlib.import_module("10_security")
+Permission = _sec_m.Permission
+AuthenticatedPrincipal = _sec_m.AuthenticatedPrincipal
+require_permission = importlib.import_module("10_security.dependencies").require_permission
+
+
+router = APIRouter(
+    prefix="/api/v1/cameras",
+    tags=["Camera Registry & PostGIS"],
+    dependencies=[Depends(require_permission(Permission.CAMERA_READ))]
+)
 
 
 @router.get("", response_model=CameraListResponse)
