@@ -2,5 +2,19 @@
   "pass": "Priority 11 Autonomous Scale, Performance, Deployability & Mainframe Integration",
   "baseline_commit": "709619e42e416595e33101d428fae3e21526cbec",
   "date": "2026-08-28T21:15:00Z",
-  "findings": []
+  "findings": [
+    {
+      "id": "P11-F01",
+      "severity": "HIGH",
+      "description": "Scheduler lock deadlock during auto-registration from within enqueue_frame",
+      "resolution": "Upgraded FairStreamScheduler to use threading.RLock() enabling re-entrant acquisition."
+    },
+    {
+      "id": "P11-F02",
+      "severity": "HIGH",
+      "description": "Database connection pool exhaustion when legacy repositories invoked get_connection() without closing",
+      "resolution": "Preserved direct psycopg connection creation for get_connection() while providing pooled connections via db_connection() and get_pooled_connection() with non-blocking ephemeral fallback."
+    }
+  ]
+
 }
