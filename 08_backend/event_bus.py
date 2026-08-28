@@ -1,7 +1,10 @@
 import asyncio
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Set, Optional
+
+logger = logging.getLogger("sentineltrack.event_bus")
 
 
 @dataclass
@@ -64,8 +67,13 @@ class AsyncEventBus:
                 else:
                     handler(event)
             except Exception as e:
-                # Event handler failure must not crash event bus
-                pass
+                logger.exception(f"Error executing event bus handler for {event.event_type}: {e}")
+                try:
+                    import importlib
+                    met_m = importlib.import_module("08_backend.metrics")
+                    met_m.get_metrics_collector().inc_errors()
+                except Exception:
+                    pass
 
 
 _GLOBAL_EVENT_BUS: Optional[AsyncEventBus] = None

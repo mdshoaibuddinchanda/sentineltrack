@@ -155,8 +155,8 @@ class TargetService:
         if self.repository:
             try:
                 self.repository.save_watchlist_entry(entry)
-            except Exception:
-                pass
+            except Exception as e:
+                raise DatabaseUnavailableError(f"Database persistence failure while updating target: {e}")
 
         return TargetResponse(
             target_id=entry.watchlist_id,
@@ -180,8 +180,8 @@ class TargetService:
         if self.repository:
             try:
                 self.repository.save_watchlist_entry(entry)
-            except Exception:
-                pass
+            except Exception as e:
+                raise DatabaseUnavailableError(f"Database persistence failure while disabling target: {e}")
 
         return TargetResponse(
             target_id=entry.watchlist_id,

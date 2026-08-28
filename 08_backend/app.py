@@ -84,6 +84,7 @@ def create_app() -> FastAPI:
 
     # 3. Exception Handlers
     app.add_exception_handler(SentinelTrackAPIError, sentineltrack_exception_handler)
+    app.add_exception_handler(Exception, global_unhandled_exception_handler)
 
     # 4. Include Routers
     app.include_router(health_router)

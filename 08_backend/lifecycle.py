@@ -24,8 +24,9 @@ async def lifespan(app: FastAPI):
     metrics = get_metrics_collector()
     logger.info(f"Starting {config.server.title} v{config.server.version}...")
 
-    # Optional: Start background analytics worker
+    # Start background analytics worker
     worker = get_analytics_worker()
+    worker.start()
 
     yield
 

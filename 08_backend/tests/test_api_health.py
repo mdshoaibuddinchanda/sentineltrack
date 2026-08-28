@@ -14,7 +14,8 @@ def test_health_liveness_endpoint():
     data = response.json()
     assert data["status"] == "healthy"
     assert data["version"] == "1.0.0"
-    assert data["git_sha"] == "f5f294f2fb6410f1bef0460228256923cc22b9e5"
+    assert "git_sha" in data
+    assert len(data["git_sha"]) >= 7
     assert "uptime_seconds" in data
     assert data["uptime_seconds"] >= 0.0
 

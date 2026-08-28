@@ -1,5 +1,6 @@
 import time
 import importlib
+from typing import Optional
 from fastapi import APIRouter, Depends, Response, status
 
 try:
@@ -15,6 +16,38 @@ except (ImportError, ValueError):
 router = APIRouter(tags=["Health & Diagnostics"])
 
 
+import os
+import subprocess
+
+_CACHED_GIT_SHA: Optional[str] = None
+
+def get_current_git_sha() -> str:
+    global _CACHED_GIT_SHA
+    if _CACHED_GIT_SHA is not None:
+        return _CACHED_GIT_SHA
+
+    env_sha = os.getenv("SENTINEL_GIT_SHA") or os.getenv("GIT_SHA")
+    if env_sha:
+        _CACHED_GIT_SHA = env_sha
+        return _CACHED_GIT_SHA
+
+    try:
+        res = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=2.0
+        )
+        if res.returncode == 0 and res.stdout.strip():
+            _CACHED_GIT_SHA = res.stdout.strip()
+            return _CACHED_GIT_SHA
+    except Exception:
+        pass
+
+    _CACHED_GIT_SHA = "unknown"
+    return _CACHED_GIT_SHA
+
+
 @router.get("/health", response_model=HealthResponse)
 async def get_health(metrics: MetricsCollector = Depends(get_metrics)):
     """Basic process liveness probe."""
@@ -22,7 +55,7 @@ async def get_health(metrics: MetricsCollector = Depends(get_metrics)):
     return HealthResponse(
         status="healthy",
         version="1.0.0",
-        git_sha="f5f294f2fb6410f1bef0460228256923cc22b9e5",
+        git_sha=get_current_git_sha(),
         uptime_seconds=round(uptime, 2)
     )
 

@@ -34,10 +34,11 @@ Priority 8 transforms the independent analytical capabilities of SentinelTrack (
 ┌──────────────────────────────┐                              ┌──────────────────────────────┐
 │     POSTGRESQL / POSTGIS     │                              │   INFERENCE WORKER (P1-P5)   │
 │  • cameras (Geometry)        │                              │  • FramePacket Ingestion     │
-│  • vehicle_sightings         │                              │  • YOLOv8n Detection & Byte  │
-│  • watchlist_entries         │                              │  • YOLOv8n-plate + PP-OCRv5  │
-│  • alerts                    │                              │  • Target Matching & Voting  │
-│  • trajectory_runs           │                              │  • Ingest/Event UTC Ordering │
+│  • vehicle_sightings         │                              │  • YOLO11m Vehicle Detection │
+│  • watchlist_entries         │                              │  • ByteTrack Multi-Camera    │
+│  • alerts                    │                              │  • YOLO11s Plate Detection   │
+│  • trajectory_runs           │                              │  • PP-OCRv5 Consensus Voter  │
+│  • dynamic PostGIS queries   │                              │  • P5 Target Normalization   │
 └──────────────────────────────┘                              └──────────────────────────────┘
 ```
 
