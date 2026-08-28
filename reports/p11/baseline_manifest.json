@@ -1,0 +1,56 @@
+{
+  "baseline_version": "P11-FROZEN-BASELINE-1.0",
+  "p10_freeze_commit": "709619e42e416595e33101d428fae3e21526cbec",
+  "date_created": "2026-08-28T21:24:00Z",
+  "hardware": {
+    "os": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 141 Stepping 1, GenuineIntel",
+    "python_version": "3.12.12",
+    "cuda_available": true,
+    "gpu_device_name": "NVIDIA GeForce RTX 3050 Laptop GPU",
+    "total_vram_mb": 4095.5
+  },
+  "frozen_hyperparameters": {
+    "p1_vehicle_detector": {
+      "model": "YOLO11m",
+      "weights_path": "models/vehicle/yolo11m.pt",
+      "weights_sha256": "d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95",
+      "confidence_threshold": 0.25,
+      "iou_threshold": 0.45,
+      "classes": [
+        "car",
+        "motorcycle",
+        "bus",
+        "truck"
+      ]
+    },
+    "p2_tracker": {
+      "algorithm": "ByteTrack",
+      "track_thresh": 0.5,
+      "track_buffer": 30,
+      "match_thresh": 0.8
+    },
+    "p3_plate_detector": {
+      "model": "YOLO11s-plate",
+      "weights_path": "models/plate/production/best.pt",
+      "weights_sha256": "8603afbc9ee2c16f99971898ae98211048c01cc6668bc5d5cc46df13d5f9c8ba",
+      "confidence_threshold": 0.3
+    },
+    "p4_plate_ocr": {
+      "model": "PP-OCRv5-Mobile-ONNX",
+      "weights_path": "models/ocr/PP-OCRv5_mobile_rec_infer.onnx",
+      "weights_sha256": "4e16deb22c4da6468bdca539b2cd3c8687825538b67109177c47d359ab994cd7",
+      "min_crop_quality": 0.2,
+      "min_support_count": 2
+    },
+    "p5_target_matching": {
+      "exact_evidence_gate": true,
+      "high_probability_threshold": 0.9,
+      "min_match_score": 0.6
+    },
+    "p7_route_physics": {
+      "max_plausible_speed_kmh": 180.0,
+      "min_match_score": 0.6
+    }
+  }
+}

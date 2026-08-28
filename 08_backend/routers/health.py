@@ -167,3 +167,14 @@ async def get_metrics_snapshot(
     """Returns operational JSON metrics snapshot (METRICS_READ)."""
     return MetricsResponse(metrics=metrics.snapshot())
 
+
+@router.get("/metrics/prometheus")
+async def get_prometheus_metrics(
+    metrics: MetricsCollector = Depends(get_metrics),
+    principal: AuthenticatedPrincipal = Depends(require_permission(Permission.METRICS_READ))
+):
+    """Returns operational metrics in standard Prometheus exposition format (METRICS_READ)."""
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse(metrics.to_prometheus_text(), media_type="text/plain; version=0.0.4")
+
+

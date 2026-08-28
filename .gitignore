@@ -18,6 +18,7 @@ raw/
 
 # Model weights & binaries
 models/
+!models/manifest.json
 runs/
 *.pt
 *.pth
@@ -30,7 +31,10 @@ runs/
 reports/
 !reports/security/
 !reports/security/**
+!reports/p11/
+!reports/p11/**
 *.jpg
+
 
 *.jpeg
 *.png

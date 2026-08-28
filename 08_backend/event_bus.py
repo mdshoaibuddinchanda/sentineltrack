@@ -75,6 +75,26 @@ class AsyncEventBus:
                 except Exception:
                     pass
 
+    def publish_sync(self, event: BaseEvent):
+        """Thread-safe synchronous publish from worker threads."""
+        handlers: List[Callable[[BaseEvent], Any]] = list(self._global_subscribers)
+        if event.event_type in self._subscribers:
+            handlers.extend(self._subscribers[event.event_type])
+
+        for handler in handlers:
+            try:
+                if asyncio.iscoroutinefunction(handler):
+                    try:
+                        loop = asyncio.get_running_loop()
+                        loop.create_task(handler(event))
+                    except RuntimeError:
+                        # No running loop in this thread; execute in event loop runner or ignore
+                        pass
+                else:
+                    handler(event)
+            except Exception as e:
+                logger.exception(f"Error in synchronous event handler: {e}")
+
 
 _GLOBAL_EVENT_BUS: Optional[AsyncEventBus] = None
 
@@ -84,3 +104,4 @@ def get_event_bus() -> AsyncEventBus:
     if _GLOBAL_EVENT_BUS is None:
         _GLOBAL_EVENT_BUS = AsyncEventBus()
     return _GLOBAL_EVENT_BUS
+

@@ -1,0 +1,32 @@
+{
+  "models": [
+    {
+      "logical_name": "vehicle_detector",
+      "file_path": "models/vehicle/yolo11m.pt",
+      "sha256": "d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95",
+      "size_bytes": 40684120,
+      "required": true
+    },
+    {
+      "logical_name": "plate_detector",
+      "file_path": "models/plate/production/best.pt",
+      "sha256": "8603afbc9ee2c16f99971898ae98211048c01cc6668bc5d5cc46df13d5f9c8ba",
+      "size_bytes": 19171155,
+      "required": true
+    },
+    {
+      "logical_name": "ocr_recognizer_mobile",
+      "file_path": "models/ocr/PP-OCRv5_mobile_rec_infer.onnx",
+      "sha256": "4e16deb22c4da6468bdca539b2cd3c8687825538b67109177c47d359ab994cd7",
+      "size_bytes": 7830888,
+      "required": true
+    },
+    {
+      "logical_name": "ocr_recognizer_server",
+      "file_path": "models/ocr/PP-OCRv5_server_rec_infer.onnx",
+      "sha256": "13d0dda27d63dc0f4938af48df2c55b33f3c989a0bd5eacb8410e30f1735f644",
+      "size_bytes": 84505505,
+      "required": true
+    }
+  ]
+}

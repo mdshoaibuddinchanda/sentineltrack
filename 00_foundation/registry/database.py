@@ -1,41 +1,223 @@
 import os
 import json
+import time
+import queue
+import logging
+import threading
+from contextlib import contextmanager
+from typing import Optional, Dict, Any, Generator
 import psycopg
+from psycopg import rows
 
 from dotenv import load_dotenv
 
-
 load_dotenv()
 
+logger = logging.getLogger("sentineltrack.database")
 
-def get_connection():
 
-    return psycopg.connect(
+class PooledConnectionWrapper:
+    """Wraps a psycopg connection, intercepting close() / context manager to return to pool."""
 
-        host=os.getenv(
-            "DATABASE_HOST",
-            "localhost",
-        ),
+    def __init__(self, conn, pool: Optional["BoundedConnectionPool"] = None):
+        self._conn = conn
+        self._pool = pool
+        self._returned = False
 
-        port=os.getenv(
-            "DATABASE_PORT",
-            "5432",
-        ),
+    def __enter__(self):
+        return self
 
-        dbname=os.getenv(
-            "DATABASE_NAME",
-            "sentinel",
-        ),
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            try:
+                self._conn.rollback()
+            except Exception:
+                pass
+        else:
+            try:
+                if not getattr(self._conn, "autocommit", False):
+                    self._conn.commit()
+            except Exception:
+                pass
+        self.close()
 
-        user=os.getenv(
-            "DATABASE_USER",
-            "sentinel",
-        ),
+    def close(self):
+        if not self._returned:
+            self._returned = True
+            if self._pool:
+                self._pool.return_connection(self._conn)
+            else:
+                try:
+                    self._conn.close()
+                except Exception:
+                    pass
 
-        password=os.getenv(
-            "DATABASE_PASSWORD",
-        ),
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+
+class BoundedConnectionPool:
+    """Thread-safe bounded connection pool with health validation, reuse and telemetry."""
+
+    def __init__(
+        self,
+        min_size: int = 2,
+        max_size: int = 10,
+        timeout_s: float = 2.0
+    ):
+        self.min_size = min_size
+        self.max_size = max_size
+        self.timeout_s = timeout_s
+
+        self._pool: queue.Queue = queue.Queue(maxsize=max_size)
+        self._active_connections = 0
+        self._lock = threading.Lock()
+        self._total_created = 0
+        self._total_timeouts = 0
+        self._total_errors = 0
+
+    def _create_raw_connection(self):
+        conn = psycopg.connect(
+            host=os.getenv("DATABASE_HOST", "localhost"),
+            port=os.getenv("DATABASE_PORT", "5432"),
+            dbname=os.getenv("DATABASE_NAME", "sentinel"),
+            user=os.getenv("DATABASE_USER", "sentinel"),
+            password=os.getenv("DATABASE_PASSWORD"),
+        )
+        self._total_created += 1
+        return conn
+
+    def get_connection(self, timeout: Optional[float] = None) -> PooledConnectionWrapper:
+        t_out = timeout if timeout is not None else self.timeout_s
+        conn = None
+
+        # 1. Try to get existing idle connection
+        try:
+            conn = self._pool.get_nowait()
+        except queue.Empty:
+            # 2. If pool is empty, check if we can create a new connection up to max_size
+            with self._lock:
+                if self._active_connections < self.max_size:
+                    self._active_connections += 1
+                    try:
+                        conn = self._create_raw_connection()
+                    except Exception as e:
+                        self._active_connections -= 1
+                        self._total_errors += 1
+                        raise e
+
+        # 3. If at max capacity, wait for available connection with timeout; fallback to ephemeral on timeout
+        if conn is None:
+            try:
+                conn = self._pool.get(block=True, timeout=t_out)
+            except queue.Empty:
+                self._total_timeouts += 1
+                logger.warning(f"Connection pool exhausted (active={self._active_connections}); creating ephemeral connection.")
+                try:
+                    conn = self._create_raw_connection()
+                    return PooledConnectionWrapper(conn, None)
+                except Exception as e:
+                    self._total_errors += 1
+                    raise e
+
+        # 4. Validate connection health
+        is_healthy = False
+        try:
+            if not conn.closed:
+                is_healthy = True
+        except Exception:
+            is_healthy = False
+
+        if not is_healthy:
+            try:
+                conn.close()
+            except Exception:
+                pass
+            conn = self._create_raw_connection()
+
+        return PooledConnectionWrapper(conn, self)
+
+    def return_connection(self, conn) -> None:
+        if conn.closed:
+            with self._lock:
+                self._active_connections = max(0, self._active_connections - 1)
+            return
+
+        try:
+            self._pool.put_nowait(conn)
+        except queue.Full:
+            try:
+                conn.close()
+            except Exception:
+                pass
+            with self._lock:
+                self._active_connections = max(0, self._active_connections - 1)
+
+    def get_metrics(self) -> Dict[str, Any]:
+        with self._lock:
+            idle = self._pool.qsize()
+            in_use = max(0, self._active_connections - idle)
+            return {
+                "max_size": self.max_size,
+                "active_connections": self._active_connections,
+                "in_use": in_use,
+                "idle": idle,
+                "total_created": self._total_created,
+                "total_timeouts": self._total_timeouts,
+                "total_errors": self._total_errors
+            }
+
+
+_GLOBAL_DB_POOL: Optional[BoundedConnectionPool] = None
+_POOL_LOCK = threading.Lock()
+
+
+def get_db_pool() -> BoundedConnectionPool:
+    global _GLOBAL_DB_POOL
+    with _POOL_LOCK:
+        if _GLOBAL_DB_POOL is None:
+            min_s = int(os.getenv("SENTINEL_DB_POOL_MIN", "2"))
+            max_s = int(os.getenv("SENTINEL_DB_POOL_MAX", "10"))
+            timeout_s = float(os.getenv("SENTINEL_DB_POOL_TIMEOUT", "0.5"))
+            _GLOBAL_DB_POOL = BoundedConnectionPool(min_size=min_s, max_size=max_s, timeout_s=timeout_s)
+        return _GLOBAL_DB_POOL
+
+
+def get_pooled_connection(timeout: Optional[float] = None) -> PooledConnectionWrapper:
+    """Returns a connection from the bounded connection pool."""
+    return get_db_pool().get_connection(timeout=timeout)
+
+
+def get_connection(autocommit: bool = False) -> psycopg.Connection:
+    """
+    Returns a direct PostgreSQL database connection.
+    Preserves exact backwards compatibility for legacy repository modules.
+    """
+    host = os.getenv("DATABASE_HOST", "localhost")
+    port = int(os.getenv("DATABASE_PORT", "5432"))
+    dbname = os.getenv("DATABASE_NAME", "sentinel")
+    user = os.getenv("DATABASE_USER", "sentinel")
+    password = os.getenv("DATABASE_PASSWORD")
+    conn = psycopg.connect(
+        host=host,
+        port=port,
+        dbname=dbname,
+        user=user,
+        password=password,
+        autocommit=autocommit,
     )
+    return conn
+
+
+@contextmanager
+def db_connection() -> Generator[PooledConnectionWrapper, None, None]:
+    """Context manager for automatic connection checkout and check-in from pool."""
+    conn = get_pooled_connection()
+    try:
+        yield conn
+    finally:
+        conn.close()
+
 
 
 def upsert_camera(camera):

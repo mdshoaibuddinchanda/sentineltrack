@@ -43,6 +43,8 @@ ROUTE_POLICY = {
 
     ("GET", "/ready"): Permission.SYSTEM_READ,
     ("GET", "/metrics"): Permission.METRICS_READ,
+    ("GET", "/metrics/prometheus"): Permission.METRICS_READ,
+
 
     ("GET", "/api/v1/cameras"): Permission.CAMERA_READ,
     ("GET", "/api/v1/cameras/nearby"): Permission.CAMERA_READ,

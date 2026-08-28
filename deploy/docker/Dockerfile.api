@@ -1,0 +1,33 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    SENTINEL_PROCESS_ROLE=api
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    libpq-dev \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements-api.txt /app/
+RUN pip install --no-cache-dir -r requirements-api.txt
+
+COPY 00_foundation /app/00_foundation
+COPY 05_target_matching /app/05_target_matching
+COPY 07_route_engine /app/07_route_engine
+COPY 08_backend /app/08_backend
+COPY 10_security /app/10_security
+COPY 11_scale_deployment /app/11_scale_deployment
+
+RUN useradd -m -u 1000 sentinel && chown -R sentinel:sentinel /app
+USER sentinel
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
+  CMD curl -f http://localhost:8000/health || exit 1
+
+CMD ["python", "-m", "uvicorn", "08_backend.app:app", "--host", "0.0.0.0", "--port", "8000"]

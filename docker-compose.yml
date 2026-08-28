@@ -1,20 +1,21 @@
-# docker-compose.yml
-
 services:
   postgres:
     image: postgis/postgis:17-3.5
     container_name: sentinel-postgres
-
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: sentinel
-      POSTGRES_USER: sentinel
-      POSTGRES_PASSWORD: sentinel_dev
-
+      POSTGRES_DB: ${DATABASE_NAME:-sentinel}
+      POSTGRES_USER: ${DATABASE_USER:-sentinel}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD must be set in environment or .env}
     ports:
-      - "5432:5432"
-
+      - "${DATABASE_PORT:-5432}:5432"
     volumes:
       - sentinel_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-sentinel} -d ${DATABASE_NAME:-sentinel}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
   sentinel_postgres:

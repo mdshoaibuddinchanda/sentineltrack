@@ -1,6 +1,7 @@
 import asyncio
 import importlib
 import logging
+import queue
 import threading
 import time
 from typing import Any, Dict, List, Optional, Tuple
@@ -17,6 +18,11 @@ except (ImportError, ValueError):
     get_event_bus, AlertCreatedEvent, SightingCreatedEvent = ev_m.get_event_bus, ev_m.AlertCreatedEvent, ev_m.SightingCreatedEvent
     get_metrics_collector = importlib.import_module("08_backend.metrics").get_metrics_collector
 
+FairStreamScheduler = importlib.import_module("11_scale_deployment.scheduler").FairStreamScheduler
+get_scale_config = importlib.import_module("11_scale_deployment.config").get_scale_config
+
+
+
 logger = logging.getLogger("sentineltrack.analytics")
 
 
@@ -32,16 +38,20 @@ class AnalyticsWorker:
       -> EventBus & Telemetry.
     """
 
-    def __init__(self, config=None, event_bus=None, metrics_collector=None):
+    def __init__(self, config=None, event_bus=None, metrics_collector=None, scheduler=None):
         self.config = config or get_backend_config().analytics_worker
+        self.scale_config = get_scale_config()
         self.event_bus = event_bus or get_event_bus()
         self.metrics = metrics_collector or get_metrics_collector()
+        self.scheduler = scheduler or FairStreamScheduler()
 
         self._running = False
         self._thread: Optional[threading.Thread] = None
+        self._dispatch_thread: Optional[threading.Thread] = None
+        self._dispatch_queue: queue.Queue = queue.Queue(maxsize=2000)
         # RLock to prevent recursive deadlocks between start() and _lazy_init_models()
         self._lock = threading.RLock()
-        self._camera_queues: Dict[str, Any] = {}
+        self._camera_queues = self.scheduler._camera_queues
 
         # Pipeline modules
         self._detector = None
@@ -50,6 +60,7 @@ class AnalyticsWorker:
         self._plate_pipeline = None
         self._ocr_pipeline = None
         self._target_pipeline = None
+
 
     def _lazy_init_models(self):
         with self._lock:
@@ -124,6 +135,8 @@ class AnalyticsWorker:
             self._lazy_init_models()
             self._thread = threading.Thread(target=self._worker_loop, daemon=True, name="SentinelAnalyticsWorker")
             self._thread.start()
+            self._dispatch_thread = threading.Thread(target=self._dispatch_worker_loop, daemon=True, name="SentinelEventDispatcher")
+            self._dispatch_thread.start()
             logger.info("SentinelTrack AnalyticsWorker started successfully.")
 
     def stop(self):
@@ -131,7 +144,9 @@ class AnalyticsWorker:
             self._running = False
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=2.0)
-            logger.info("SentinelTrack AnalyticsWorker stopped.")
+        if self._dispatch_thread and self._dispatch_thread.is_alive():
+            self._dispatch_thread.join(timeout=2.0)
+        logger.info("SentinelTrack AnalyticsWorker stopped.")
 
     def is_running(self) -> bool:
         with self._lock:
@@ -140,15 +155,7 @@ class AnalyticsWorker:
     def enqueue_frame(self, frame_packet: Any) -> bool:
         """Enqueues a FramePacket into the per-camera bounded queue with latest-frame drop policy."""
         self._lazy_init_models()
-        cid = frame_packet.camera_id
-        with self._lock:
-            if cid not in self._camera_queues:
-                bounded_queue_mod = importlib.import_module("00_foundation.streams.bounded_stream_queue")
-                self._camera_queues[cid] = bounded_queue_mod.BoundedStreamQueue(maxsize=self.config.queue_max_size)
-
-            bq = self._camera_queues[cid]
-
-        ok = bq.put_latest(frame_packet)
+        ok = self.scheduler.enqueue_frame(frame_packet)
         self.metrics.inc_frames(ingested=1, dropped=0 if ok else 1)
         return ok
 
@@ -249,57 +256,62 @@ class AnalyticsWorker:
         return batch_res[0] if batch_res else {"status": "NO_RESULT"}
 
     def _dispatch_event(self, event: Any):
-        """Dispatches an event asynchronously to the global event bus without blocking inference."""
+        """Enqueues an event to the dedicated background dispatch queue without spawning endless threads."""
         try:
-            try:
-                loop = asyncio.get_running_loop()
-                loop.create_task(self.event_bus.publish(event))
-            except RuntimeError:
-                threading.Thread(target=lambda: asyncio.run(self.event_bus.publish(event)), daemon=True).start()
-        except Exception as e:
-            logger.exception(f"Failed to dispatch event to EventBus: {e}")
+            self._dispatch_queue.put_nowait(event)
+        except queue.Full:
+            logger.warning("Event dispatch queue full; dropping event.")
             self.metrics.inc_errors()
+
+    def _dispatch_worker_loop(self):
+        """Single background worker loop consuming events and publishing them safely."""
+        while self._running:
+            try:
+                event = self._dispatch_queue.get(timeout=0.1)
+                self.event_bus.publish_sync(event)
+
+                # Split-process PostgreSQL NOTIFY publishing if enabled
+                if self.scale_config.enable_postgres_event_bridge:
+                    try:
+                        bridge_m = importlib.import_module("11_scale_deployment.event_bridge")
+                        bridge = bridge_m.get_event_bridge()
+                        bridge.publish_event(event.event_type, event.payload)
+                    except Exception as pe:
+                        logger.warning(f"Error publishing to Postgres event bridge: {pe}")
+
+                self._dispatch_queue.task_done()
+            except queue.Empty:
+                pass
+            except Exception as e:
+                logger.error(f"Error in event dispatch worker: {e}")
+
 
     def _worker_loop(self):
         batch_size = max(1, self.config.micro_batch_size)
-        wait_seconds = max(0.001, self.config.max_batch_wait_ms / 1000.0)
+        max_wait_ms = self.config.max_batch_wait_ms
 
         while self._running:
-            with self._lock:
-                active_cameras = list(self._camera_queues.keys())
-            self.metrics.set_camera_workers(len(active_cameras))
+            active_cams = len(self.scheduler._camera_order)
+            self.metrics.set_camera_workers(active_cams)
 
-            packets_to_process: List[Any] = []
-
-            for cid in active_cameras:
-                with self._lock:
-                    bq = self._camera_queues.get(cid)
-                if not bq or bq.qsize() == 0:
-                    continue
-
-                try:
-                    packet = bq.get(block=False)
-                    packets_to_process.append(packet)
-                    if len(packets_to_process) >= batch_size:
-                        break
-                except Exception:
-                    pass
+            packets_to_process = self.scheduler.fetch_batch(
+                max_batch_size=batch_size,
+                max_wait_ms=max_wait_ms
+            )
 
             if packets_to_process:
                 self.process_batch(packets_to_process)
             else:
-                time.sleep(wait_seconds)
+                time.sleep(0.005)
 
     def get_status(self) -> Dict[str, Any]:
         with self._lock:
-            queue_stats = {}
-            for cid, bq in self._camera_queues.items():
-                queue_stats[cid] = bq.get_metrics()
-
+            scheduler_metrics = self.scheduler.get_metrics()
             return {
                 "running": self._running,
-                "active_camera_count": len(self._camera_queues),
-                "queues": queue_stats,
+                "active_camera_count": scheduler_metrics["active_camera_count"],
+                "queues": scheduler_metrics["queue_depths"],
+                "scheduler": scheduler_metrics,
                 "models_loaded": {
                     "detector": self._detector is not None,
                     "tracker": self._tracker_registry is not None,
@@ -309,6 +321,7 @@ class AnalyticsWorker:
                     "target_pipeline": self._target_pipeline is not None
                 }
             }
+
 
 
 _GLOBAL_ANALYTICS_WORKER: Optional[AnalyticsWorker] = None

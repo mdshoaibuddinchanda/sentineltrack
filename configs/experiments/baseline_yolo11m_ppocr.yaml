@@ -1,0 +1,27 @@
+experiment_id: baseline_yolo11m_ppocr
+description: Frozen production baseline with YOLO11m vehicle detection and PP-OCRv5 mobile ONNX
+
+p1_vehicle_detector:
+  model_path: models/vehicle/yolo11m.pt
+  confidence_threshold: 0.25
+  iou_threshold: 0.45
+
+p2_tracker:
+  algorithm: ByteTrack
+  track_thresh: 0.5
+  match_thresh: 0.8
+
+p3_plate_detector:
+  model_path: models/plate/production/best.pt
+  confidence_threshold: 0.30
+
+p4_plate_ocr:
+  engine: ppocr_mobile
+  model_path: models/ocr/PP-OCRv5_mobile_rec_infer.onnx
+  min_crop_quality: 0.20
+  min_support_count: 2
+
+p5_target_matching:
+  exact_evidence_gate: true
+  high_probability_threshold: 0.90
+  min_match_score: 0.60

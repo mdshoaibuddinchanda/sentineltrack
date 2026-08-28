@@ -62,12 +62,27 @@ class RequestCorrelationMiddleware(BaseHTTPMiddleware):
         req_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
         start_time = time.perf_counter()
 
-        response: Response = await call_next(request)
+        try:
+            from .metrics import get_metrics_collector
+            metrics = get_metrics_collector()
+            metrics.inc_active_requests()
+        except Exception:
+            metrics = None
+
+        try:
+            response: Response = await call_next(request)
+        finally:
+            if metrics:
+                metrics.dec_active_requests()
 
         latency_ms = (time.perf_counter() - start_time) * 1000.0
+        if metrics:
+            metrics.record_request_latency(latency_ms)
+
         response.headers["X-Request-ID"] = req_id
         response.headers["X-Response-Time-Ms"] = f"{latency_ms:.2f}"
         return response
+
 
 
 def create_app() -> FastAPI:

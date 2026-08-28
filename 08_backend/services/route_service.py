@@ -1,6 +1,7 @@
+import time
 import importlib
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 try:
     from ..errors import RoutePersistenceAPIError
@@ -17,10 +18,22 @@ def _get_route_pipeline():
 
 
 class RouteService:
-    """Service computing kinematic vehicle trajectories, summaries, and RFC-7946 GeoJSON."""
+    """Service computing kinematic vehicle trajectories, summaries, and RFC-7946 GeoJSON with bounded caching."""
 
-    def __init__(self, pipeline=None):
+    def __init__(self, pipeline=None, cache_ttl_s: float = 5.0):
         self.pipeline = pipeline or _get_route_pipeline()
+        self.cache_ttl_s = cache_ttl_s
+        self._trajectory_cache: Dict[Tuple, Tuple[float, Any]] = {}
+
+    def invalidate_cache(self, registration: Optional[str] = None) -> None:
+        """Invalidates cached trajectory records globally or for a specific registration."""
+        if registration is None:
+            self._trajectory_cache.clear()
+        else:
+            reg_clean = registration.strip().upper()
+            keys_to_remove = [k for k in self._trajectory_cache if k[0] == reg_clean]
+            for k in keys_to_remove:
+                self._trajectory_cache.pop(k, None)
 
     def build_target_trajectory(
         self,
@@ -30,6 +43,19 @@ class RouteService:
         min_match_score: float = 0.60,
         persist: bool = True
     ) -> RouteResponse:
+        cache_key = (
+            registration.strip().upper(),
+            start_time_utc.isoformat() if start_time_utc else None,
+            end_time_utc.isoformat() if end_time_utc else None,
+            round(min_match_score, 2),
+            persist
+        )
+        now = time.time()
+        if cache_key in self._trajectory_cache:
+            ts, cached_resp = self._trajectory_cache[cache_key]
+            if (now - ts) < self.cache_ttl_s:
+                return cached_resp
+
         try:
             traj = self.pipeline.build_target_trajectory(
                 registration=registration,
@@ -42,6 +68,7 @@ class RouteService:
             if "RoutePersistenceError" in type(e).__name__:
                 raise RoutePersistenceAPIError(f"Database persistence failure while computing trajectory: {e}")
             raise
+
 
         sightings_res = [
             RouteSightingResponse(

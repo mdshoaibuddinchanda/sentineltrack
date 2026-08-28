@@ -1,0 +1,59 @@
+{
+  "concurrency_levels": {
+    "1": {
+      "concurrent_clients": 1,
+      "total_requests": 20,
+      "successful_requests": 20,
+      "errors": 0,
+      "rps": 6.9,
+      "mean_ms": 145.07,
+      "p50_ms": 34.7,
+      "p95_ms": 2254.73,
+      "p99_ms": 2254.73
+    },
+    "5": {
+      "concurrent_clients": 5,
+      "total_requests": 100,
+      "successful_requests": 100,
+      "errors": 0,
+      "rps": 85.2,
+      "mean_ms": 57.28,
+      "p50_ms": 64.01,
+      "p95_ms": 90.57,
+      "p99_ms": 103.72
+    },
+    "10": {
+      "concurrent_clients": 10,
+      "total_requests": 200,
+      "successful_requests": 200,
+      "errors": 0,
+      "rps": 83.8,
+      "mean_ms": 116.17,
+      "p50_ms": 122.58,
+      "p95_ms": 188.09,
+      "p99_ms": 207.02
+    },
+    "25": {
+      "concurrent_clients": 25,
+      "total_requests": 500,
+      "successful_requests": 500,
+      "errors": 0,
+      "rps": 75.8,
+      "mean_ms": 315.97,
+      "p50_ms": 325.89,
+      "p95_ms": 585.95,
+      "p99_ms": 798.15
+    },
+    "50": {
+      "concurrent_clients": 50,
+      "total_requests": 1000,
+      "successful_requests": 1000,
+      "errors": 0,
+      "rps": 76.9,
+      "mean_ms": 610.02,
+      "p50_ms": 647.94,
+      "p95_ms": 1241.66,
+      "p99_ms": 1518.23
+    }
+  }
+}

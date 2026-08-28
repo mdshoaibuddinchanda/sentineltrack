@@ -1,0 +1,92 @@
+{
+  "timestamp": 1787936633.3745542,
+  "batch_size": 4,
+  "iterations": 50,
+  "profiler": {
+    "warmup_iterations": 5,
+    "profiled_iterations": 45,
+    "stages": {
+      "p1_detect": {
+        "count": 45,
+        "mean_ms": 86.1,
+        "min_ms": 80.36,
+        "p50_ms": 85.3,
+        "p90_ms": 91.0,
+        "p95_ms": 94.1,
+        "p99_ms": 99.7,
+        "max_ms": 102.61,
+        "throughput_fps": 11.61
+      },
+      "p2_track": {
+        "count": 45,
+        "mean_ms": 1.03,
+        "min_ms": 0.74,
+        "p50_ms": 0.95,
+        "p90_ms": 1.27,
+        "p95_ms": 1.51,
+        "p99_ms": 2.09,
+        "max_ms": 2.23,
+        "throughput_fps": 971.98
+      },
+      "p3_plate": {
+        "count": 45,
+        "mean_ms": 0.01,
+        "min_ms": 0.01,
+        "p50_ms": 0.01,
+        "p90_ms": 0.01,
+        "p95_ms": 0.01,
+        "p99_ms": 0.01,
+        "max_ms": 0.01,
+        "throughput_fps": 121819.22
+      },
+      "p4_ocr": {
+        "count": 45,
+        "mean_ms": 0.01,
+        "min_ms": 0.01,
+        "p50_ms": 0.01,
+        "p90_ms": 0.01,
+        "p95_ms": 0.01,
+        "p99_ms": 0.01,
+        "max_ms": 0.01,
+        "throughput_fps": 135216.26
+      },
+      "p5_match": {
+        "count": 45,
+        "mean_ms": 0.01,
+        "min_ms": 0.01,
+        "p50_ms": 0.01,
+        "p90_ms": 0.01,
+        "p95_ms": 0.01,
+        "p99_ms": 0.02,
+        "max_ms": 0.03,
+        "throughput_fps": 130662.04
+      },
+      "end_to_end": {
+        "count": 45,
+        "mean_ms": 87.21,
+        "min_ms": 81.27,
+        "p50_ms": 86.25,
+        "p90_ms": 92.26,
+        "p95_ms": 96.14,
+        "p99_ms": 100.79,
+        "max_ms": 103.58,
+        "throughput_fps": 11.47
+      }
+    }
+  },
+  "resources": {
+    "samples_count": 8,
+    "duration_minutes": 0.12,
+    "cpu_mean_percent": 109.6,
+    "cpu_peak_percent": 201.4,
+    "rss_start_mb": 415.64,
+    "rss_end_mb": 1487.65,
+    "rss_peak_mb": 1487.65,
+    "rss_slope_mb_per_min": 8918.4662,
+    "vram_start_mb": 0.0,
+    "vram_end_mb": 102.66,
+    "vram_peak_mb": 102.66,
+    "vram_slope_mb_per_min": 854.0683,
+    "thread_count": 26
+  }
+}
