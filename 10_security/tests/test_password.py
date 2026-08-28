@@ -1,9 +1,13 @@
 import sys
+from pathlib import Path
 import pytest
 import importlib
 
-sys.path.insert(0, 'c:/DR2/sentineltrack')
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 _pw = importlib.import_module('10_security.password')
+
 PasswordPolicy = _pw.PasswordPolicy
 hash_password = _pw.hash_password
 verify_password = _pw.verify_password

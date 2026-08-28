@@ -268,31 +268,46 @@ async def change_password(
     if not valid:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=err_msg)
 
+    old_password_hash = user.password_hash
+    old_must_change = user.must_change_password
+
     user.password_hash = hash_password(payload.new_password)
     user.must_change_password = False
     user.updated_at = datetime.now(timezone.utc)
     repo.update_user(user)
 
-    # Invalidate all active sessions for this user across all browsers/devices
-    session_manager.revoke_all_user_sessions(user.user_id)
-
-    # Clear current browser session cookie
-    response.delete_cookie(
-        key=config.cookie_name,
-        path=config.cookie_path,
-        samesite=config.cookie_samesite
-    )
-
-    audit.log_event(
-        action="PASSWORD_CHANGED",
-        resource_type="user",
-        outcome="SUCCESS",
-        principal=principal,
-        resource_id=user.user_id,
-        request_id=request.headers.get("X-Request-ID"),
-        fail_closed=True
-    )
+    try:
+        audit.log_event(
+            action="PASSWORD_CHANGED",
+            resource_type="user",
+            outcome="SUCCESS",
+            principal=principal,
+            resource_id=user.user_id,
+            request_id=request.headers.get("X-Request-ID"),
+            fail_closed=True
+        )
+        # Invalidate all active sessions for this user across all browsers/devices on audit success
+        session_manager.revoke_all_user_sessions(user.user_id)
+        # Clear current browser session cookie
+        response.delete_cookie(
+            key=config.cookie_name,
+            path=config.cookie_path,
+            samesite=config.cookie_samesite
+        )
+    except Exception:
+        # Compensate: restore old password state and leave active sessions intact
+        try:
+            user.password_hash = old_password_hash
+            user.must_change_password = old_must_change
+            repo.update_user(user)
+        except Exception:
+            pass
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Security audit trail recording failed; password change aborted."
+        )
 
     return {"message": "Password changed successfully. All sessions invalidated, please log in again."}
+
 
 

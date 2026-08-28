@@ -6,8 +6,13 @@ import importlib
 import pytest
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
+from pathlib import Path
 
-sys.path.insert(0, "c:/DR2/sentineltrack")
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+
 
 _sec_repo = importlib.import_module("10_security.repository")
 _sec_sess = importlib.import_module("10_security.sessions")

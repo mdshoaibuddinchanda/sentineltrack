@@ -1,40 +1,28 @@
 {
-  "pass": "Priority 10D Final Security Freeze Pass",
-  "baseline_commit": "b1dc8176d4ca5499791a23e617f7f1bd426171bd",
-  "freeze_date": "2026-08-28T20:30:00Z",
-  "scope": "Unified Authorized WebSocket Engine, Permission Downgrade Revocation (4403), Structural Topic Invariants, Complete Transactional Audit Compensation Matrix across all mutations, Canonical Dynamic Route Policy Table & Invariant Matrix, AST Dangerous Sink Scanner, Parameterization Verification, Mass-Assignment Rejection, and Zero-Warning Clean Build",
+  "pass": "Priority 10D Final Security Freeze & Verification Pass",
+  "baseline_commit": "592ada7d047038e84e66e51616073918a734347e",
+  "freeze_date": "2026-08-28T20:52:00Z",
+  "scope": "Unified Authorized WebSocket Engine, Permission Downgrade Revocation (4403), Structural Topic Invariants, Complete Transactional Audit Compensation Matrix across all mutations including self-service password change, Physical Database Watchlist Deletion on rollback, AST Dangerous Sink Scanner, Parameterization Verification, Mass-Assignment Rejection, Path Portability, and Zero-Warning Clean Build",
   "verdict": "Priority 10 is 100% hackathon-acceptance complete for the defined security scope.",
   "findings_summary": {
     "critical_open": 0,
     "high_open": 0,
     "medium_open": 0,
     "low_open": 0,
-    "closed_findings": 30
+    "closed_findings": 32
   },
   "security_controls_verified": [
     {
-      "id": "D1",
-      "category": "WebSocket Security",
+      "id": "D1-D3",
+      "category": "WebSocket Security & Authorization",
       "status": "VERIFIED",
-      "details": "Unified run_authorized_websocket handler deployed across /ws/events, /ws/alerts, /ws/sightings with cookie authentication, origin validation, bounded queues, and periodic session revalidation."
-    },
-    {
-      "id": "D2",
-      "category": "WebSocket Authorization & Downgrade Revocation",
-      "status": "VERIFIED",
-      "details": "Permission downgrade or subscription revocation closes socket with code 4403; account disable or session revocation closes with code 4401."
-    },
-    {
-      "id": "D3",
-      "category": "WebSocket Invariant",
-      "status": "VERIFIED",
-      "details": "Literal '*' is structurally excluded from ConnectionManager._client_topics for authenticated clients; wildcard expands into permitted explicit topic set."
+      "details": "Unified run_authorized_websocket handler deployed across /ws/events, /ws/alerts, /ws/sightings with cookie authentication, origin validation, bounded queues, and periodic session revalidation. Downgrade closes 4403; literal '*' structurally banned."
     },
     {
       "id": "D4-D13",
       "category": "Transactional Audit Compensation",
       "status": "VERIFIED",
-      "details": "Comprehensive rollback and compensation on fail-closed audit log error verified with 100% test coverage across USER_CREATE, USER_UPDATE, USER_PASSWORD_RESET, TARGET_CREATE, TARGET_UPDATE, TARGET_DISABLE, ALERT_ACK."
+      "details": "Comprehensive rollback and compensation on fail-closed audit log error verified with 100% test coverage across USER_CREATE, USER_UPDATE, USER_PASSWORD_RESET, PASSWORD_CHANGED, TARGET_CREATE (with physical SQLite/Postgres DB deletion), TARGET_UPDATE, TARGET_DISABLE, ALERT_ACK."
     },
     {
       "id": "D14-D17",
@@ -44,16 +32,17 @@
     },
     {
       "id": "D18-D22",
-      "category": "Injection Defense & AST Sink Scanner",
+      "category": "Injection Defense, AST Sink Scanner & Log Injection",
       "status": "VERIFIED",
-      "details": "Real AST and regex scanner verified zero unreviewed dangerous sinks across production Python/TS files. SQL parameterization and extra='forbid' mass-assignment rejection enforced on all mutation request models."
+      "details": "Real AST and regex scanner verified zero unreviewed dangerous sinks across production Python/TS files. Log injection prevented via principal/actor sanitization. SQL parameterization and extra='forbid' mass-assignment rejection enforced on all mutation request models."
     },
     {
       "id": "D23-D27",
       "category": "Supply Chain & Build Integrity",
       "status": "VERIFIED",
-      "details": "npm audit --omit=dev passed with 0 vulnerabilities; 299/299 backend tests passed; 47/47 frontend tests passed; Vite production build completed with zero errors."
+      "details": "npm audit --omit=dev passed with 0 vulnerabilities; 301/301 backend tests passed; 47/47 frontend tests passed; eslint passed with 0 errors; Vite production build completed with zero errors."
     }
   ]
 }
+
 

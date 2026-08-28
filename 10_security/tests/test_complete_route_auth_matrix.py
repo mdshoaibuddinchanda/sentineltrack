@@ -4,7 +4,12 @@ import pytest
 from fastapi.testclient import TestClient
 from fastapi.routing import APIRoute
 
-sys.path.insert(0, "c:/DR2/sentineltrack")
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 
 _sec_repo = importlib.import_module("10_security.repository")
 _sec_sess = importlib.import_module("10_security.sessions")
@@ -30,10 +35,11 @@ AUTHENTICATED_ONLY = "AUTHENTICATED_ONLY"
 ROUTE_POLICY = {
     ("GET", "/health"): PUBLIC,
     ("POST", "/api/v1/auth/login"): PUBLIC,
-    ("GET", "/api/v1/auth/csrf"): PUBLIC,
+    ("GET", "/api/v1/auth/csrf"): AUTHENTICATED_ONLY,
     ("GET", "/api/v1/auth/me"): AUTHENTICATED_ONLY,
     ("POST", "/api/v1/auth/logout"): AUTHENTICATED_ONLY,
     ("POST", "/api/v1/auth/change-password"): AUTHENTICATED_ONLY,
+
 
     ("GET", "/ready"): Permission.SYSTEM_READ,
     ("GET", "/metrics"): Permission.METRICS_READ,

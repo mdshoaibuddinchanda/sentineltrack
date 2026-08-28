@@ -32,8 +32,13 @@ class BaseTargetMatchingRepository(ABC):
         pass
 
     @abstractmethod
+    def delete_watchlist_entry(self, watchlist_id: str) -> bool:
+        pass
+
+    @abstractmethod
     def list_active_watchlist_entries(self) -> list[WatchlistEntry]:
         pass
+
 
     @abstractmethod
     def save_sighting(self, sighting: Sighting) -> None:
@@ -201,7 +206,15 @@ class SQLiteTargetMatchingRepository(BaseTargetMatchingRepository):
                 metadata=json.loads(row['metadata']) if row['metadata'] else {}
             )
 
+    def delete_watchlist_entry(self, watchlist_id: str) -> bool:
+        with self._lock:
+            cur = self._conn.cursor()
+            cur.execute('DELETE FROM watchlist_entries WHERE watchlist_id = ?', (watchlist_id,))
+            self._conn.commit()
+            return cur.rowcount > 0
+
     def list_active_watchlist_entries(self) -> list[WatchlistEntry]:
+
         with self._lock:
             cur = self._conn.cursor()
             cur.execute('SELECT * FROM watchlist_entries WHERE enabled = 1')
@@ -467,7 +480,19 @@ class PostgresTargetMatchingRepository(BaseTargetMatchingRepository):
         conn.close()
         return entry
 
+    def delete_watchlist_entry(self, watchlist_id: str) -> bool:
+        conn = self._get_connection()
+        try:
+            with conn.cursor() as cur:
+                cur.execute('DELETE FROM watchlist_entries WHERE watchlist_id = %s;', (watchlist_id,))
+                deleted = cur.rowcount > 0
+            conn.commit()
+            return deleted
+        finally:
+            conn.close()
+
     def list_active_watchlist_entries(self) -> list[WatchlistEntry]:
+
         conn = self._get_connection()
         entries = []
         with conn.cursor() as cur:

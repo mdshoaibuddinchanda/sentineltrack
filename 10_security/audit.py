@@ -69,12 +69,10 @@ class AuditLogger:
         now = datetime.now(timezone.utc)
         audit_id = str(uuid.uuid4())
 
-        username = (
-            principal.username
-            if principal
-            else sanitize_audit_string(actor_username)
+        username = sanitize_audit_string(
+            principal.username if principal else actor_username
         )
-        user_id = principal.user_id if principal else actor_user_id
+        user_id = sanitize_audit_string(principal.user_id if principal else actor_user_id)
         role = (
             principal.role.value
             if principal
@@ -89,15 +87,16 @@ class AuditLogger:
             actor_user_id=user_id,
             actor_username=username,
             actor_role=role,
-            action=action.strip().upper(),
-            resource_type=resource_type.strip().lower(),
+            action=sanitize_audit_string(action).strip().upper() if action else "UNKNOWN",
+            resource_type=sanitize_audit_string(resource_type).strip().lower() if resource_type else "unknown",
             resource_id=sanitize_audit_string(resource_id),
-            outcome=outcome.strip().upper(),
+            outcome=sanitize_audit_string(outcome).strip().upper() if outcome else "UNKNOWN",
             request_id=sanitize_audit_string(request_id),
             source_ip=sanitize_audit_string(source_ip),
             user_agent=sanitize_audit_string(user_agent),
             details_json=clean_details
         )
+
 
         try:
             self.repo.save_audit_event(event)

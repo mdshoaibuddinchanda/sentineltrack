@@ -1,16 +1,20 @@
 import os
 import re
 import sys
+from pathlib import Path
 import importlib
 import pytest
 from fastapi.testclient import TestClient
 
-sys.path.insert(0, "c:/DR2/sentineltrack")
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 _sec_repo = importlib.import_module("10_security.repository")
 _sec_sess = importlib.import_module("10_security.sessions")
 _sec_pw = importlib.import_module("10_security.password")
 _sec_models = importlib.import_module("10_security.models")
+_sec_audit = importlib.import_module("10_security.audit")
 _backend = importlib.import_module("08_backend.app")
 
 SqliteSecurityRepository = _sec_repo.SqliteSecurityRepository
@@ -20,6 +24,7 @@ set_session_manager = _sec_sess.set_session_manager
 hash_password = _sec_pw.hash_password
 User = _sec_models.User
 UserRole = _sec_models.UserRole
+AuthenticatedPrincipal = _sec_models.AuthenticatedPrincipal
 
 SQL_ATTACK_PAYLOADS = [
     "' OR '1'='1",
@@ -81,7 +86,7 @@ def test_d19_source_level_dangerous_sink_scanner():
     D19: Real source-level AST/regex scanner over tracked Python and TypeScript source code.
     Asserts zero unreviewed dangerous evaluation sinks exist across production modules.
     """
-    root_dir = "c:/DR2/sentineltrack"
+    root_dir = str(REPO_ROOT)
     scanned_dirs = [
         "00_ingestion", "01_pipeline", "02_tracking", "03_license_plate",
         "04_search_ocr", "05_target_matching", "07_trajectory", "08_backend",
@@ -93,6 +98,7 @@ def test_d19_source_level_dangerous_sink_scanner():
 
     for sdir in scanned_dirs:
         full_sdir = os.path.join(root_dir, sdir)
+
         if not os.path.exists(full_sdir):
             continue
         for root, dirs, files in os.walk(full_sdir):
@@ -209,3 +215,49 @@ def test_d20_sql_parameterization_on_repositories(clean_security_env):
         # Login with SQL payload returns 401 or 422, never 500
         res = client.post("/api/v1/auth/login", json={"username": payload, "password": "wrong_password"})
         assert res.status_code in (401, 422)
+
+
+def test_d22_log_injection_prevention(clean_security_env):
+    """
+    D22: Verifies that newline characters and control bytes injected into usernames, actions,
+    or details are stripped and sanitized, preventing log forging and audit injection.
+    """
+    repo, sm = clean_security_env
+    logger = _sec_audit.AuditLogger(repo)
+
+    # 1. Test explicit malicious actor_username with newline/fake log injection
+    malicious_user = "operator\n[AUDIT] action=USER_ADMIN resource=ALL actor=admin outcome=SUCCESS"
+    event1 = logger.log_event(
+        action="LOGIN_FAILURE\r\n[CRITICAL] FORGED",
+        resource_type="auth\nadmin",
+        actor_username=malicious_user,
+        details={"note": "Multiline\nattempt\r\ninjection"}
+    )
+
+    assert "\n" not in event1.actor_username
+    assert "\r" not in event1.actor_username
+    assert "\n" not in event1.action
+    assert "\r" not in event1.action
+    assert "\n" not in event1.resource_type
+    assert "\n" not in event1.details_json.get("note", "")
+
+    # 2. Test principal with potential newline in username
+    malicious_principal = AuthenticatedPrincipal(
+        user_id="usr_fake",
+        username="supervisor\n[FAKE_LOG_ENTRY]",
+        display_name="Supervisor",
+        role=UserRole.SUPERVISOR,
+        permissions=set(),
+        session_id="sess_fake"
+    )
+
+    event2 = logger.log_event(
+        action="TARGET_CREATE",
+        resource_type="target",
+        principal=malicious_principal
+    )
+
+    assert "\n" not in event2.actor_username
+    assert "\r" not in event2.actor_username
+    assert event2.actor_username == "supervisor [FAKE_LOG_ENTRY]"
+

@@ -280,6 +280,7 @@ class TargetService:
         if not entry:
             return
         norm_reg = entry.normalized_registration
+        state_code = norm_reg[:2] if len(norm_reg) >= 2 else ""
         with self.watchlist_manager._lock:
             if target_id in self.watchlist_manager._entries:
                 del self.watchlist_manager._entries[target_id]
@@ -287,21 +288,18 @@ class TargetService:
                 self.watchlist_manager._exact_index[norm_reg].discard(target_id)
                 if not self.watchlist_manager._exact_index[norm_reg]:
                     del self.watchlist_manager._exact_index[norm_reg]
-            if norm_reg in self.watchlist_manager._active_index:
-                self.watchlist_manager._active_index[norm_reg].discard(target_id)
-                if not self.watchlist_manager._active_index[norm_reg]:
-                    del self.watchlist_manager._active_index[norm_reg]
+            if state_code in self.watchlist_manager._state_index:
+                self.watchlist_manager._state_index[state_code].discard(target_id)
+                if not self.watchlist_manager._state_index[state_code]:
+                    del self.watchlist_manager._state_index[state_code]
 
-        if self.repository and hasattr(self.repository, "delete_watchlist_entry"):
-            try:
+        if self.repository:
+            if hasattr(self.repository, "delete_watchlist_entry"):
                 self.repository.delete_watchlist_entry(target_id)
-            except Exception:
-                pass
-        elif self.repository:
-            entry.enabled = False
-            try:
+            else:
+                entry.enabled = False
                 self.repository.save_watchlist_entry(entry)
-            except Exception:
-                pass
+
+
 
 

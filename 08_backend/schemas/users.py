@@ -14,9 +14,10 @@ class RoleEnum(str, Enum):
 class UserCreateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    username: str = Field(..., min_length=3, max_length=64, description="Normalized username")
+    username: str = Field(..., min_length=3, max_length=64, pattern=r"^[a-zA-Z0-9._-]+$", description="Normalized username")
     display_name: str = Field(..., min_length=1, max_length=128, description="Operator display name")
     password: str = Field(..., min_length=15, max_length=128, description="Initial password")
+
     role: RoleEnum = Field(default=RoleEnum.OPERATOR, description="Assigned role")
     must_change_password: bool = Field(default=False, description="Require password change on first login")
 

@@ -5,7 +5,12 @@ import pytest
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
-sys.path.insert(0, "c:/DR2/sentineltrack")
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 
 _sec_repo = importlib.import_module("10_security.repository")
 _sec_sess = importlib.import_module("10_security.sessions")

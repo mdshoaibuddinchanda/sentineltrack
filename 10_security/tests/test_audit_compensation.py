@@ -1,12 +1,15 @@
 import sys
 import copy
+from pathlib import Path
 from datetime import datetime, timezone
 import importlib
 import pytest
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
-sys.path.insert(0, "c:/DR2/sentineltrack")
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 _sec_repo = importlib.import_module("10_security.repository")
 _sec_sess = importlib.import_module("10_security.sessions")
@@ -104,7 +107,6 @@ def test_user_update_audit_failure_compensation(clean_security_env):
 
     # User state restored in repo
     refetched = repo.get_user_by_id(target_user.user_id)
-    assert refetched.display_name == "Test Operator" or refetched.display_name == "Admin Comp" or refetched.role == UserRole.OPERATOR
     assert refetched.role == UserRole.OPERATOR
 
     # Operator session was NOT destructively revoked
@@ -144,17 +146,54 @@ def test_user_password_reset_audit_failure_compensation(clean_security_env):
     assert login_new.status_code == 401
 
 
+def test_self_password_change_audit_failure_compensation(clean_security_env):
+    """PASSWORD_CHANGED: when self-service password change audit fails, old password is restored and session remains intact."""
+    repo, sm = clean_security_env
+    user = _create_user(repo, "self_pw_user", UserRole.OPERATOR, "OldPassword123456789!")
+
+    client = TestClient(_backend.app)
+    login_res = client.post("/api/v1/auth/login", json={"username": "self_pw_user", "password": "OldPassword123456789!"})
+    assert login_res.status_code == 200
+    csrf = login_res.json()["csrf_token"]
+
+    with patch.object(_sec_audit.AuditLogger, "log_event", side_effect=RuntimeError("Audit disk full")):
+        res = client.post(
+            "/api/v1/auth/change-password",
+            json={
+                "current_password": "OldPassword123456789!",
+                "new_password": "NewSecurePassword12345!"
+            },
+            headers={"X-CSRF-Token": csrf}
+        )
+        assert res.status_code == 500
+
+    # Existing session is still valid
+    me_res = client.get("/api/v1/auth/me")
+    assert me_res.status_code == 200
+    assert me_res.json()["user"]["username"] == "self_pw_user"
+
+    # Old password still works for login; new password rejected
+    login_old = TestClient(_backend.app).post("/api/v1/auth/login", json={"username": "self_pw_user", "password": "OldPassword123456789!"})
+    assert login_old.status_code == 200
+    login_new = TestClient(_backend.app).post("/api/v1/auth/login", json={"username": "self_pw_user", "password": "NewSecurePassword12345!"})
+    assert login_new.status_code == 401
+
+
 def _get_fresh_target_service():
     target_svc_mod = importlib.import_module("08_backend.services.target_service")
     p5_watchlist = importlib.import_module("05_target_matching.watchlist")
     p5_repo = importlib.import_module("05_target_matching.repository")
-    fresh_wm = p5_watchlist.WatchlistManager()
-    svc = target_svc_mod.TargetService(watchlist_manager=fresh_wm)
-    return svc
+    sqlite_repo = p5_repo.SQLiteTargetMatchingRepository(":memory:")
+    fresh_wm = p5_watchlist.WatchlistManager(repository=sqlite_repo)
+    svc = target_svc_mod.TargetService(repository=sqlite_repo, watchlist_manager=fresh_wm)
+    return svc, sqlite_repo
 
 
 def test_target_create_audit_failure_compensation(clean_security_env):
-    """TARGET_CREATE: when audit logging fails, target is physically removed from repository and memory."""
+    """
+    TARGET_CREATE: when audit logging fails, target is physically removed from in-memory index,
+    active normalized index, AND persistent repository database.
+    """
     repo, sm = clean_security_env
     admin = _create_user(repo, "admin_tc_test", UserRole.ADMIN)
 
@@ -162,7 +201,7 @@ def test_target_create_audit_failure_compensation(clean_security_env):
     login_res = client.post("/api/v1/auth/login", json={"username": "admin_tc_test", "password": "Password123456789!"})
     csrf = login_res.json()["csrf_token"]
 
-    svc = _get_fresh_target_service()
+    svc, persistent_repo = _get_fresh_target_service()
     _backend.app.dependency_overrides[importlib.import_module("08_backend.dependencies").get_target_service] = lambda: svc
     _backend.app.dependency_overrides[importlib.import_module("08_backend.routers.targets").get_target_service] = lambda: svc
 
@@ -174,10 +213,22 @@ def test_target_create_audit_failure_compensation(clean_security_env):
         )
         assert res.status_code == 500
 
-    # Assert target is NOT in list
+    # 1. Assert in-memory list has zero matches
     targets = svc.list_targets()
     matching = [t for t in targets if t.registration == "GJ01FAIL999"]
     assert len(matching) == 0
+
+    # 2. Assert in-memory exact and state index has no trace of normalized registration
+    norm_reg = "GJ01FAIL999"
+    state_code = "GJ"
+    assert norm_reg not in svc.watchlist_manager._exact_index or len(svc.watchlist_manager._exact_index[norm_reg]) == 0
+    assert state_code not in svc.watchlist_manager._state_index or len(svc.watchlist_manager._state_index[state_code]) == 0
+
+    # 3. Assert persistent database repository has ZERO records for this registration
+    active_persistent = persistent_repo.list_active_watchlist_entries()
+    persistent_matching = [e for e in active_persistent if e.registration == "GJ01FAIL999"]
+    assert len(persistent_matching) == 0
+
 
 
 def test_target_update_audit_failure_detailed_compensation(clean_security_env):
@@ -190,7 +241,7 @@ def test_target_update_audit_failure_detailed_compensation(clean_security_env):
     csrf = login_res.json()["csrf_token"]
 
     target_sch_mod = importlib.import_module("08_backend.schemas.targets")
-    svc = _get_fresh_target_service()
+    svc, persistent_repo = _get_fresh_target_service()
     _backend.app.dependency_overrides[importlib.import_module("08_backend.dependencies").get_target_service] = lambda: svc
     _backend.app.dependency_overrides[importlib.import_module("08_backend.routers.targets").get_target_service] = lambda: svc
 
@@ -242,7 +293,7 @@ def test_target_disable_audit_failure_compensation(clean_security_env):
     csrf = login_res.json()["csrf_token"]
 
     target_sch_mod = importlib.import_module("08_backend.schemas.targets")
-    svc = _get_fresh_target_service()
+    svc, persistent_repo = _get_fresh_target_service()
     _backend.app.dependency_overrides[importlib.import_module("08_backend.dependencies").get_target_service] = lambda: svc
     _backend.app.dependency_overrides[importlib.import_module("08_backend.routers.targets").get_target_service] = lambda: svc
 
@@ -263,7 +314,6 @@ def test_target_disable_audit_failure_compensation(clean_security_env):
 
     refetched = svc.get_target(tid)
     assert refetched.enabled is True
-
 
 
 def test_alert_ack_audit_failure_compensation(clean_security_env):
