@@ -4,7 +4,12 @@ import threading
 from typing import Dict, Any, List
 from collections import deque
 import psutil
-import torch
+
+try:
+    import torch
+except ImportError:
+    torch = None
+
 
 
 class MetricsCollector:
@@ -106,11 +111,13 @@ class MetricsCollector:
                 pass
 
             vram_mb = 0.0
-            if torch.cuda.is_available():
+            if torch is not None:
                 try:
-                    vram_mb = round(torch.cuda.memory_allocated() / (1024.0 * 1024.0), 1)
+                    if torch.cuda.is_available():
+                        vram_mb = round(torch.cuda.memory_allocated() / (1024.0 * 1024.0), 1)
                 except Exception:
                     pass
+
 
             return {
                 "uptime_seconds": round(uptime, 2),

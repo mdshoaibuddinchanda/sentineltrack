@@ -1,8 +1,13 @@
 import time
 from typing import Dict, Any, Optional
-import torch
+
+try:
+    import torch
+except ImportError:
+    torch = None
 
 import importlib
+
 get_scale_config = importlib.import_module("11_scale_deployment.config").get_scale_config
 get_connection = importlib.import_module("00_foundation.registry.database").get_connection
 
@@ -44,14 +49,15 @@ def check_scale_health() -> Dict[str, Any]:
         health_status["status"] = "DEGRADED"
 
     # 2. GPU & Hardware Capability Check
-    cuda_avail = torch.cuda.is_available()
-    device_name = torch.cuda.get_device_name(0) if cuda_avail else "CPU"
+    cuda_avail = bool(torch and torch.cuda.is_available())
+    device_name = torch.cuda.get_device_name(0) if (torch and cuda_avail) else "CPU"
     vram_mb = 0.0
-    if cuda_avail:
+    if torch and cuda_avail:
         try:
             vram_mb = torch.cuda.get_device_properties(0).total_memory / (1024.0 * 1024.0)
         except Exception:
             pass
+
 
     gpu_check_pass = True
     if config.require_gpu and not cuda_avail:

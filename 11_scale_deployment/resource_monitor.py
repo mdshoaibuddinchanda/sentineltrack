@@ -3,7 +3,12 @@ import time
 import threading
 from typing import Dict, List, Optional, Any
 import psutil
-import torch
+
+try:
+    import torch
+except ImportError:
+    torch = None
+
 
 
 class ResourceSnapshot:
@@ -55,12 +60,14 @@ class ResourceMonitor:
 
         vram_alloc = 0.0
         vram_res = 0.0
-        if torch.cuda.is_available():
+        if torch is not None:
             try:
-                vram_alloc = torch.cuda.memory_allocated() / (1024.0 * 1024.0)
-                vram_res = torch.cuda.memory_reserved() / (1024.0 * 1024.0)
+                if torch.cuda.is_available():
+                    vram_alloc = torch.cuda.memory_allocated() / (1024.0 * 1024.0)
+                    vram_res = torch.cuda.memory_reserved() / (1024.0 * 1024.0)
             except Exception:
                 pass
+
 
         snap = ResourceSnapshot(
             timestamp=now,

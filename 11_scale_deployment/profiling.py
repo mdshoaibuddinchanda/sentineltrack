@@ -2,7 +2,12 @@ import time
 import math
 from typing import Dict, List, Optional, Any
 from collections import defaultdict
-import torch
+
+try:
+    import torch
+except ImportError:
+    torch = None
+
 
 
 class StageMetrics:
@@ -66,7 +71,8 @@ class PipelineProfiler:
         self.warmup_iterations = warmup_iterations
         self._iteration_count = 0
         self._stages: Dict[str, StageMetrics] = defaultdict(lambda: StageMetrics("unknown"))
-        self._is_cuda = torch.cuda.is_available()
+        self._is_cuda = bool(torch and torch.cuda.is_available())
+
 
     def stage_timer(self, stage_name: str):
         """Context manager for timing a stage with CUDA synchronization."""
