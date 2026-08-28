@@ -65,8 +65,9 @@ CREATE TABLE IF NOT EXISTS security_audit_events (
     request_id TEXT,
     source_ip TEXT,
     user_agent TEXT,
-    details_json JSONB DEFAULT ''{}''::jsonb
+    details_json JSONB DEFAULT '{}'::jsonb
 );
+
 
 CREATE INDEX IF NOT EXISTS idx_security_audit_time
 ON security_audit_events(event_time_utc DESC);
