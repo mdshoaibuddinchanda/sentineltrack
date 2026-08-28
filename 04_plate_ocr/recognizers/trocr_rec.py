@@ -1,9 +1,9 @@
 import torch
 import cv2
 import numpy as np
-from PIL import Image
 from typing import Optional
 from .base import BasePlateRecognizer
+
 
 
 class TrOCRPlateRecognizer(BasePlateRecognizer):
@@ -35,8 +35,11 @@ class TrOCRPlateRecognizer(BasePlateRecognizer):
             else:
                 rgb = cv2.cvtColor(crop, cv2.COLOR_BGR2RGB)
 
+            from PIL import Image
             pil_img = Image.fromarray(rgb)
             pixel_values = self.processor(pil_img, return_tensors='pt').pixel_values.to(self.device)
+
+
 
             with torch.no_grad():
                 gen_out = self.model.generate(

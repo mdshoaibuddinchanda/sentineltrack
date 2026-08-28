@@ -6,10 +6,15 @@ on:
   pull_request:
     branches: [ main ]
 
+concurrency:
+  group: sentineltrack-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   backend-test:
-    name: Backend Tests & Security Gates
+    name: Security & Scale Backend Gates
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       postgres:
         image: postgis/postgis:17-3.5
@@ -20,7 +25,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U sentinel -d sentinel"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 5
@@ -32,6 +37,9 @@ jobs:
       DATABASE_USER: sentinel
       DATABASE_PASSWORD: sentinel_test_password
       SENTINEL_ENV: development
+      SENTINEL_PROCESS_ROLE: api
+      SENTINEL_REQUIRE_GPU: "false"
+      SENTINEL_PG_EVENT_BRIDGE: "false"
       PYTHONPATH: .
 
     steps:
@@ -47,17 +55,16 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements-api.txt
-          pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
-          pip install opencv-python-headless pytest pytest-asyncio pytest-timeout httpx
+          pip install -r requirements-ci.txt -c constraints-ci.txt
 
       - name: Initialize PostgreSQL Database Schemas
         run: |
           python tools/p11/init_schema.py
 
-      - name: Run Backend Pytest Suite
+      - name: Run Security & Scale Pytest Suite
         run: |
-          python -m pytest 10_security/tests/ 11_scale_deployment/tests/ -v --timeout=30
+          python -m pytest 10_security/tests/ 11_scale_deployment/tests/ tests/test_ci_contract.py -v --timeout=30
+
 
 
 

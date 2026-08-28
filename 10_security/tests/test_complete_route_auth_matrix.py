@@ -117,18 +117,51 @@ def _get_client_for_user(username):
     return client, csrf
 
 
+def get_actual_application_routes() -> set[tuple[str, str]]:
+    """
+    Extracts all public HTTP path operations exposed by the FastAPI application.
+    Uses OpenAPI schema as authoritative source, with route-tree fallback.
+    """
+    actual_routes: set[tuple[str, str]] = set()
+    http_methods = {"get", "post", "put", "patch", "delete", "options", "head", "trace"}
+
+    # 1. Authoritative OpenAPI schema extraction
+    openapi_schema = _backend.app.openapi()
+    for path, path_item in openapi_schema.get("paths", {}).items():
+        for method in path_item:
+            if method.lower() in http_methods and method.lower() not in ("head", "options"):
+                actual_routes.add((method.upper(), path))
+
+    # 2. Structural route-tree traversal fallback/augmentation
+    def _walk_routes(routes, prefix=""):
+        for route in routes:
+            child_routes = getattr(route, "routes", None)
+            if child_routes:
+                sub_prefix = prefix + getattr(route, "path", getattr(route, "prefix", ""))
+                _walk_routes(child_routes, sub_prefix)
+            elif isinstance(route, APIRoute):
+                full_path = getattr(route, "path", "")
+                for method in getattr(route, "methods", []):
+                    if method not in ("HEAD", "OPTIONS") and not full_path.startswith(("/docs", "/redoc", "/openapi")):
+                        actual_routes.add((method.upper(), full_path))
+
+    _walk_routes(_backend.app.routes)
+    return actual_routes
+
+
 def test_d15_policy_coverage_invariant():
     """
-    D15: Invariant test verifying that 100% of APIRoute (method, path) entries in the application
-    are explicitly registered in ROUTE_POLICY.
+    D15: Invariant test verifying that 100% of HTTP API routes exposed by the application
+    are explicitly registered in ROUTE_POLICY with zero missing and zero stale routes.
     """
-    actual_routes = set()
-    for route in _backend.app.routes:
-        if isinstance(route, APIRoute):
-            path = route.path
-            for method in route.methods:
-                if method not in ("HEAD", "OPTIONS") and not path.startswith(("/docs", "/redoc", "/openapi")):
-                    actual_routes.add((method, path))
+    actual_routes = get_actual_application_routes()
+
+    # Sanity gates: verify route extraction was successful
+    assert actual_routes, "Route inventory unexpectedly empty"
+    assert ("POST", "/api/v1/auth/login") in actual_routes, "Sanity check failed: login route missing"
+    assert ("GET", "/health") in actual_routes, "Sanity check failed: health route missing"
+    assert ("GET", "/api/v1/cameras") in actual_routes, "Sanity check failed: cameras route missing"
+    assert ("GET", "/metrics/prometheus") in actual_routes, "Sanity check failed: prometheus route missing"
 
     policy_routes = set(ROUTE_POLICY.keys())
 
@@ -137,6 +170,7 @@ def test_d15_policy_coverage_invariant():
 
     stale_in_policy = policy_routes - actual_routes
     assert not stale_in_policy, f"Stale routes in ROUTE_POLICY that do not exist in application: {stale_in_policy}"
+
 
 
 def test_d16_unauthenticated_route_rejection(clean_security_env):

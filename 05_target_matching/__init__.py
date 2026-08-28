@@ -30,7 +30,6 @@ from .repository import (
 TargetMatchingRepository = SQLiteTargetMatchingRepository
 
 from .history import HistoricalSearchService
-from .pipeline import TargetMatchingPipeline
 
 __all__ = [
     'MatchClass',
@@ -61,3 +60,11 @@ __all__ = [
     'HistoricalSearchService',
     'TargetMatchingPipeline',
 ]
+
+
+def __getattr__(name: str):
+    if name == 'TargetMatchingPipeline':
+        from .pipeline import TargetMatchingPipeline
+        return TargetMatchingPipeline
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+
