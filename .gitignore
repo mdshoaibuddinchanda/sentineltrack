@@ -26,14 +26,17 @@ runs/
 *.bin
 *.weights
 
-# Reports, outputs & artifacts
+# Reports, video chunks & outputs (narrowly scoped to prevent ignoring .ts TypeScript source files)
 reports/
 *.jpg
 *.jpeg
 *.png
 *.mp4
 *.m3u8
-*.ts
+*.m2ts
+data/**/*.ts
+raw/**/*.ts
+videos/**/*.ts
 *.avi
 *.cache
 

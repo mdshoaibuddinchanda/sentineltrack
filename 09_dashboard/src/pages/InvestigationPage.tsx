@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { useTrajectory } from "../hooks/useTrajectory";
 import { SearchBar } from "../components/investigation/SearchBar";
 import { TrajectorySummaryCard } from "../components/investigation/TrajectorySummaryCard";
@@ -8,26 +9,41 @@ import { KinematicSegmentsTable } from "../components/investigation/KinematicSeg
 import { WarningsPanel } from "../components/investigation/WarningsPanel";
 import { Card } from "../components/common/Card";
 import { TableSkeleton } from "../components/common/Skeleton";
-import { Compass, Eye, MapPin, AlertTriangle, CheckCircle } from "lucide-react";
+import { Compass, Eye, MapPin, AlertTriangle } from "lucide-react";
 
 interface InvestigationPageProps {
-  initialRegistration?: string;
   demoMode?: boolean;
   privacyMode?: boolean;
 }
 
 export function InvestigationPage({
-  initialRegistration = "GJ01AB1234",
   demoMode = false,
   privacyMode = false,
 }: InvestigationPageProps) {
-  const [selectedReg, setSelectedReg] = useState(initialRegistration);
+  const { registration: routeReg } = useParams<{ registration?: string }>();
+  const navigate = useNavigate();
+
+  const [selectedReg, setSelectedReg] = useState<string>(routeReg || "GJ01AB1234");
   const [selectedSightingId, setSelectedSightingId] = useState<string | null>(null);
 
-  const { route, summary, geoJSON, sightings, loading, error, refresh } = useTrajectory(
+  useEffect(() => {
+    if (routeReg) {
+      setSelectedReg(routeReg);
+      setSelectedSightingId(null);
+    }
+  }, [routeReg]);
+
+  const { route, summary, geoJSON, loading, error } = useTrajectory(
     selectedReg,
     demoMode
   );
+
+  const handleSearch = (reg: string) => {
+    const clean = reg.trim().toUpperCase();
+    setSelectedReg(clean);
+    setSelectedSightingId(null);
+    navigate(`/investigation/${encodeURIComponent(clean)}`);
+  };
 
   return (
     <div className="space-y-4">
@@ -40,10 +56,7 @@ export function InvestigationPage({
       >
         <SearchBar
           initialValue={selectedReg}
-          onSearch={(reg) => {
-            setSelectedReg(reg);
-            setSelectedSightingId(null);
-          }}
+          onSearch={handleSearch}
           isLoading={loading}
         />
       </Card>

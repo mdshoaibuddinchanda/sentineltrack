@@ -39,7 +39,7 @@ export function CamerasPage({ cameras, onSelectCamera, selectedCameraId }: Camer
       try {
         setSearchingNearby(true);
         const res = await searchNearbyCameras(cam.latitude, cam.longitude, 5000);
-        setNearbyCams(res.items.filter((c) => c.camera_id !== cam.camera_id));
+        setNearbyCams(res.filter((c) => c.camera_id !== cam.camera_id));
       } catch (e) {
         setNearbyCams([]);
       } finally {

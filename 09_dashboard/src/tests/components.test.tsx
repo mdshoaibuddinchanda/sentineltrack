@@ -40,7 +40,8 @@ describe("UI Badges & Component Tests", () => {
         totalCameras={20}
         activeTargets={5}
         unackAlerts={3}
-        totalSightings={142}
+        loadedSightingsCount={42}
+        persistedSightingsTotal={142}
         analyticsStatus={true}
         workerCount={4}
       />
@@ -50,6 +51,7 @@ describe("UI Badges & Component Tests", () => {
     expect(container.textContent).toContain("5");
     expect(container.textContent).toContain("3");
     expect(container.textContent).toContain("142");
+    expect(container.textContent).toContain("42 loaded");
     expect(container.textContent).toContain("4 Workers Active");
   });
 

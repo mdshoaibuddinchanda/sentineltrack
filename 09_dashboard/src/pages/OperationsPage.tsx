@@ -5,7 +5,7 @@ import { RecentSightings } from "../components/operations/RecentSightings";
 import { ControlRoomMap } from "../components/map/ControlRoomMap";
 import { Card } from "../components/common/Card";
 import { Camera, Alert, Sighting } from "../types/api";
-import { LayoutDashboard, Radio, Eye, Compass, Video } from "lucide-react";
+import { Radio, Eye, Video } from "lucide-react";
 
 interface OperationsPageProps {
   cameras: Camera[];
@@ -15,6 +15,7 @@ interface OperationsPageProps {
   activeTargetsCount: number;
   analyticsWorkerStatus: boolean;
   workerCount: number;
+  persistedSightingsTotal?: number;
   onAcknowledgeAlert: (alertId: string) => void;
   onInvestigate: (registration: string) => void;
   onSelectCamera: (cameraId: string) => void;
@@ -30,6 +31,7 @@ export function OperationsPage({
   activeTargetsCount,
   analyticsWorkerStatus,
   workerCount,
+  persistedSightingsTotal,
   onAcknowledgeAlert,
   onInvestigate,
   onSelectCamera,
@@ -48,7 +50,8 @@ export function OperationsPage({
         totalCameras={cameras.length}
         activeTargets={activeTargetsCount}
         unackAlerts={unackAlertsCount}
-        totalSightings={sightings.length}
+        loadedSightingsCount={sightings.length}
+        persistedSightingsTotal={persistedSightingsTotal}
         analyticsStatus={analyticsWorkerStatus}
         workerCount={workerCount}
       />

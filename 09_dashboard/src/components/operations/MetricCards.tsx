@@ -1,6 +1,5 @@
 import React from "react";
-import { Video, AlertOctagon, Activity, Eye, Cpu, CheckCircle } from "lucide-react";
-import { Card } from "../common/Card";
+import { Video, AlertOctagon, Activity, Eye, Cpu } from "lucide-react";
 
 interface MetricCardsProps {
   onlineCameras: number;
@@ -8,10 +7,10 @@ interface MetricCardsProps {
   totalCameras: number;
   activeTargets: number;
   unackAlerts: number;
-  totalSightings: number;
+  loadedSightingsCount: number;
+  persistedSightingsTotal?: number;
   analyticsStatus: boolean;
   workerCount: number;
-  fpsAverage?: number;
 }
 
 export function MetricCards({
@@ -20,10 +19,10 @@ export function MetricCards({
   totalCameras,
   activeTargets,
   unackAlerts,
-  totalSightings,
+  loadedSightingsCount,
+  persistedSightingsTotal,
   analyticsStatus,
   workerCount,
-  fpsAverage = 30,
 }: MetricCardsProps) {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 select-none">
@@ -79,28 +78,37 @@ export function MetricCards({
         </div>
       </div>
 
-      {/* Total Sightings */}
+      {/* Sightings (Persisted & Loaded) */}
       <div className="bg-police-850 border border-police-750 p-3 rounded-lg flex items-center gap-3">
         <div className="p-2.5 rounded-md bg-cyan-950/80 border border-cyan-600/40 text-cyan-400">
           <Eye className="w-5 h-5" />
         </div>
         <div>
-          <div className="text-[11px] text-slate-400 font-mono uppercase">Sightings Today</div>
-          <div className="text-xl font-bold text-slate-100 font-mono">{totalSightings}</div>
+          <div className="text-[11px] text-slate-400 font-mono uppercase">Persisted Sightings</div>
+          <div className="text-xl font-bold text-slate-100 font-mono">
+            {persistedSightingsTotal !== undefined ? persistedSightingsTotal : loadedSightingsCount}{" "}
+            <span className="text-[10px] text-slate-500 font-normal">({loadedSightingsCount} loaded)</span>
+          </div>
         </div>
       </div>
 
       {/* Analytics Worker Status */}
       <div className="bg-police-850 border border-police-750 p-3 rounded-lg flex items-center gap-3">
         <div className={`p-2.5 rounded-md border ${
-          analyticsStatus ? "bg-emerald-950/80 border-emerald-600/40 text-emerald-400" : "bg-rose-950/80 border-rose-600/40 text-rose-400"
+          analyticsStatus && workerCount > 0
+            ? "bg-emerald-950/80 border-emerald-600/40 text-emerald-400"
+            : "bg-police-800 border-police-700 text-slate-500"
         }`}>
           <Cpu className="w-5 h-5" />
         </div>
         <div>
           <div className="text-[11px] text-slate-400 font-mono uppercase">Analytics Engine</div>
           <div className="text-xs font-bold text-slate-100 font-mono">
-            {analyticsStatus ? `${workerCount} Workers Active` : "STOPPED"}
+            {!analyticsStatus
+              ? "STOPPED"
+              : workerCount > 0
+              ? `${workerCount} Workers Active`
+              : "0 Workers (IDLE)"}
           </div>
         </div>
       </div>

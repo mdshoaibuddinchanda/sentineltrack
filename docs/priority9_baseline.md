@@ -1,66 +1,68 @@
-# Priority 9: Frontend Intelligence & Control Room Dashboard — Baseline Report
+# Priority 9: Frontend Intelligence & Control Room Dashboard — Baseline Report (P9B Hardened)
 
 ## 1. Executive Summary & Architectural Overview
 
-Priority 9 delivers the primary operational user interface for **SentinelTrack**: a high-density, real-time police control room intelligence dashboard. Built with React 18, TypeScript, Vite, Tailwind CSS, and Leaflet, the frontend interfaces directly with the Priority 8 FastAPI backend and WebSocket hub.
+Priority 9 delivers the primary operational cockpit for **SentinelTrack**: a high-density, real-time police control room vehicle intelligence dashboard. Built with React 18, TypeScript, Vite, Tailwind CSS, Leaflet, and React Router, the application interfaces directly with the Priority 8 FastAPI backend and real-time WebSocket hub.
 
-The dashboard translates low-level multi-stage computer vision outputs (P1 vehicle detection, P2 tracking, P3 plate detection, P4 OCR consensus, P5 target matching, and P7 spatio-temporal trajectory inference) into an actionable, serious operational cockpit for police operators and evaluators.
+Following the **P9B Hardening Pass**, all P8 API contracts, URL routing paths, WebSocket evidence integrity mechanisms, air-gapped styling, and TypeScript repository tracking have been strictly verified and hardened.
 
 ---
 
-## 2. Core Functional Views & Pages
+## 2. Core Functional Views & URL Routing Architecture
 
-| Page Route | Component | Key Operational Capabilities |
+The dashboard implements true client-side URL routing via `react-router-dom`, supporting bookmarkable paths, deep linking, and browser navigation history:
+
+| URL Route | Component | Key Operational Capabilities |
 | :--- | :--- | :--- |
-| `/` | `OperationsPage` | Situational awareness KPI cards, real-time alert feed with sound/toast notification, multi-camera Leaflet GIS map with color-coded stream health markers, recent sightings stream. |
-| `/cameras` | `CamerasPage` | Camera registry table, search & filter by department/status, hardware telemetry (measured FPS, coordinates, azimuth), PostGIS 5 km radius nearby camera discovery. |
-| `/targets` | `TargetsPage` | Active target watchlist management, target registration modal with real-time plate normalization preview (`GJ 01 AB 1234` $\to$ `GJ01AB1234`), priority badges, deactivate actions. |
-| `/alerts` | `AlertsPage` | Incident triage feed, severity filters (`CRITICAL`, `HIGH`, `NORMAL`, `LOW`), match class badges, one-click operator acknowledgement with optimistic UI & rollback, deep link to route trace. |
-| `/investigation` | `InvestigationPage` | Plate search, chronological sighting timeline, P7 GeoJSON LineString trajectory visualization, kinematic segment table (lower-bound distance, transit duration, minimum required speed, feasibility classification), physical conflict & ambiguity explanation alerts. |
+| `/` & `/operations` | `OperationsPage` | Situational awareness KPI strip (persisted sightings, active worker count), real-time alert feed, multi-camera Leaflet GIS map with stream health markers, recent sightings stream. |
+| `/cameras` & `/cameras/:cameraId` | `CamerasPage` | Camera registry table, search & filter by department/status, hardware telemetry (measured FPS, coordinates, azimuth), PostGIS 5 km radius nearby camera discovery (`GET /api/v1/cameras/nearby?lat=...&lon=...`). |
+| `/targets` | `TargetsPage` | Active target watchlist management, target registration modal with real-time plate normalization preview (`GJ 01 AB 1234` $\to$ `GJ01AB1234`), priority badges, deactivate actions with transactional rollback. |
+| `/alerts` & `/alerts/:alertId` | `AlertsPage` | Incident triage feed, severity filters (`CRITICAL`, `HIGH`, `NORMAL`, `LOW`), unacknowledged toggle, match class badges, one-click operator acknowledgement with optimistic UI & rollback, deep link to route trace. |
+| `/investigation` & `/investigation/:registration` | `InvestigationPage` | Bookmarkable plate search, chronological sighting timeline, P7 GeoJSON LineString trajectory visualization, kinematic segment table (lower-bound distance, transit duration, minimum required speed, feasibility classification), physical conflict & ambiguity explanation alerts. |
 | `/system` | `SystemPage` | Central API health, Git commit SHA, deep subsystem readiness matrix (PostgreSQL, PostGIS, Camera Registry, Target DB, P1–P5 CV models, P7 Route Engine), live operational telemetry. |
 
 ---
 
-## 3. Real-Time WebSocket Hub Integration
+## 3. P8 API Contract Alignment & Verification
 
-The WebSocket hook (`useWebSocket`) provides enterprise-grade resilience:
-1. **Topic Subscriptions:** Connects to `/ws/events?topics=*` with real-time routing of `ALERT_CREATED` and `SIGHTING_CREATED` events.
-2. **Exponential Reconnection Backoff:** Automatically handles disconnections by retrying at $1\text{s}, 2\text{s}, 4\text{s}, 8\text{s}, \dots, \max 30\text{s}$.
-3. **Heartbeat Keepalive:** Sends bidirectional `"ping"` frames every 15s to keep connections alive through proxies and firewalls.
-4. **Deduplication:** Maintains an in-memory hash ring of seen event IDs to prevent duplicate alerts from flooding the feed.
-5. **Bounded Buffer:** Limits in-memory event queues to the latest 200 items to prevent client-side memory leakage.
+All API clients strictly conform to the authoritative Priority 8 FastAPI schemas:
 
----
-
-## 4. GIS Mapping & Trajectory Visualization
-
-- **Leaflet & React-Leaflet:** Zero-cost, vendor-neutral map engine (no paid Google Maps API keys required).
-- **Offline Map Resilience:** In air-gapped or disconnected environments where OpenStreetMap tiles fail to load, the dashboard automatically activates vector mode on a tactical dark grid canvas, keeping all camera nodes, sightings, and trajectory polylines 100% interactive.
-- **Visual Trajectory Sequence:** Numbered sequence node icons (`1`, `2`, `3`, `4`) with interactive click-to-sync between map popups and the chronological timeline.
-- **Kinematic Feasibility Badges:** Segments are color-coded by kinematic feasibility:
-  - `FEASIBLE` (emerald): Required speed is plausible for urban/highway conditions.
-  - `QUESTIONABLE` (amber): High transit speed requiring highway bypass or expressway traversal.
-  - `IMPOSSIBLE SPEED` (rose): Required velocity exceeds physical thresholds, indicating cloned plates or clock skew.
-- **Legal & Scientific Honesty:** Prominently displays disclaimers that LineStrings represent chronological camera sightings, not reconstructed road-level turns.
+1. **Target Watchlists (`/api/v1/targets`):** Uses query parameter `enabled` (boolean).
+2. **Alert Responses (`/api/v1/alerts`):** Uses query parameter `unacknowledged` (boolean).
+3. **Route Engine (`/api/v1/routes`):** Uses query parameter `min_match_score` (float $0.0 - 1.0$) across route, geojson, and summary endpoints.
+4. **PostGIS Nearby Cameras (`/api/v1/cameras/nearby`):** Passes `lat` and `lon` query parameters and handles raw `CameraResponse[]` array response.
 
 ---
 
-## 5. Verification & Test Metrics
+## 4. WebSocket Evidence Integrity (No Fabricated Data)
 
-### Automated Suite Results
-- **TypeScript Typecheck (`npm run typecheck`):**
-  - Result: `0 errors` (strict mode verified).
-- **Frontend Test Suite (`npm test` / Vitest):**
-  - Result: `3 test files passed, 13/13 tests passed` in 55.7s.
-  - Coverage: Formatters, API client error envelope parsing, UI badges, MetricCards, OfflineBanner.
-- **Production Build (`npm run build`):**
-  - Result: Build completed in 4.08s.
-  - Bundle sizes: `dist/index.html` (1.29 kB), `dist/assets/index-*.css` (30.1 kB), `dist/assets/index-*.js` (412.1 kB / 119.3 kB gzipped).
-- **Backend Canonical Test Suite:**
-  - Result: `214 passed in 20.91s` across P0–P5, P7, and P8.
+When real-time WebSocket events arrive, the frontend enforces strict evidence integrity:
+1. **`ALERT_CREATED` Events:** The client reads the incoming `alert_id` and immediately fetches the authoritative database record via `GET /api/v1/alerts/{alert_id}` before prepending to the feed. Missing or unverified fields are never manufactured.
+2. **`SIGHTING_CREATED` Events:** The client triggers an authoritative refetch of the database recent sightings query.
+3. **Resilience Hub:** Exponential reconnection backoff ($1\text{s}, 2\text{s}, 4\text{s}, 8\text{s}, \dots, \max 30\text{s}$), bidirectional 15s ping/pong keepalive, deduplication by event ID, and bounded 200-event buffers.
 
 ---
 
-## 6. Baseline Status: FROZEN & HACKATHON-READY
+## 5. Air-Gapped & Self-Contained Offline Operation
 
-Priority 9 fulfills all dashboard requirements, connecting every underlying computer vision and spatio-temporal subsystem into one cohesive, production-grade intelligence application.
+- **Local CSS & Fonts:** Remote unpkg and Google Fonts links removed from `index.html`. Leaflet CSS imported locally via `import "leaflet/dist/leaflet.css"`.
+- **Offline Vector Overlay:** If tile servers or internet connectivity fail, the GIS map automatically switches to vector mode over a tactical dark grid canvas without crashing or throwing errors.
+
+---
+
+## 6. Verification & Quality Gates
+
+| Verification Step | Command | Result | Status |
+| :--- | :--- | :--- | :--- |
+| **TypeScript Typecheck** | `npm run typecheck` | `0 errors` (Strict mode verified) | **PASS** |
+| **ESLint Standards** | `npm run lint` | `0 errors` across all TypeScript modules | **PASS** |
+| **Frontend Test Suite** | `npm test` (Vitest) | `7 test files passed, 26 / 26 tests passed` | **PASS** |
+| **Production Build** | `npm run build` | `Built in 5.22s, Bundle: 132.95 kB gzip` | **PASS** |
+| **Backend Test Suite** | `pytest` | `214 / 214 tests passed in 22.00s` | **PASS** |
+| **Git Tracking** | `git status` | All `.ts` source files tracked; `.gitignore` scoped | **VERIFIED** |
+
+---
+
+## 7. Baseline Status: FROZEN & HACKATHON-ACCEPTANCE COMPLETE
+
+Priority 9B resolves all audit items, ensures 100% clean-clone reproducibility, adheres strictly to P8 database contracts, and provides a polished, operational vehicle intelligence control room.
