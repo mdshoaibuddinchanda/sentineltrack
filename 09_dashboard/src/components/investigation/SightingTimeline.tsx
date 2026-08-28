@@ -1,8 +1,8 @@
 import React from "react";
-import { RouteSighting, Sighting } from "../../types/api";
-import { formatDateTime, formatScore, maskRegistration } from "../../utils/formatters";
+import { RouteSighting } from "../../types/api";
+import { formatDateTime, formatScore } from "../../utils/formatters";
 import { TimeQualityBadge } from "../common/Badge";
-import { MapPin, CheckCircle, Navigation } from "lucide-react";
+import { MapPin } from "lucide-react";
 
 interface SightingTimelineProps {
   sightings: RouteSighting[];
@@ -15,8 +15,9 @@ export function SightingTimeline({
   sightings,
   selectedSightingId,
   onSelectSighting,
-  privacyMode = false,
+  privacyMode: _privacyMode = false,
 }: SightingTimelineProps) {
+
   if (sightings.length === 0) {
     return (
       <div className="p-6 text-center text-slate-500 font-mono text-xs">

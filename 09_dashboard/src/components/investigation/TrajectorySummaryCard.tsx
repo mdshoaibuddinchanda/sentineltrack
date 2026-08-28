@@ -1,8 +1,10 @@
 import React from "react";
 import { RouteResponse, RouteSummaryResponse } from "../../types/api";
 import { formatDistance, formatDuration, formatScore, formatSpeed, maskRegistration } from "../../utils/formatters";
+
 import { Badge } from "../common/Badge";
-import { Compass, Clock, MapPin, Gauge, ShieldCheck, AlertTriangle } from "lucide-react";
+import { Clock, MapPin, Gauge, ShieldCheck } from "lucide-react";
+
 
 interface TrajectorySummaryCardProps {
   route: RouteResponse;

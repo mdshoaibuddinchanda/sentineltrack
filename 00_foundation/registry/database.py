@@ -79,13 +79,14 @@ class BoundedConnectionPool:
     def _create_raw_connection(self):
         conn = psycopg.connect(
             host=os.getenv("DATABASE_HOST", "localhost"),
-            port=os.getenv("DATABASE_PORT", "5432"),
+            port=int(os.getenv("DATABASE_PORT", "5432")),
             dbname=os.getenv("DATABASE_NAME", "sentinel"),
             user=os.getenv("DATABASE_USER", "sentinel"),
             password=os.getenv("DATABASE_PASSWORD"),
         )
         self._total_created += 1
         return conn
+
 
     def get_connection(self, timeout: Optional[float] = None) -> PooledConnectionWrapper:
         t_out = timeout if timeout is not None else self.timeout_s

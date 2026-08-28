@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Shield, Radio, Activity, AlertOctagon, Video, RefreshCw, Lock, LogOut, User as UserIcon } from "lucide-react";
+import { Shield, Radio, Activity, AlertOctagon, Video, RefreshCw, Lock, LogOut } from "lucide-react";
+
 import { SystemStatusType } from "../../hooks/useSystemStatus";
 import { WebSocketConnectionStatus } from "../../types/websocket";
 import { useAuth } from "../../context/AuthContext";

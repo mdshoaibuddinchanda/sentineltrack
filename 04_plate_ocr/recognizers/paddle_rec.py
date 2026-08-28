@@ -3,8 +3,14 @@ import cv2
 import math
 import importlib
 import numpy as np
-import onnxruntime as ort
+
+try:
+    import onnxruntime as ort
+except ImportError:
+    ort = None
+
 from pathlib import Path
+
 from typing import Optional
 from .base import BasePlateRecognizer
 
@@ -57,6 +63,9 @@ class PPOCRPlateRecognizer(BasePlateRecognizer):
             lines = [line.strip('\r\n') for line in f.readlines()]
         self.char_list = ['blank'] + lines + [' ']
 
+        if ort is None:
+            raise RuntimeError("onnxruntime is not installed. Install onnxruntime or use mock OCR.")
+
         avail_providers = ort.get_available_providers()
         if (device == 'cuda' or device == 'gpu') and 'CUDAExecutionProvider' in avail_providers:
             providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
@@ -68,6 +77,7 @@ class PPOCRPlateRecognizer(BasePlateRecognizer):
         self.session = ort.InferenceSession(str(self.model_path), providers=providers)
         self.input_name = self.session.get_inputs()[0].name
         self.target_height = 48
+
 
     def _preprocess_single(self, img: np.ndarray, target_w: Optional[int] = None) -> tuple[np.ndarray, int]:
         h, w = img.shape[:2]

@@ -2,7 +2,8 @@ import React from "react";
 import { RouteSegment } from "../../types/api";
 import { formatDistance, formatDuration, formatSpeed } from "../../utils/formatters";
 import { FeasibilityBadge } from "../common/Badge";
-import { ArrowRight, AlertTriangle } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
+
 
 interface KinematicSegmentsTableProps {
   segments: RouteSegment[];

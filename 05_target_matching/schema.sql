@@ -56,7 +56,8 @@ CREATE INDEX IF NOT EXISTS idx_sightings_created_at
 ON vehicle_sightings(created_at);
 
 CREATE INDEX IF NOT EXISTS idx_sightings_event_time
-ON vehicle_sightings(COALESCE(event_time_utc, created_at));
+ON vehicle_sightings(event_time_utc, created_at);
+
 
 CREATE INDEX IF NOT EXISTS idx_sightings_match_score
 ON vehicle_sightings(match_score);

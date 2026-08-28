@@ -9,9 +9,8 @@ import {
 
 export { setCsrfToken, getCsrfToken, AuthenticationError, AuthorizationError };
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? import.meta.env.VITE_SENTINEL_API_URL ?? 'http://localhost:8000';
-
 /**
+
  * Fetches a fresh CSRF token from the server and stores it in memory.
  * Safe to call on page load — the session cookie determines the session context.
  */
