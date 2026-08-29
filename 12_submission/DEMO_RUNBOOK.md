@@ -10,6 +10,22 @@ This runbook is for a real software demonstration. The deterministic dashboard m
 - No production credentials in the repository or recording.
 - Confirm the official resource contract and feed permissions before connecting any government stream.
 
+## PostgreSQL option
+
+For the native API path, start the local PostGIS database first:
+
+```powershell
+docker run -d --name sentinel-postgres -p 5432:5432 `
+  -e POSTGRES_USER=sentinel `
+  -e POSTGRES_PASSWORD=sentinel_dev `
+  -e POSTGRES_DB=sentinel `
+  postgis/postgis:16-3.4
+```
+
+Use a disposable local password only. The Compose path starts its own
+PostgreSQL/PostGIS service and receives `DATABASE_PASSWORD` from the shell or
+`.env`; it does not require a separate database container.
+
 ## Path A: deterministic local dashboard
 
 ```powershell
@@ -20,6 +36,10 @@ npm.cmd run dev
 ```
 
 Open `http://localhost:5173`. Keep the visible `DEMO: ON` indicator in the recording. Use the seeded camera, target, alert, sighting, and route fixtures; show a target such as `GJ01AB1234`, but state that the data is deterministic demo data.
+
+The fixture source is `09_dashboard/src/utils/demoData.ts`. Path A requires no
+database seed process; enabling `VITE_DEMO_MODE=true` selects the source-controlled
+fixtures and the dashboard displays the demo indicator.
 
 ## Path B: native API plus dashboard
 

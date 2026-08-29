@@ -12,6 +12,20 @@ The official Sentinel material describes a multi-department, heterogeneous catal
 | State catalogue / GIS | Central registry and location source | Stable camera IDs, coordinates, departments, routes | Camera identity and feasibility inputs | `PARTIAL — official schema not supplied` |
 | VMS/RTSP/WebRTC/HLS | Stream ingestion | RTSP/WHEP/HLS endpoint, auth, codec, time base | Connect/reconnect/epoch evidence | `READY FOR SANDBOX CONTRACT` |
 
+## Deployment responsibility matrix
+
+| Owner | Responsibility | Required inputs / acceptance | Dependency class |
+|---|---|---|---|
+| Police / Control Room | Register targets, review alerts, investigate sightings, acknowledge/escalate cases | Watchlist authority, severity policy, operator roles, investigation acceptance | `MANDATORY_FOR_PILOT` |
+| CCTV / VMS Team | Maintain stream availability, IDs, timestamps, endpoint access and metadata | RTSP/HLS/WHEP access, codec, NTP/PTS behavior, maintenance contact | `MANDATORY_FOR_PILOT` |
+| IT / Data Centre | Provide compute/GPU, containers/VMs, database, DNS, certificates, monitoring and backups | Approved topology, capacity-test hardware, PostGIS, secrets path, restore test | `MANDATORY_FOR_PRODUCTION` |
+| Network Team | Provide VLAN/firewall routes, QoS, regional connectivity and WAN controls | Bandwidth, allowed ports, private routes, outage procedure | `MANDATORY_FOR_PILOT` |
+| Cybersecurity | Govern IAM, secrets, RBAC, logs, vulnerability management and audit review | Security assessment, trust boundaries, rotation, incident response | `MANDATORY_FOR_PRODUCTION` |
+| GIS / Mapping | Validate coordinates, junction metadata and camera geolocation | Authoritative GIS export, coordinate accuracy, correction workflow | `MANDATORY_FOR_PILOT` |
+| Investigation / Operations | Govern watchlists, false-positive review, evidence handling and retention | Review SLA, legal hold, export format, training and acceptance owner | `MANDATORY_FOR_PILOT` |
+| Procurement | Size hardware, warranty, support, spares and phased rollout | Vendor-neutral bill of quantities after qualification tests | `MANDATORY_FOR_PRODUCTION` |
+| Legal / Privacy / Governance | Approve retention, access, audit, purpose and evidentiary policy | Written policy, data owner, deletion/legal-hold rules | `MANDATORY_FOR_PRODUCTION` |
+
 ## Required owner questionnaire
 
 For every camera: stable ID, department, physical location, timezone, latitude/longitude accuracy, stream URL/protocol, codec/resolution/FPS/bitrate, credentials path, NTP/PTP status, retention owner, privacy zones, expected uptime, maintenance contact, and whether the feed may leave the department network.
@@ -21,4 +35,3 @@ For every department: roles, watchlist authority, alert severity policy, review 
 ## Official alignment
 
 The official FAQ describes 26 independent government departments, heterogeneous analog/IP sources, and a central registry/GIS requirement. The official resource guidance exposes RTSP, WHEP, HLS, and API-ingest patterns. Exact production catalogue schema, credentials, and department-level retention values were not published in the verified public material and remain `OFFICIAL_REQUIREMENT_NOT_VERIFIED` until supplied by the organizers or departments.
-

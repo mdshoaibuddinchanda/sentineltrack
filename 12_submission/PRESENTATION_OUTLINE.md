@@ -28,7 +28,7 @@ Use `diagrams/G_identity_fusion.mmd`. Strong ANPR wins; partial plates receive s
 
 ## Slide 7 — Measured results
 
-Show only traceable values: plate detector F1 0.975610 on the cited test artifact; OCR P50 10.53 ms/P95 24.85 ms; target matching Recall@100 92.0% and P95 112.55 ms; P6 proxy threshold/FMR/FNMR with the explicit no-cross-camera-GT warning.
+Show only traceable values: plate detector F1 0.975610 on the cited test artifact; OCR P50 10.53 ms/P95 24.85 ms; target matching Recall@100 92.0% and P95 112.55 ms; P6 proxy threshold/FMR/FNMR with the explicit no-cross-camera-GT warning. Trace the slide to [`MODEL_EVIDENCE.md`](MODEL_EVIDENCE.md), [`reports/p11_5/end_to_end_evaluation.json`](../reports/p11_5/end_to_end_evaluation.json), and [`reports/p6/P6_EVALUATION.json`](../reports/p6/P6_EVALUATION.json).
 
 ## Slide 8 — 80k deployment model
 
@@ -49,4 +49,3 @@ Show the five-stage pilot roadmap, measurable KPIs, parameterized cost model, an
 ## Slide 12 — Readiness and ask
 
 State what is frozen and ready for sandbox evaluation, what requires department/organizer action, and the next acceptance gate.
-

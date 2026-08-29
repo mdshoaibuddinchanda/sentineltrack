@@ -1,95 +1,98 @@
 # SentinelTrack — Final Hackathon Submission Report
 
-## 1. Executive summary
+## 1. Executive Summary
 
-SentinelTrack is a hybrid, evidence-preserving platform for multi-camera vehicle observation, plate recognition, target matching, chronological cross-camera correlation, and operator review. The submission package is based on the frozen P6 commit and adds documentation, diagrams, runbooks, and deployment planning; it does not reopen the frozen model work.
+SentinelTrack is a hybrid, evidence-preserving platform for multi-camera vehicle observation, plate recognition, target matching, chronological cross-camera correlation, and operator review. This package is based on the frozen P6 engineering commit and adds documentation, diagrams, runbooks, and deployment planning without reopening the frozen model work.
 
-## 2. Official problem alignment
+## 2. Problem Statement
 
-The official Gujarat Sentinel material describes heterogeneous government camera sources, a central catalogue/GIS, designated-vehicle tracking across cameras, timestamped/location-wise history, a working platform, presentation/HLD, and a scale-ready deployment plan. The verified source list is in [`OFFICIAL_REQUIREMENTS_MATRIX.md`](OFFICIAL_REQUIREMENTS_MATRIX.md).
+The Gujarat Sentinel challenge requires a practical platform that can ingest heterogeneous government CCTV/VMS sources, maintain a central camera/GIS registry, locate designated vehicles across cameras, preserve timestamps and location-wise history, and demonstrate a working operator workflow. The official source audit is in [`OFFICIAL_REQUIREMENTS_MATRIX.md`](OFFICIAL_REQUIREMENTS_MATRIX.md).
 
-## 3. What is implemented
+## 3. Proposed Solution
 
-- per-camera vehicle tracking with stream-epoch reset;
-- plate detection, OCR normalization, and temporal voting;
-- watchlist matching and alert safeguards;
-- chronological sightings and lower-bound travel feasibility;
-- security/session/RBAC/audit controls documented in the repository;
-- P6 masked, track-level, review-only vehicle appearance fallback;
-- deterministic dashboard fixtures and container/native demo paths.
+SentinelTrack combines registry-first ingestion, per-camera tracking, ANPR, watchlist matching, conservative appearance support, chronological feasibility analysis, secure APIs, and a control-room dashboard. Existing departmental VMS remains authoritative for continuous recordings; SentinelTrack centralizes permitted metadata, events, alerts, audit, and selected evidence.
 
-The detailed design is [`HLD.md`](HLD.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md).
+## 4. System Architecture
 
-## 4. Model and measured evidence
+The selected architecture is hybrid: department/regional gateways and inference shards sit near the camera networks, while a central control plane provides catalogue, governance, cross-region search, reporting, API, and audit. The detailed design is [`HLD.md`](HLD.md) and [`ARCHITECTURE.md`](ARCHITECTURE.md). Seven canonical Mermaid diagrams are under [`diagrams/`](diagrams/).
 
-The authoritative register is [`MODEL_EVIDENCE.md`](MODEL_EVIDENCE.md). Key measured artifacts include plate-chain metrics, OCR latency, target-matching benchmark results, and P6 proxy/benchmark values. Each claim is classified in [`EVIDENCE_INVENTORY.md`](EVIDENCE_INVENTORY.md).
+## 5. Functional Capabilities
 
-## 5. P6 truth boundary
+- camera catalogue and stream health;
+- vehicle detection and per-camera ByteTrack tracking;
+- plate detection, OCR normalization, and five-frame consensus;
+- watchlist registration, matching, alert safeguards, and acknowledgement;
+- chronological cross-camera sightings and feasibility explanation;
+- masked, track-level, review-only appearance fallback;
+- secured API/WebSocket delivery, audit, evidence references, and exportable reports.
 
-True cross-camera vehicle identity ground truth was not available locally. P6 therefore reports same-track appearance proxy evidence only: 240 samples, 61 calibration tracks, 27 locked-test tracks, no track overlap; calibration threshold 0.874001; locked proxy false-match rate 0 and false-non-match rate 0.459016. P6 is review-only and cannot create an automatic high/critical identity alert.
+## 6. AI/ML Stack
 
-## 6. Identity hierarchy
+The authoritative model register is [`MODEL_EVIDENCE.md`](MODEL_EVIDENCE.md). The frozen stack is YOLO11m vehicle detection, per-camera ByteTrack, selected P11.5 YOLO11s plate detection, PP-OCRv5 Mobile ONNX, five-frame OCR voting, P5 target matching, P7 feasibility, and one MobileNetV3-Small ImageNet appearance baseline for P6.
 
-Strong/full plate evidence dominates. Partial/degraded plate evidence may be supported by appearance, time, and feasibility. No usable plate is appearance-only review. Plate regions are masked before embedding. This is explained visually in [`diagrams/G_identity_fusion.mmd`](diagrams/G_identity_fusion.mmd).
+## 7. Identity Resolution Logic
 
-## 7. Architecture and deployment
+Strong/full plate evidence dominates. Partial/degraded plates may receive appearance, time, and feasibility support. No usable plate produces appearance-only `REVIEW`/`POSSIBLE` evidence. Plate regions are masked before embedding, and OCR text is never sent to the appearance model. ReID cannot override strong ANPR or create an automatic high/critical identity alert. See [`diagrams/G_identity_fusion.mmd`](diagrams/G_identity_fusion.mmd).
 
-The selected architecture is hybrid: edge/department gateways and regional inference shards, with a central catalogue, event/reporting, and governance plane. The package includes seven canonical Mermaid diagrams and a catalogue/integration contract.
+## 8. Accuracy / Evaluation
 
-## 8. Scale plan
+Authoritative values are classified in [`EVIDENCE_INVENTORY.md`](EVIDENCE_INVENTORY.md). Selected plate detection reports F1 `0.975610` and mAP50-95 `0.783111`; the plate recognition chain reports TP 143, FP 4, FN 0, F1 `0.986207`, OCR exact 49/143 = `0.3427`, and CER `0.2662`. P1 external vehicle-GT recall/FPR remains unavailable.
 
-The 80,000-camera document is a projected staged architecture. No 80,000-camera capacity claim is made. The model uses explicit bitrate, sampling, worker-capacity, margin, and headroom assumptions and requires lab, sandbox, regional, multi-region, and statewide wave gates. See [`ROLLOUT_80K_CAMERAS.md`](ROLLOUT_80K_CAMERAS.md).
+P6 has **NO TRUE CROSS-CAMERA VEHICLE-ID GT — THESE ARE APPEARANCE PROXY METRICS ONLY.** The proxy has 240 samples, 61 calibration tracks, 27 locked-test tracks, and no track overlap. Calibration threshold is `0.874001`; locked proxy FMR is `0` and FNMR is `0.459016`.
 
-## 9. Bandwidth and storage
+## 9. Performance
 
-Raw-video totals are parameterized at 1/2/4 Mbps and show why regional termination and selective central evidence are required. Metadata and evidence sizing are kept separate from raw video. See [`STORAGE_BANDWIDTH_SIZING.md`](STORAGE_BANDWIDTH_SIZING.md).
+The plate recognition chain measured `33.51 FPS`; this is not complete SentinelTrack end-to-end throughput. PP-OCRv5 Mobile measured P50 `10.53 ms`, P95 `24.85 ms`, and `79.54` crops/s on its locked test. P6 measured 110.65/292.97/391.85 embeddings/s for batch 1/4/8 and gallery P50 1.62/13.61/166.56 ms for 100/1,000/10,000 embeddings. These are local/test measurements, not statewide capacity claims.
 
-## 10. HA/DR
+## 10. Security
 
-The package defines gateway, worker, API, PostGIS, object-store, state-plane, and regional failure boundaries; proposed RPO/RTO targets are clearly not measured. Restore, reconciliation, failover, and game-day tests are required before production. See [`HA_DR_PLAN.md`](HA_DR_PLAN.md).
+The implemented P10 baseline includes opaque server-side sessions, HttpOnly cookies, Argon2id, CSRF protection, RBAC, authorization, rate limits, WebSocket authorization, session invalidation, and audit paths. OIDC, JWT, Keycloak, HSM, statewide key management, and an independent penetration test are not claimed. See [`SECURITY_PRIVACY.md`](SECURITY_PRIVACY.md).
 
-## 11. Security and privacy
+## 11. GIS / Investigation
 
-The repository baseline includes opaque sessions, HttpOnly cookies, Argon2id, CSRF protection, RBAC, rate limits, authorization, audit paths, and session invalidation. OIDC, HSM, statewide key management, and independent penetration testing are not claimed. See [`SECURITY_PRIVACY.md`](SECURITY_PRIVACY.md).
+P7 provides chronological camera sightings, geodesic/straight-line lower-bound distance, minimum physically required speed, feasibility classification, and same-camera dwell collapse. It does not claim shortest road routes, exact driven paths, live traffic reconstruction, or road-level route snapping.
 
-## 12. Department and GIS readiness
+## 12. Scalability
 
-The department matrix identifies required feed, catalogue, clock, network, role, retention, legal-hold, and acceptance inputs. The public official material does not publish every production schema or credential; those rows are marked `OFFICIAL_REQUIREMENT_NOT_VERIFIED`. See [`DEPARTMENT_REQUIREMENTS.md`](DEPARTMENT_REQUIREMENTS.md).
+P11 implements bounded queues, stale-frame dropping, fair scheduling, adaptive base/burst sampling, worker sharding, and health/reset behavior. Existing evidence does not establish safe statewide capacity. The 80k architecture and numbers are explicitly projected from assumptions.
 
-## 13. Demo
+## 13. 80k-Camera Rollout
 
-[`DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md) supplies deterministic, native, container, and official-feed procedures. [`DEMO_SCRIPT_5_MIN.md`](DEMO_SCRIPT_5_MIN.md) is the live narration. Fixtures are visibly labeled and are never represented as government-feed output.
+[`ROLLOUT_80K_CAMERAS.md`](ROLLOUT_80K_CAMERAS.md) models conservative, balanced, and high-efficiency scenarios using total cameras, sampling/burst rates, burst fraction, assumed usable worker capacity, safety margin, headroom, and regional shards. Every node count is `PROJECTED_FROM_ASSUMPTIONS`. The rollout is staged from lab to sandbox, regional pilot, multi-region qualification, and bounded statewide waves.
 
-## 14. Submission media
+## 14. Bandwidth / Storage
 
-[`VIDEO_SCRIPT.md`](VIDEO_SCRIPT.md) separates the own-feed 2–3 minute recording from the permitted government-feed demonstration and output report. [`PRESENTATION_OUTLINE.md`](PRESENTATION_OUTLINE.md) supplies the slide-by-slide content.
+[`STORAGE_BANDWIDTH_SIZING.md`](STORAGE_BANDWIDTH_SIZING.md) separates raw CCTV traffic, analytics traffic, metadata/events, and selected evidence. At 80,000 cameras, continuous raw traffic at 1/2/4 Mbps is 80/160/320 Gbps, or 864 TB/1.728 PB/3.456 PB per day under explicit bitrate assumptions. The design therefore prefers regional inference and central event/evidence forwarding over duplicating all raw video.
 
-## 15. KPI framework
+## 15. HA / DR
 
-| KPI | Definition | Evidence class at freeze | Owner for pilot |
-|---|---|---|---|
-| Feed availability | connected camera minutes / expected camera minutes | `NOT_MEASURED_STATEWIDE` | Department + operations |
-| Observation latency | event time to operator-visible event | `MEASURED_LOCAL_IN_PARTS` | Platform |
-| Alert latency | qualifying observation to alert creation | `MEASURED_LOCAL_IN_PARTS` | Platform + police |
-| Plate exactness | exact recognized plate / evaluated plate cases | `MEASURED_TEST_ON_LOCKED_DATA` | ML/evaluation |
-| Review workload | alerts requiring operator review per period | `NOT_MEASURED` | Operations |
-| ReID false-match rate | negative proxy pairs above review threshold | `MEASURED_TEST_PROXY_ONLY` | ML/evaluation |
-| Evidence completeness | alerts with image, camera, event time, and provenance | `NOT_MEASURED_STATEWIDE` | Platform + departments |
-| Recovery | time to restore feed/service after failure | `NOT_MEASURED_PRODUCTION` | SRE |
+[`HA_DR_PLAN.md`](HA_DR_PLAN.md) covers stateless API replicas, multiple workers, camera sharding, heartbeats, restart/reassignment, reconnect and stale-drop behavior, PostGIS primary/standby, backups, evidence object storage, integrity checks, monitoring, and audit. Proposed RPO/RTO values are labeled `PROPOSED_DR_TARGET`; no production failover SLA is claimed.
 
-## 16. Cost/benefit
+## 16. Cost-Benefit
 
-[`COST_BENEFIT.md`](COST_BENEFIT.md) gives the formulas and procurement inputs. It intentionally avoids unsupported vendor pricing and treats conservative false-escalation avoidance as a safety benefit.
+[`COST_BENEFIT.md`](COST_BENEFIT.md) provides CAPEX/OPEX variables and benefit KPIs without unsupported rupee quotations. Pilot evidence should compare alert latency, review time, evidence completeness, camera availability, false escalation, and investigation turnaround against the existing process.
 
-## 17. Reproducibility
+## 17. Department Dependencies
 
-The frozen commit, Conda environment, model hashes, source reports, commands, and package inventory are recorded. See [`EVIDENCE_INVENTORY.md`](EVIDENCE_INVENTORY.md) and [`SUBMISSION_CHECKLIST.md`](SUBMISSION_CHECKLIST.md).
+[`DEPARTMENT_REQUIREMENTS.md`](DEPARTMENT_REQUIREMENTS.md) assigns inputs and acceptance responsibilities across Police/Control Room, CCTV/VMS, IT/Data Centre, Network, Cybersecurity, GIS, Investigation/Operations, Procurement, and Legal/Privacy/Governance. Exact production schemas, credentials, retention, and legal policies require owner confirmation.
 
-## 18. Limitations
+## 18. Deployment Plan
 
-No true cross-camera GT, no statewide capacity measurement, no road-level routing, no universal department schema, and no completed government-feed recording are hidden. See [`LIMITATIONS_AND_FUTURE_WORK.md`](LIMITATIONS_AND_FUTURE_WORK.md).
+[`PILOT_ROADMAP.md`](PILOT_ROADMAP.md) defines lab, sandbox, department, regional, multi-region, and statewide-wave gates. Each stage has infrastructure, measured exit evidence, operational acceptance, risks, and rollback criteria. No stage is represented as already tested at statewide scale.
 
-## 19. Final evaluator message
+## 19. Demo Procedure
 
-The platform is a working, safety-bounded sandbox submission with an explicit path to production qualification. Its strongest claim is traceability: an evaluator can follow an observation from feed/camera/epoch through detection, tracking, plate/OCR, target matching, temporal/feasibility support, alert, audit, and exported report.
+[`DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md) supplies deterministic fixture, native, container, and official-feed procedures. [`DEMO_SCRIPT_5_MIN.md`](DEMO_SCRIPT_5_MIN.md) gives the timed six-act story: system online, register target, observe, alert, investigate, and explain the ReID fallback. Fixture screens remain visibly labeled `DEMO: ON`.
+
+## 20. Limitations
+
+OCR exact accuracy remains the largest recognition limitation; external P1 vehicle GT is unavailable; P6 lacks true cross-camera labeled identity GT; ReID is intentionally review-only; cloud/multi-node capacity is projected; P7 is not road-level routing; TensorRT is not claimed; and large-scale live Sentinel-network testing has not occurred. Mitigations and non-claims are in [`LIMITATIONS_AND_FUTURE_WORK.md`](LIMITATIONS_AND_FUTURE_WORK.md).
+
+## 21. Future Work
+
+Future enhancements are deliberately outside P12: domain-specific OCR fine-tuning, modern OCR alternatives, vehicle-specific ReID training, a true cross-camera benchmark, TensorRT after validation, larger-gallery ANN search, road-network snapping, distributed infrastructure, larger GPU clusters, and broader real-city evaluation. They are not blockers to this documentation/package freeze.
+
+## 22. Reproducibility / Evidence Index
+
+The exact frozen engineering commit is `1f48aad81a35553ff1e80866a17b1784313efa1b`; the final P12 commit and CI run are recorded in the release handoff. The Conda environment is `PY312` with Python 3.12.12. Model paths and hashes are in [`MODEL_EVIDENCE.md`](MODEL_EVIDENCE.md), the claim classifications and source files are in [`EVIDENCE_INVENTORY.md`](EVIDENCE_INVENTORY.md), and startup/validation commands are in [`DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md) and [`SUBMISSION_CHECKLIST.md`](SUBMISSION_CHECKLIST.md).
 
