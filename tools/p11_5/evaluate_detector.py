@@ -128,13 +128,9 @@ def main() -> int:
         "path: " + data_root.as_posix() + "\ntrain: images/train\nval: images/val\ntest: images/test\nnames:\n  0: license_plate\n",
         encoding="utf-8",
     )
-    map_metrics = model.val(data=str(config), split=args.split, imgsz=args.imgsz, batch=args.batch, device=args.device, workers=0, plots=False, verbose=False, project=str(ROOT / "runs" / "p11_5" / "eval"), name=f"{args.run_id}_{args.split}_{args.imgsz}", exist_ok=False)
-    # Validation keeps tensors/caches alive in some Ultralytics releases. Clear
-    # them before the custom IoU pass, and stream results so the full test set
-    # is never materialized in GPU memory at once.
+    # Stream the custom IoU pass before validation. Some Ultralytics releases
+    # retain validation allocations on the model and can OOM on a second pass.
     import torch  # type: ignore
-    if str(args.device) != "cpu" and torch.cuda.is_available():
-        torch.cuda.empty_cache()
     predictions = model.predict(source=[str(path) for path in paths], imgsz=args.imgsz, conf=args.conf, batch=args.batch, device=args.device, stream=True, verbose=False)
     totals = Counter()
     subsets: dict[str, Counter] = {"standard_aspect": Counter(), "square_or_tall": Counter(), "tiny_lt60": Counter(), "small_60_120": Counter(), "large_gt120": Counter()}
@@ -159,6 +155,9 @@ def main() -> int:
             for subset in {name, size_name}:
                 subsets[subset]["gt"] += 1
                 subsets[subset]["tp"] += int(matched[index])
+    if str(args.device) != "cpu" and torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    map_metrics = model.val(data=str(config), split=args.split, imgsz=args.imgsz, batch=args.batch, device=args.device, workers=0, plots=False, verbose=False, project=str(ROOT / "runs" / "p11_5" / "eval"), name=f"{args.run_id}_{args.split}_{args.imgsz}", exist_ok=False)
     precision = totals["tp"] / max(1, totals["tp"] + totals["fp"])
     recall = totals["tp"] / max(1, totals["tp"] + totals["fn"])
     result: dict[str, Any] = {
