@@ -39,6 +39,7 @@ The root YOLO hashes were recorded before archival: YOLO11l `9ebd0e09…`, YOLO1
 
 - Working-tree scan found zero references to `tools/p11`, `tools/p11_5`, `configs/experiments`, or `experiments/p11_5` after path updates.
 - The active profiler is `tools/profile_pipeline.py`; the obsolete P11 copy was removed.
+- The generic experiment runner was moved to `experiments/archive/run.py`; active `tools/` now contains operational utilities only.
 - `tools/doctor.py` and `tools/init_schema.py` were updated for their promoted location and now resolve the repository root correctly.
 - No tracked tests, source datasets, model manifest, security evidence, or authoritative reports were deleted.
 

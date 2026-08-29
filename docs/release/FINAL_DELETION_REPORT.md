@@ -37,6 +37,7 @@ The promoted schema and doctor tools were corrected from `parents[2]` to `parent
 ## Experiment files archived
 
 - 33 historical P11.5 reproducibility scripts moved to `experiments/archive/p11_5/`.
+- The generic experiment runner moved from `tools/experiments/run.py` to `experiments/archive/run.py`.
 - Three experiment configuration files moved to `experiments/archive/configs/`.
 - P11.5 README and registry moved to `reports/p11_5/provenance/`.
 - The 2,895-file, 1.59 GB ignored `runs/` tree moved to `C:\DR2\sentineltrack_archive\runs`.
