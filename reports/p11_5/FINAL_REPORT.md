@@ -24,5 +24,5 @@ This branch is the bounded P11.5 freeze: strict dataset freezes, same-manifest d
 
 ## Reproducibility
 
-Use the PY312 interpreter, the committed tools under tools/p11_5, the recorded manifest hashes, and the run registry. Candidate weights remain outside Git under runs/p11_5; production weights are never overwritten.
+Use the PY312 interpreter, the archived reproducibility scripts under experiments/archive/p11_5, the recorded manifest hashes, and the run registry. Candidate weights remain outside Git under the external sentineltrack_archive; production weights are never overwritten.
 The final freeze is complete when the local checks pass and the exact pushed commit's backend and frontend GitHub Actions jobs are green.

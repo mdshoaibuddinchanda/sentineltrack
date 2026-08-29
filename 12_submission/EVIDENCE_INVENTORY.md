@@ -33,10 +33,10 @@ website accessed on 30 August 2026.
 | OCR locked test readout | P50 `10.53 ms`, P95 `24.85 ms`, `79.54` crops/s | `MEASURED_TEST` | `reports/plate_ocr/ppocr_mobile_test_evaluation.json` |
 | OCR fine-tuning | Attempt stopped resource-limited; no checkpoint or result | `NOT_MEASURED` | `reports/p11_5/OCR_FINETUNE.md` |
 | P2 tracking identity | Per-camera `(camera_id, stream_epoch, track_id)` with reset on discontinuity | `MEASURED_TEST` | `docs/p11_runtime_mainframe.md`; `02_tracking/`; tests |
-| P5 controlled watchlist benchmark | Recall@100 `92.0%`, P95 `112.55 ms` at 100k records | `MEASURED_TEST` | `docs/system_optimization_baseline.md`; `reports/target_matching/` |
-| P7 route semantics | Chronological camera sightings, geodesic lower bound, required speed and feasibility; no road routing | `MEASURED_TEST` | `docs/priority7_baseline.md`; `07_route_engine/` |
-| P8 API benchmark | Endpoint-specific local P50/P95 values in frozen baseline | `MEASURED_LOCAL` | `docs/priority8_baseline.md` |
-| P9 UI verification | Frozen baseline records typecheck, lint, frontend tests and build | `MEASURED_TEST` | `docs/priority9_baseline.md`; P12 final validation |
+| P5 controlled watchlist benchmark | Recall@100 `92.0%`, P95 `112.55 ms` at 100k records | `MEASURED_TEST` | `docs/archive/development-baselines/system_optimization_baseline.md`; `reports/target_matching/` |
+| P7 route semantics | Chronological camera sightings, geodesic lower bound, required speed and feasibility; no road routing | `MEASURED_TEST` | `docs/archive/development-baselines/priority7_baseline.md`; `07_route_engine/` |
+| P8 API benchmark | Endpoint-specific local P50/P95 values in frozen baseline | `MEASURED_LOCAL` | `docs/archive/development-baselines/priority8_baseline.md` |
+| P9 UI verification | Frozen baseline records typecheck, lint, frontend tests and build | `MEASURED_TEST` | `docs/archive/development-baselines/priority9_baseline.md`; P12 final validation |
 | P10 controls | Opaque session cookie, Argon2id, CSRF, RBAC, audit, rate limiting and WebSocket authorization | `MEASURED_TEST` | `docs/priority10_baseline.md`; `docs/security/`; `10_security/tests/` |
 | P11 sampling | Base `1 FPS`, burst `5 FPS`, bounded queues and stale-frame dropping | `MEASURED_TEST` | `11_scale_deployment/config.py`; `docs/p11_runtime_mainframe.md`; tests |
 | P11 safe statewide capacity | Not measured; no single-frame or local-node result is converted into safe camera capacity | `NOT_MEASURED` | `reports/p11_5/CAPACITY_DELTA.md` |

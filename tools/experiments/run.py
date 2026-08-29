@@ -72,7 +72,7 @@ def run_experiment(config_path: str, output_path: str = None):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="SentinelTrack Algorithm Experiment Runner")
-    parser.add_argument("--config", type=str, default="configs/experiments/baseline_yolo11m_ppocr.yaml", help="Path to experiment config YAML")
+    parser.add_argument("--config", type=str, default="experiments/archive/configs/baseline_yolo11m_ppocr.yaml", help="Path to experiment config YAML")
     parser.add_argument("--output", type=str, default="reports/experiments/baseline_results.json", help="Output path for benchmark JSON")
     args = parser.parse_args()
     run_experiment(args.config, args.output)

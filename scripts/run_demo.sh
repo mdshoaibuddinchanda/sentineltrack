@@ -13,7 +13,7 @@ python tools/preflight.py
 
 echo ""
 echo "[2/4] Executing Subsystem Diagnostics Doctor..."
-python tools/p11/doctor.py
+python tools/doctor.py
 
 echo ""
 echo "[3/4] Validating Computer Vision Weights..."

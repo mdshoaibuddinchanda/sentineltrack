@@ -1,6 +1,6 @@
 # Model inventory
 
-This inventory distinguishes the four selected operational models from local-only historical and experimental artifacts. Model binaries are ignored by Git; paths below describe a provisioned checkout and are verified by `models/manifest.json` and `tools/preflight.py`.
+This inventory distinguishes the four selected operational models plus the required OCR dictionary from local-only historical and experimental artifacts. Model binaries are ignored by Git; paths below describe a provisioned checkout and are verified by `models/manifest.json` and `tools/preflight.py`.
 
 ## Operational runtime set
 
@@ -17,14 +17,17 @@ The required P4 support dictionary `models/ocr/ppocr_mobile_dict.txt` is also ha
 
 ## Historical and experimental families
 
-The local audit found 74 model/checkpoint artifacts across canonical folders, root downloads, `weights/`, `runs/`, and experiment output. They include:
+The pre-polish local audit found 74 model/checkpoint artifacts across canonical folders, root downloads, `weights/`, `runs/`, and experiment output. The final checkout retains only the canonical runtime assets under `models/`; unpromoted binaries were moved outside the checkout.
+
+They included:
 
 - P11.5 P1/P3 candidates, OBB candidates, synthetic/real-only runs, and `mlflow` checkpoints under ignored `runs/`.
-- Root YOLO11n/s/m/l, YOLO11s-OBB, and YOLO26 downloads when present locally.
+- Root YOLO11n/s/m/l, YOLO11s-OBB, and YOLO26 downloads, moved to `C:\DR2\sentineltrack_archive\models\unpromoted`.
+- Optional PP-OCRv5 Server ONNX and dictionary, moved to `C:\DR2\sentineltrack_archive\models\ocr_optional`.
 - Legacy P3 `production/best.pt` and `baseline/best.pt`, retained as ignored archive material when present.
 - The selected P3 candidate originally under `runs/p11_5/p3-yolo11s-v2-e20-b4-640-r3-clean/weights/best.pt`; release setup promotes a verified copy to the canonical P3 path.
 
-Historical P11.5 model-selection context is retained in [`reports/p11_5/model_manifest_evidence.yaml`](../../reports/p11_5/model_manifest_evidence.yaml). `runs/` is not a production dependency and is not included in the operational manifest.
+Historical P11.5 model-selection context is retained in [`reports/p11_5/model_manifest_evidence.yaml`](../../reports/p11_5/model_manifest_evidence.yaml). `runs/` is not a production dependency and is no longer present in the release checkout; retained local outputs are under `C:\DR2\sentineltrack_archive\runs`.
 
 ## Provisioning and integrity
 

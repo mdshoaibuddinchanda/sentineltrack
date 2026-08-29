@@ -2,7 +2,7 @@
 
 ## Scope
 
-This branch is a final repository presentation and release-cleanup pass from frozen P12 commit `6cf9bd5421eccc854be02957b064f0319fbeafbb`. P11.5 and P6 algorithms, thresholds, training, and evidence were not reopened.
+This document records the preceding repository presentation cleanup from frozen P12 commit `6cf9bd5421eccc854be02957b064f0319fbeafbb`. The final hygiene pass is on branch `final-repository-polish`, based on release-cleanup commit `7d7aa4be79b9d3b6df4853f3cdc6423b6d0e122b`. P11.5 and P6 algorithms, thresholds, training, and evidence were not reopened.
 
 ## Completed
 
@@ -10,7 +10,7 @@ This branch is a final repository presentation and release-cleanup pass from fro
 - Promoted the selected P11.5 plate artifact to `models/plate/yolo11s_plate_v2.pt`; P1, P3, P4, and P6 runtime paths are canonical and repository-root resolved.
 - Made P6 live in `08_backend/services/analytics_service.py` with strong-plate gating, partial/no-plate fallback, local plate masking coordinates, epoch-safe track keys, and graceful model failure.
 - Added worker-level P6 integration tests proving ANPR authority, masking, review-only no-plate behavior, and P5 preservation.
-- Added canonical `tools/preflight.py`; retained `tools/p11/preflight.py` as a compatibility wrapper.
+- Added canonical `tools/preflight.py`; promoted the operational schema, doctor, and API benchmark tools to `tools/` and removed the retired P11 compatibility directory.
 - Reworked `scripts/setup_models.py` to verify the manifest, use direct verified public downloads, avoid CWD side effects, and report custom/optional artifacts explicitly. Server OCR is optional.
 - Consolidated dependencies into root `requirements.txt`/`requirements-dev.txt` plus `requirements/api.txt`, `requirements/analytics.txt`, `requirements/ci.txt`, and optional files. Docker and CI references were updated; Ultralytics `8.3.235` remains the production pin.
 - Renamed manual test-like utilities to `validate_*`/`run_*` and preserved their contents/history. No manual utility was deleted.
@@ -41,3 +41,11 @@ Large datasets, ignored model binaries, `runs/`, caches, and dependency director
 - Full pytest collection: 351 tests.
 - Foundation/P1/P3 validation: 35 passed, 1 skipped; P2/P4 validation: 41 passed.
 - Full suite, frontend gates, compile checks, exact commit, and GitHub Actions result are recorded at final handoff after the release commit is pushed.
+
+## Final hygiene pass
+
+- Historical P11.5 scripts moved to `experiments/archive/p11_5/`; experiment configs moved to `experiments/archive/configs/`; provenance metadata moved to `reports/p11_5/provenance/`.
+- Historical priority baselines moved to `docs/archive/development-baselines/`; active documentation now starts at `docs/README.md` and the submission package.
+- Canonical `models/` now contains the operational manifest, selected P1/P3/P4/P6 assets, and the example manifest only. Optional server OCR and unpromoted YOLO files were moved to `C:\DR2\sentineltrack_archive\models\`.
+- Local `runs/` (2,895 files, 1.59 GB) moved intact to `C:\DR2\sentineltrack_archive\runs`; generated catalogues, accessible Python caches, empty local output directories, and one sensitive sample image were removed from the checkout. A small set of empty pytest paths with an OS-level ACL denial is recorded in the final hygiene audit.
+- Added `docs/assets/README.md` with screenshot redaction/provenance requirements; no unredacted or fabricated screenshot was added.

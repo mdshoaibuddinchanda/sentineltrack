@@ -34,8 +34,6 @@ reports/
 !reports/p11/
 !reports/p11/**
 *.jpg
-
-
 *.jpeg
 *.png
 *.mp4
@@ -50,9 +48,12 @@ videos/**/*.ts
 # Python artifacts
 __pycache__/
 *.py[cod]
+*.pyo
 *.class
 .pytest_cache/
-.coverage
+.coverage*
+.mypy_cache/
+.ruff_cache/
 htmlcov/
 
 # Logs & scratch
@@ -66,3 +67,11 @@ mlruns/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Checked-in documentation assets are intentional exceptions to the media rules above.
+!docs/assets/
+!docs/assets/**
+!docs/assets/*.png
+!docs/assets/*.jpg
+!docs/assets/*.jpeg
+!docs/assets/*.webp

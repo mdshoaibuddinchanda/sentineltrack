@@ -29,10 +29,10 @@ Key entry points:
 Reproducible commands, from the repository root, using the `PY312` interpreter:
 
 ```text
-C:\Users\SHOAIB-CHANDA\miniconda3\envs\py312\python.exe tools\p11_5\audit_dataset.py
-C:\Users\SHOAIB-CHANDA\miniconda3\envs\py312\python.exe tools\p11_5\build_v2.py
-C:\Users\SHOAIB-CHANDA\miniconda3\envs\py312\python.exe tools\p11_5\run_accuracy_suite.py --profile --profile-name auto --baseline --temporal
-C:\Users\SHOAIB-CHANDA\miniconda3\envs\py312\python.exe tools\p11_5\build_reports.py
-C:\Users\SHOAIB-CHANDA\miniconda3\envs\py312\python.exe tools\p11_5\requested_completion_matrix.py
+C:\Users\SHOAIB-CHANDA\miniconda3\envs\py312\python.exe experiments\archive\p11_5\audit_dataset.py
+C:\Users\SHOAIB-CHANDA\miniconda3\envs\py312\python.exe experiments\archive\p11_5\build_v2.py
+C:\Users\SHOAIB-CHANDA\miniconda3\envs\py312\python.exe experiments\archive\p11_5\run_accuracy_suite.py --profile --profile-name auto --baseline --temporal
+C:\Users\SHOAIB-CHANDA\miniconda3\envs\py312\python.exe experiments\archive\p11_5\build_reports.py
+C:\Users\SHOAIB-CHANDA\miniconda3\envs\py312\python.exe experiments\archive\p11_5\requested_completion_matrix.py
 C:\Users\SHOAIB-CHANDA\miniconda3\envs\py312\python.exe -m pytest -p no:cacheprovider tests\test_p11_5_tools.py -q
 ```

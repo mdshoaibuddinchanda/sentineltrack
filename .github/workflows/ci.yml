@@ -62,7 +62,7 @@ jobs:
 
       - name: Initialize PostgreSQL Database Schemas
         run: |
-          python tools/p11/init_schema.py
+          python tools/init_schema.py
 
       - name: Run Security & Scale Pytest Suite
         run: |

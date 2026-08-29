@@ -488,7 +488,7 @@
     "temporal": {
       "status": "NOT_EVALUATED",
       "reason": "No locked frame-level OCR ground-truth track is available in the frozen corpus.",
-      "implementation": "tools/p11_5/temporal.py"
+      "implementation": "experiments/archive/p11_5/temporal.py"
     }
   }
 }

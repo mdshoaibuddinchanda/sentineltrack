@@ -48,8 +48,8 @@ Terminal 1:
 ```powershell
 conda activate PY312
 cd C:\DR2\sentineltrack
-python tools\p11\preflight.py
-python tools\p11\doctor.py
+python tools\preflight.py
+python tools\doctor.py
 python -m uvicorn 08_backend.app:app --host 0.0.0.0 --port 8000
 ```
 

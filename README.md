@@ -1,6 +1,6 @@
 # SentinelTrack
 
-[![CI](https://github.com/mdshoaibuddinchanda/sentineltrack/actions/workflows/ci.yml/badge.svg?branch=release-cleanup)](https://github.com/mdshoaibuddinchanda/sentineltrack/actions/workflows/ci.yml)
+[![CI](https://github.com/mdshoaibuddinchanda/sentineltrack/actions/workflows/ci.yml/badge.svg?branch=final-repository-polish)](https://github.com/mdshoaibuddinchanda/sentineltrack/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.12-blue)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/API-FastAPI-009688)](https://fastapi.tiangolo.com/)
 [![Frontend](https://img.shields.io/badge/UI-React%20%2B%20TypeScript-61dafb)](09_dashboard/)
@@ -9,6 +9,17 @@
 SentinelTrack is a production-oriented, multi-camera vehicle intelligence and ANPR platform prepared for the Sentinel Gujarat CCTV integration challenge. It combines plate-first identity evidence with conservative tracking, route feasibility, auditability, and a review-safe vehicle appearance fallback.
 
 This repository contains the implementation, reproducible evidence, and final hackathon submission package. It does not claim that appearance-only matching establishes a police identity.
+
+## Quick navigation
+
+- [Architecture and setup](#architecture)
+- [Runtime models](#canonical-runtime-models)
+- [Demo and services](#demo-and-services)
+- [Testing and validation](#testing-and-validation)
+- [Evidence and documentation](#evidence-and-documentation)
+- [Security and privacy](#security-and-privacy)
+- [Final submission package](12_submission/README.md)
+- [Documentation index](docs/README.md)
 
 ## At a glance
 
@@ -81,16 +92,19 @@ The identity hierarchy is deliberate: strong ANPR wins; partial plates may recei
 10_security/         auth, authorization, audit, CSRF
 11_scale_deployment/ scheduler, capacity, health, deployment
 12_submission/       evaluator-facing package and diagrams
-configs/             runtime and experiment configuration
+configs/             live runtime configuration
+experiments/archive/ historical experiment inputs and reproducibility scripts
 docs/                architecture, operations, security, release docs
 models/              operational manifest and local model directories
 reports/             tracked evidence and evaluation artifacts
 scripts/             setup and demo entry points
-tools/               preflight, benchmark, evaluation, and evidence tools
+tools/               active preflight, benchmark, evaluation, and evidence tools
 tests/               cross-stage contract tests
 ```
 
-Large datasets, generated runs, caches, and model binaries are local/ignored artifacts. They are inventoried in [`docs/release/REPOSITORY_AUDIT.md`](docs/release/REPOSITORY_AUDIT.md); `runs/` is evidence/experiment storage, never the production source of truth.
+Large datasets, generated caches, and model binaries are local/ignored artifacts. They are inventoried in [`docs/release/REPOSITORY_AUDIT.md`](docs/release/REPOSITORY_AUDIT.md); runtime code never depends on local training output directories.
+
+Historical run outputs are kept outside the checkout under `C:\DR2\sentineltrack_archive\runs` when available; the tracked reports and provenance files remain the reviewable evidence source.
 
 ## Canonical runtime models
 
@@ -104,6 +118,8 @@ The operational source of truth is [`models/manifest.json`](models/manifest.json
 | P6 | MobileNetV3-Small ImageNet appearance baseline, 576-D | `models/reid/mobilenet_v3_small-047dcff4.pth` |
 
 The P6 checkpoint is optional at runtime and remains review-only. Superseded and experimental artifacts are retained outside the operational manifest for provenance.
+
+The optional PP-OCR server checkpoint and unpromoted YOLO variants are intentionally outside this checkout; they are not production dependencies.
 
 ## Configuration precedence
 
@@ -181,6 +197,8 @@ GitHub Actions runs the backend security/scale contract gate and the frontend ty
 - [`docs/README.md`](docs/README.md) — documentation index.
 - [`docs/release/REPOSITORY_AUDIT.md`](docs/release/REPOSITORY_AUDIT.md) — tracked/ignored inventory and cleanup decisions.
 - [`docs/release/MODEL_INVENTORY.md`](docs/release/MODEL_INVENTORY.md) — selected, legacy, and experimental model evidence.
+- [`docs/release/FINAL_HYGIENE_AUDIT.md`](docs/release/FINAL_HYGIENE_AUDIT.md) — final local artifact and repository hygiene record.
+- [`docs/release/FINAL_DELETION_REPORT.md`](docs/release/FINAL_DELETION_REPORT.md) — exact deletion, archival, and legacy-tool ledger.
 - [`reports/p6/P6_REPORT.md`](reports/p6/P6_REPORT.md) — P6 proxy evaluation and safety boundary.
 - [`reports/p11_5/FINAL_REPORT.md`](reports/p11_5/FINAL_REPORT.md) — frozen P11.5 evidence.
 - [`12_submission/README.md`](12_submission/README.md) — final submission navigation.
@@ -195,7 +213,7 @@ P11 scale documents provide a bounded architecture projection, storage/bandwidth
 
 ## Screenshots
 
-The dashboard is implemented under `09_dashboard/` and includes deterministic fixture data for presentation. No generated or potentially sensitive runtime screenshot is committed in this release; capture a fresh redacted screenshot from the demo environment when required by the submission portal.
+The dashboard is implemented under `09_dashboard/` and includes deterministic fixture data for presentation. No generated or potentially sensitive runtime screenshot is committed in this release; follow [`docs/assets/README.md`](docs/assets/README.md) to capture a fresh redacted screenshot when required by the submission portal.
 
 ## License
 

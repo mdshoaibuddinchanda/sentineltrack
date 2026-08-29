@@ -16,7 +16,7 @@ if ($LASTEXITCODE -ne 0) {
 
 # 2. Subsystem Diagnostics
 Write-Host "`n[2/4] Executing Subsystem Diagnostics Doctor..." -ForegroundColor Yellow
-python tools/p11/doctor.py
+python tools/doctor.py
 if ($LASTEXITCODE -ne 0) {
     Write-Host "[ERROR] Diagnostic Doctor detected failure(s)." -ForegroundColor Red
     exit $LASTEXITCODE

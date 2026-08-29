@@ -30,4 +30,4 @@ P11.5 freeze decision: all locally feasible evidence and accounting work is comp
 
 ## Reproducibility
 
-Run `C:\Users\SHOAIB-CHANDA\miniconda3\envs\py312\python.exe tools\p11_5\requested_completion_matrix.py` from the repository root.
+Run `C:\Users\SHOAIB-CHANDA\miniconda3\envs\py312\python.exe experiments\archive\p11_5\requested_completion_matrix.py` from the repository root.
