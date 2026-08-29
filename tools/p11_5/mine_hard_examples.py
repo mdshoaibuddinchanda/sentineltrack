@@ -45,14 +45,17 @@ def main() -> int:
         if row.get("split") == args.split
     ]
     model = YOLO(str((ROOT / args.weights).resolve()))
-    predictions = model.predict(
-        source=[str(data_root / row["output_image"]) for row in rows],
-        imgsz=args.imgsz,
-        conf=args.conf,
-        batch=args.batch,
-        device=args.device,
-        verbose=False,
-    )
+    def predictions_one_at_a_time():
+        for row in rows:
+            yield model.predict(
+                source=str(data_root / row["output_image"]),
+                imgsz=args.imgsz,
+                conf=args.conf,
+                device=args.device,
+                verbose=False,
+            )[0]
+
+    predictions = predictions_one_at_a_time()
     category_counts: Counter[str] = Counter()
     hard_rows = []
     for row, result in zip(rows, predictions):
