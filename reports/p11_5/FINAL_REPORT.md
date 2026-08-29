@@ -6,18 +6,18 @@ This branch contains measured local P11.5 work: strict dataset freezes, a true m
 
 ## Measured outcomes
 
-- Detector candidate reports: 2 evaluation artifacts.
+- Authoritative detector candidate reports: 2; diagnostic architecture smoke reports: 3.
 - OCR candidate rows: 9.
 - Temporal tracks: 88 across 583 crops.
 - Synthetic corpus: 100000 generated examples against a 100,000 target; bounded screens completed: 3.
 - Hard-example mining records aggregate failure categories and does not persist raw predictions.
-- CI run 12 passed backend security/scale gates and frontend typecheck, lint, tests, and build.
+- The latest verified CI run before this experiment passed backend security/scale gates and frontend typecheck, lint, tests, and build.
 
 ## Hard blockers and limitations
 
-- YOLO26 is unavailable in the installed local Ultralytics package; official OBB weights were downloaded only for the supported YOLO11 OBB stage.
+- YOLO11m and YOLO26m have one-epoch smoke evidence only; comparable full YOLO11m/l/x and YOLO26m/l/x tournament training remains pending.
 - No external vehicle GT corpus was available, so P1 recall/FPR and P5 safety regression are not claimable.
-- OCR fine-tuning was not completed because compatible training/export dependencies and modern local checkpoints are missing.
+- SVTRv2/PARSeq/MGP-STR integration and OCR fine-tuning were not completed because compatible runtime/checkpoint/export assets are missing.
 - The 3-epoch 500-real-example synthetic screens completed; full-scale 100,000-example training remains pending and synthetic data is not used for authoritative test claims.
 - Cross-split raw SHA and identity leakage are clean. Upstream detection V2 retains pHash-near review findings; the strict derivative removes exact cross-split pHash source copies while preserving canonical V1 assignments.
 - One malformed source JPEG is materialized deterministically with the Ultralytics-compatible repair (1 row); its original source SHA remains in the manifest and the materialized SHA is checked post-training.

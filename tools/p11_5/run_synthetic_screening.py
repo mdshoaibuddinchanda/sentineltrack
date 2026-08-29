@@ -114,14 +114,31 @@ def main() -> int:
     parser.add_argument("--keep-staging", action="store_true")
     parser.add_argument("--max-real-train", type=int, default=0, help="optional real-train cap for a fast screening pilot")
     parser.add_argument("--staging-dir", default=str(STAGING), help="ignored staging directory; choose a new path after an interrupted run")
+    parser.add_argument("--full-scale", action="store_true", help="stage the complete 80,000-image synthetic train split alongside all real train data")
+    parser.add_argument("--allow-long-run", action="store_true", help="required with --full-scale because this can run for many hours")
     args = parser.parse_args()
+
+    if args.full_scale and not args.allow_long_run:
+        parser.error("--full-scale requires --allow-long-run")
+    if args.full_scale and args.max_real_train:
+        parser.error("--full-scale cannot be combined with --max-real-train")
+    if args.full_scale and args.epochs < 20:
+        parser.error("--full-scale requires at least 20 epochs for a non-screening curriculum run")
 
     from ultralytics import YOLO  # type: ignore
 
     real_train_count = len(list((REAL / "images" / "train").glob("*")))
     if args.max_real_train:
         real_train_count = min(real_train_count, args.max_real_train)
-    variants = [("real_only_screen_e3", 0), ("real_plus_synthetic_25pct_screen_e3", round(real_train_count * 0.25)), ("real_plus_synthetic_50pct_screen_e3", round(real_train_count * 0.50))]
+    if args.full_scale:
+        variants = [
+            ("real_only_fullscale_e" + str(args.epochs), 0),
+            ("real_plus_synthetic_25pct_fullscale_e" + str(args.epochs), 20000),
+            ("real_plus_synthetic_50pct_fullscale_e" + str(args.epochs), 40000),
+            ("real_plus_synthetic_100pct_fullscale_e" + str(args.epochs), 80000),
+        ]
+    else:
+        variants = [("real_only_screen_e3", 0), ("real_plus_synthetic_25pct_screen_e3", round(real_train_count * 0.25)), ("real_plus_synthetic_50pct_screen_e3", round(real_train_count * 0.50))]
     staging_root = (ROOT / args.staging_dir).resolve() if not Path(args.staging_dir).is_absolute() else Path(args.staging_dir).resolve()
     results: list[dict[str, Any]] = []
     for name, synthetic_count in variants:
@@ -155,7 +172,7 @@ def main() -> int:
         if not args.keep_staging:
             shutil.rmtree(dataset, ignore_errors=False)
 
-    output = {"status": "COMPLETE_WITH_SCREENING_OR_BLOCKERS", "real_dataset": str(REAL.relative_to(ROOT)).replace("\\", "/"), "synthetic_dataset": str(SYNTHETIC.relative_to(ROOT)).replace("\\", "/"), "synthetic_manifest_sha256": sha256(SYNTHETIC / "manifest.json"), "screening_definition": "same candidate initialization; 3-epoch isolated real-only, +25%, +50% synthetic train screens; real strict val/test retained", "real_train_limit": args.max_real_train or None, "results": results}
+    output = {"status": "COMPLETE_WITH_SCREENING_OR_BLOCKERS", "real_dataset": str(REAL.relative_to(ROOT)).replace("\\", "/"), "synthetic_dataset": str(SYNTHETIC.relative_to(ROOT)).replace("\\", "/"), "synthetic_manifest_sha256": sha256(SYNTHETIC / "manifest.json"), "screening_definition": "full-scale isolated real-only, +25%, +50%, +100% synthetic train variants; real strict val/test retained" if args.full_scale else "same candidate initialization; 3-epoch isolated real-only, +25%, +50% synthetic train screens; real strict val/test retained", "full_scale_requested": args.full_scale, "real_train_limit": args.max_real_train or None, "results": results}
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     (REPORT_DIR / "synthetic_screening.json").write_text(json.dumps(output, indent=2), encoding="utf-8")
     with (REPORT_DIR / "synthetic_screening.csv").open("w", encoding="utf-8", newline="") as handle:

@@ -1,0 +1,497 @@
+{
+  "schema_version": 1,
+  "environment": {
+    "name": "PY312",
+    "python": "3.12.12",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "ultralytics": {
+      "status": "IMPORTABLE",
+      "version": "8.4.132",
+      "model_families": {
+        "11": true,
+        "26": true
+      }
+    }
+  },
+  "detector_tournament": {
+    "status": "INCOMPLETE_LOCAL_EVIDENCE",
+    "rule": "A candidate requires a completed isolated training run plus locked plate validation before it can be ranked or promoted.",
+    "candidates": [
+      {
+        "candidate": "YOLO11m plate",
+        "family": "YOLO11",
+        "local_checkpoint": "yolo11m.pt",
+        "checkpoint_sha256": "d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95",
+        "package_architecture_available": true,
+        "status": "TRAINED_SMOKE_EVALUATED_NOT_FINAL",
+        "training_runs": [
+          {
+            "run_id": "p11-5-yolo11m-plate-smoke-e1-b4",
+            "status": "TRAINED",
+            "epochs": 1,
+            "batch": 4,
+            "training_time_seconds": 371.494,
+            "metrics": {
+              "metrics/precision(B)": 0.8634205453393062,
+              "metrics/recall(B)": 0.869894099848714,
+              "metrics/mAP50(B)": 0.9106538591093409,
+              "metrics/mAP50-95(B)": 0.5304706976650948,
+              "fitness": 0.5304706976650948
+            },
+            "weight_path": "runs/p11_5/p11-5-yolo11m-plate-smoke-e1-b4/weights/best.pt"
+          }
+        ],
+        "evaluation_runs": [
+          {
+            "run_id": "p11-5-yolo11m-plate-smoke-e1-b4",
+            "split": "test",
+            "precision": 0.428148,
+            "recall": 0.947541,
+            "f1": 0.589796,
+            "map50": 0.9162220584466226,
+            "map50_95": 0.5317659132691813,
+            "latency": {
+              "1": {
+                "batch": 1,
+                "samples": 10,
+                "latency_ms_per_image": {
+                  "mean": 37.0461,
+                  "p50": 36.407,
+                  "p90": 40.0298,
+                  "p95": 40.3089,
+                  "p99": 40.5322
+                },
+                "fps": 26.993
+              },
+              "2": {
+                "batch": 2,
+                "samples": 20,
+                "latency_ms_per_image": {
+                  "mean": 36.5277,
+                  "p50": 34.0316,
+                  "p90": 37.5042,
+                  "p95": 49.744,
+                  "p99": 59.5358
+                },
+                "fps": 27.376
+              },
+              "4": {
+                "batch": 4,
+                "samples": 40,
+                "latency_ms_per_image": {
+                  "mean": 35.3913,
+                  "p50": 34.2839,
+                  "p90": 38.3039,
+                  "p95": 40.4711,
+                  "p99": 42.2049
+                },
+                "fps": 28.255
+              }
+            },
+            "evidence_file": "reports/p11_5/detector_eval/p11-5-yolo11m-plate-smoke-e1-b4_test_640.json"
+          }
+        ]
+      },
+      {
+        "candidate": "YOLO11l plate",
+        "family": "YOLO11",
+        "local_checkpoint": "yolo11l.pt",
+        "checkpoint_sha256": "9ebd0e09d59811db4b1d61e2bc6730649608b1ac47f8dd01e2da6bca7c20023f",
+        "package_architecture_available": true,
+        "status": "TRAINED_SMOKE_EVALUATED_NOT_FINAL",
+        "training_runs": [
+          {
+            "run_id": "p11-5-yolo11l-plate-smoke-e1-b2",
+            "status": "TRAINED",
+            "epochs": 1,
+            "batch": 2,
+            "training_time_seconds": 537.111,
+            "metrics": {
+              "metrics/precision(B)": 0.14576380423760943,
+              "metrics/recall(B)": 0.3040847201210287,
+              "metrics/mAP50(B)": 0.08271684736079371,
+              "metrics/mAP50-95(B)": 0.02390429000928873,
+              "fitness": 0.02390429000928873
+            },
+            "weight_path": "runs/p11_5/p11-5-yolo11l-plate-smoke-e1-b2/weights/best.pt"
+          }
+        ],
+        "evaluation_runs": [
+          {
+            "run_id": "p11-5-yolo11l-plate-smoke-e1-b2",
+            "split": "test",
+            "precision": 0.149254,
+            "recall": 0.032787,
+            "f1": 0.053763,
+            "map50": 0.08301076201991683,
+            "map50_95": 0.024925264226786557,
+            "latency": {
+              "1": {
+                "batch": 1,
+                "samples": 10,
+                "latency_ms_per_image": {
+                  "mean": 42.635,
+                  "p50": 42.3785,
+                  "p90": 44.5103,
+                  "p95": 44.9069,
+                  "p99": 45.2243
+                },
+                "fps": 23.455
+              },
+              "2": {
+                "batch": 2,
+                "samples": 20,
+                "latency_ms_per_image": {
+                  "mean": 41.7139,
+                  "p50": 41.0191,
+                  "p90": 43.715,
+                  "p95": 44.0461,
+                  "p99": 44.311
+                },
+                "fps": 23.973
+              },
+              "4": {
+                "batch": 4,
+                "samples": 40,
+                "latency_ms_per_image": {
+                  "mean": 40.7119,
+                  "p50": 40.4444,
+                  "p90": 41.8867,
+                  "p95": 41.9885,
+                  "p99": 42.0699
+                },
+                "fps": 24.563
+              }
+            },
+            "evidence_file": "reports/p11_5/detector_eval/p11-5-yolo11l-plate-smoke-e1-b2_test_640.json"
+          }
+        ]
+      },
+      {
+        "candidate": "YOLO11x plate",
+        "family": "YOLO11",
+        "local_checkpoint": null,
+        "checkpoint_sha256": null,
+        "package_architecture_available": true,
+        "status": "READY_FOR_ISOLATED_TRAINING",
+        "training_runs": [],
+        "evaluation_runs": []
+      },
+      {
+        "candidate": "YOLO26m plate",
+        "family": "YOLO26",
+        "local_checkpoint": "yolo26m.pt",
+        "checkpoint_sha256": "401cea9ab23ad19246ff7744859816bc599f350e93c9dd30367b6f0a0745d0b7",
+        "package_architecture_available": true,
+        "status": "TRAINED_SMOKE_EVALUATED_NOT_FINAL",
+        "training_runs": [
+          {
+            "run_id": "p11-5-yolo26m-plate-smoke-e1-b4-net2",
+            "status": "TRAINED",
+            "epochs": 1,
+            "batch": 4,
+            "training_time_seconds": 528.276,
+            "metrics": {
+              "metrics/precision(B)": 0.49290997442495466,
+              "metrics/recall(B)": 0.4544018643867358,
+              "metrics/mAP50(B)": 0.4274785284264499,
+              "metrics/mAP50-95(B)": 0.16735842653726576,
+              "fitness": 0.16735842653726576
+            },
+            "weight_path": "runs/p11_5/p11-5-yolo26m-plate-smoke-e1-b4-net2/weights/best.pt"
+          }
+        ],
+        "evaluation_runs": [
+          {
+            "run_id": "p11-5-yolo26m-plate-smoke-e1-b4-net2",
+            "split": "test",
+            "precision": 0.516129,
+            "recall": 0.314754,
+            "f1": 0.391039,
+            "map50": 0.38837430114465127,
+            "map50_95": 0.1598797289206316,
+            "latency": {
+              "1": {
+                "batch": 1,
+                "samples": 10,
+                "latency_ms_per_image": {
+                  "mean": 35.6669,
+                  "p50": 35.8937,
+                  "p90": 36.4912,
+                  "p95": 36.7592,
+                  "p99": 36.9735
+                },
+                "fps": 28.037
+              },
+              "2": {
+                "batch": 2,
+                "samples": 20,
+                "latency_ms_per_image": {
+                  "mean": 34.58,
+                  "p50": 33.9036,
+                  "p90": 36.3031,
+                  "p95": 37.7743,
+                  "p99": 38.9512
+                },
+                "fps": 28.918
+              },
+              "4": {
+                "batch": 4,
+                "samples": 40,
+                "latency_ms_per_image": {
+                  "mean": 34.557,
+                  "p50": 34.3372,
+                  "p90": 35.3987,
+                  "p95": 36.0556,
+                  "p99": 36.5811
+                },
+                "fps": 28.938
+              }
+            },
+            "evidence_file": "reports/p11_5/detector_eval/p11-5-yolo26m-plate-smoke-e1-b4-net2_test_640.json"
+          }
+        ]
+      },
+      {
+        "candidate": "YOLO26l plate",
+        "family": "YOLO26",
+        "local_checkpoint": null,
+        "checkpoint_sha256": null,
+        "package_architecture_available": true,
+        "status": "READY_FOR_ISOLATED_TRAINING",
+        "training_runs": [],
+        "evaluation_runs": []
+      },
+      {
+        "candidate": "YOLO26x plate",
+        "family": "YOLO26",
+        "local_checkpoint": null,
+        "checkpoint_sha256": null,
+        "package_architecture_available": true,
+        "status": "READY_FOR_ISOLATED_TRAINING",
+        "training_runs": [],
+        "evaluation_runs": []
+      }
+    ],
+    "partial_runs": [
+      {
+        "run_id": "p11-5-yolo11m-plate-e20",
+        "status": "INTERRUPTED_BEFORE_EPOCH_COMPLETION",
+        "reason": "20-epoch batch-1 run estimated several hours on the local 4 GB GPU; no checkpoint or metric was accepted."
+      }
+    ],
+    "existing_plate_winner": {
+      "candidate": "YOLO11s custom plate detector",
+      "exact_accuracy_end_to_end": 0.3427,
+      "cer_end_to_end": 0.2669,
+      "locked_detector_map50": 0.984996,
+      "locked_detector_map50_95": 0.722429,
+      "decision": "CURRENT_REFERENCE"
+    }
+  },
+  "modern_ocr": {
+    "status": "BLOCKED_LOCAL_RUNTIME_AND_CHECKPOINTS",
+    "families": {
+      "SVTRv2": {
+        "status": "NOT_EVALUATED",
+        "reason": "Paddle/PaddleOCR import fails in PY312; no compatible local SVTRv2 checkpoint is present."
+      },
+      "PARSeq": {
+        "status": "NOT_EVALUATED",
+        "reason": "No local PARSeq package or checkpoint is present."
+      },
+      "MGP-STR": {
+        "status": "NOT_EVALUATED",
+        "reason": "No local MGP-STR package or checkpoint is present."
+      }
+    },
+    "package_probe": {
+      "paddle": {
+        "installed": true,
+        "status": "IMPORT_FAILED",
+        "error": "ImportError: generic_type: type \"_gpuDeviceProperties\" is already registered!"
+      },
+      "paddleocr": {
+        "installed": true,
+        "status": "IMPORT_FAILED",
+        "error": "ImportError: generic_type: type \"ProgramDescTracer\" is already registered!"
+      },
+      "openocr": {
+        "installed": false,
+        "status": "MISSING"
+      },
+      "parseq": {
+        "installed": false,
+        "status": "MISSING"
+      },
+      "mgp_str": {
+        "installed": false,
+        "status": "MISSING"
+      }
+    },
+    "probe_report": {
+      "environment": "PY312",
+      "paddle": {
+        "status": "UNAVAILABLE",
+        "error": "TypeError: Descriptors cannot be created directly.\nIf this call came from a _pb2.py file, your generated code is out of date and must be regenerated with protoc >= 3.19.0.\nIf you cannot immediately regenerate your protos, some other possible workarounds are:\n 1. Downgrade the protobuf package to 3.20.x or lower.\n 2. Set PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python (but this will use pure-Python parsing and will be much slower).\n\nMore information: https://developers.google.com/protocol-buffers/docs/news/2022-05-06#python-updates"
+      },
+      "paddleocr": {
+        "status": "UNAVAILABLE",
+        "error": "TypeError: Descriptors cannot be created directly.\nIf this call came from a _pb2.py file, your generated code is out of date and must be regenerated with protoc >= 3.19.0.\nIf you cannot immediately regenerate your protos, some other possible workarounds are:\n 1. Downgrade the protobuf package to 3.20.x or lower.\n 2. Set PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python (but this will use pure-Python parsing and will be much slower).\n\nMore information: https://developers.google.com/protocol-buffers/docs/news/2022-05-06#python-updates"
+      },
+      "algorithm_support": {
+        "svtrv2_documented": true,
+        "local_modern_recognition_check": "SVTR_LCNet",
+        "cached_model_families": [
+          "cls/ch_ppocr_mobile_v2.0_cls_infer/inference.pdmodel",
+          "det/en/en_PP-OCRv3_det_infer/inference.pdmodel",
+          "rec/en/en_PP-OCRv4_rec_infer/inference.pdmodel"
+        ]
+      },
+      "project_trainability": {
+        "onnx_ppocrv5_checkpoint_trainable_here": false,
+        "reason": "The project OCR artifacts are ONNX inference exports; no matching Paddle train checkpoint/config is present in the repository.",
+        "openocr_package_installed": false,
+        "parseq_or_mgp_str_package_installed": false
+      }
+    },
+    "local_ocr_weights": [
+      "models/ocr/PP-OCRv5_mobile_rec_infer.onnx",
+      "models/ocr/PP-OCRv5_server_rec_infer.onnx",
+      "models/ocr/ppocr_mobile_dict.txt",
+      "models/ocr/ppocrv5_dict.txt"
+    ]
+  },
+  "ocr_finetuning": {
+    "status": "NOT_COMPLETED",
+    "training_checkpoints": [],
+    "reason": "Only ONNX PP-OCRv5 inference exports are available; no compatible train checkpoint/config/export toolchain is present.",
+    "production_impact": "No production OCR model was replaced."
+  },
+  "synthetic_curriculum": {
+    "status": "CORPUS_COMPLETE_SCREENING_ONLY",
+    "corpus_count": 100000,
+    "train_count": 80000,
+    "screening": {
+      "status": "COMPLETE_WITH_SCREENING_OR_BLOCKERS",
+      "real_dataset": "datasets/experiments/plate_detection_v2_strict",
+      "synthetic_dataset": "datasets/experiments/synthetic_indian_v2",
+      "synthetic_manifest_sha256": "06c51761d0a55e8cc240b1a6b3279a41505789a7c559edd4df0479c9746b537a",
+      "screening_definition": "same candidate initialization; 3-epoch isolated real-only, +25%, +50% synthetic train screens; real strict val/test retained",
+      "real_train_limit": 500,
+      "results": [
+        {
+          "run_id": "real_only_screen_e3",
+          "status": "COMPLETE",
+          "epochs": 3,
+          "batch": 1,
+          "imgsz": 640,
+          "device": "0",
+          "dataset": "datasets/experiments/_p11_5_synthetic_screening_small/real_only_screen_e3",
+          "counts": {
+            "real_train": 500,
+            "synthetic_train": 0,
+            "real_val": 637,
+            "real_test": 293
+          },
+          "real_train_limit": 500,
+          "initial_weights": "runs/p11_5/p3-yolo11s-v2-e20-b4-640-r3-clean/weights/best.pt",
+          "initial_weights_sha256": "ede0b69bba65472eff10fc29250f58b352a3a79be73aa1b93f435f8533bac3c1",
+          "weight_path": "runs/p11_5/real_only_screen_e32/weights/best.pt",
+          "weight_sha256": "6202763695a9bfc1b010972eeef4a7a2b41ca2b7cfa47dd5cba8171ed6f5946b",
+          "test_metrics": {
+            "precision": 0.977871,
+            "recall": 0.980328,
+            "f1": 0.979098,
+            "map50": 0.991525,
+            "map50_95": 0.732293
+          },
+          "elapsed_seconds": 268.547
+        },
+        {
+          "run_id": "real_plus_synthetic_25pct_screen_e3",
+          "status": "COMPLETE",
+          "epochs": 3,
+          "batch": 1,
+          "imgsz": 640,
+          "device": "0",
+          "dataset": "datasets/experiments/_p11_5_synthetic_screening_small/real_plus_synthetic_25pct_screen_e3",
+          "counts": {
+            "real_train": 500,
+            "synthetic_train": 125,
+            "real_val": 637,
+            "real_test": 293
+          },
+          "real_train_limit": 500,
+          "initial_weights": "runs/p11_5/p3-yolo11s-v2-e20-b4-640-r3-clean/weights/best.pt",
+          "initial_weights_sha256": "ede0b69bba65472eff10fc29250f58b352a3a79be73aa1b93f435f8533bac3c1",
+          "weight_path": "runs/p11_5/real_plus_synthetic_25pct_screen_e3/weights/best.pt",
+          "weight_sha256": "e6cfdf90584cd93b9a1eba197d5737bb73bd3a1242a27970fef11199fc7b412e",
+          "test_metrics": {
+            "precision": 0.98297,
+            "recall": 0.960656,
+            "f1": 0.971685,
+            "map50": 0.989597,
+            "map50_95": 0.726403
+          },
+          "elapsed_seconds": 277.536
+        },
+        {
+          "run_id": "real_plus_synthetic_50pct_screen_e3",
+          "status": "COMPLETE",
+          "epochs": 3,
+          "batch": 1,
+          "imgsz": 640,
+          "device": "0",
+          "dataset": "datasets/experiments/_p11_5_synthetic_screening_small/real_plus_synthetic_50pct_screen_e3",
+          "counts": {
+            "real_train": 500,
+            "synthetic_train": 250,
+            "real_val": 637,
+            "real_test": 293
+          },
+          "real_train_limit": 500,
+          "initial_weights": "runs/p11_5/p3-yolo11s-v2-e20-b4-640-r3-clean/weights/best.pt",
+          "initial_weights_sha256": "ede0b69bba65472eff10fc29250f58b352a3a79be73aa1b93f435f8533bac3c1",
+          "weight_path": "runs/p11_5/real_plus_synthetic_50pct_screen_e3/weights/best.pt",
+          "weight_sha256": "52ee46eda69273caec13394f2de82468dd6485beeb13f9abd13b6427467a8624",
+          "test_metrics": {
+            "precision": 0.981588,
+            "recall": 0.970492,
+            "f1": 0.976009,
+            "map50": 0.989104,
+            "map50_95": 0.698319
+          },
+          "elapsed_seconds": 329.812
+        }
+      ]
+    },
+    "full_scale_training_completed": false,
+    "reason": "The 100,000-image corpus exists, but authoritative full-scale curriculum training has not completed on this workstation."
+  },
+  "production_crop": {
+    "status": "EVALUATED_NO_PROMOTION",
+    "production_code_changed": false,
+    "selected_strategy": "predicted unpadded AABB crop",
+    "predicted_aabb_exact_accuracy": 0.3427,
+    "obb_perspective_warp_exact_accuracy": 0.3357,
+    "gt_aabb_oracle_exact_accuracy": 0.4266,
+    "decision": "Keep current AABB path; OBB would regress the measured end-to-end result and the GT oracle is not deployable."
+  },
+  "overall": {
+    "all_requested_items_completed": false,
+    "safe_completed_items": [
+      "local OCR tournament",
+      "bounded synthetic screening",
+      "crop strategy evaluation",
+      "production preservation"
+    ],
+    "remaining_blockers": [
+      "full YOLO11m/l/x comparable training",
+      "full YOLO26m/l/x comparable training",
+      "SVTRv2/PARSeq/MGP-STR runtime and checkpoints",
+      "OCR train checkpoint/toolchain",
+      "full-scale synthetic curriculum run"
+    ]
+  }
+}
