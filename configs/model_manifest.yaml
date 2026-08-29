@@ -117,3 +117,25 @@ models:
     training_run_id: unknown
     minimum_vram_mb: 0
     recommended_batch: 1
+  - logical_name: vehicle_appearance_reid_fallback
+    architecture: MobileNetV3-Small pooled feature extractor
+    family: torchvision
+    source: official torchvision ImageNet-1K pretrained weights
+    source_version: torchvision-0.20.1
+    license: BSD-3-Clause for torchvision implementation; ImageNet weight terms follow the official torchvision release
+    weight_path: external_torchvision_cache/mobilenet_v3_small-047dcff4.pth
+    checkpoint_url: https://download.pytorch.org/models/mobilenet_v3_small-047dcff4.pth
+    sha256: 047dcff4addef86ea5bc2eff13c9614dc11f47ab1160d0a71a25e7db994f4e1f
+    input_size: 224x224
+    embedding_dimension: 576
+    normalization: L2
+    plate_region_masked_for_reid: true
+    precision: fp32
+    runtime: PyTorch/torchvision
+    device: auto
+    evaluation_dataset: P6_APPEARANCE_PROXY_EVALUATION
+    evaluation_dataset_manifest_role: no_true_cross_camera_identity_gt
+    selected_similarity_threshold: 0.874001
+    review_only: true
+    minimum_vram_mb: 4096
+    recommended_batch: 1

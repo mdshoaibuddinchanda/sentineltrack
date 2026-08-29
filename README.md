@@ -71,6 +71,24 @@ SENTINEL STREAM INGESTION (RTSP / HLS)
 * **Multi-Frame Corroboration:** Corroborated multi-frame observations receive automated alerts; uncorroborated single observations are gated to `REVIEW`.
 * **PostGIS Historical Search:** Stores raw sightings for non-destructive future rescoring and audit trails.
 
+### Priority 6: Vehicle ReID Fallback
+
+* **Fallback appearance signal:** Uses one torchvision MobileNetV3-Small ImageNet baseline with 576-dimensional L2-normalized embeddings.
+* **Plate leakage protection:** Blurs the locally detected plate region before embedding; OCR text is never passed to the appearance model.
+* **Track-level evidence:** Retains the top five quality crops per `(camera_id, stream_epoch, track_id)` and aggregates them into one bounded profile.
+* **Conservative fusion:** Strong ANPR remains authoritative. Partial plates may receive appearance support; no-plate appearance results remain `POSSIBLE/REVIEW` and cannot create automatic HIGH/CRITICAL alerts.
+* **Evidence boundary:** Local data has no verified same-vehicle cross-camera identity ground truth. P6 reports are explicitly `P6_APPEARANCE_PROXY_EVALUATION`; they do not claim cross-camera Rank-1/mAP accuracy.
+* **Bounded search:** Candidate lookup uses camera/epoch/class/time pruning, optional P7 feasibility, and an in-memory normalized matrix; no vector database or 80k-camera capacity claim is made.
+
+Run the P6 unit tests and bounded evaluation:
+
+```bash
+python -m pytest tests/test_p6_vehicle_reid.py -q
+python -m 06_vehicle_reid.benchmark
+```
+
+See [`reports/p6/P6_REPORT.md`](reports/p6/P6_REPORT.md), [`reports/p6/P6_EVALUATION.json`](reports/p6/P6_EVALUATION.json), and [`reports/p6/P6_BENCHMARK.json`](reports/p6/P6_BENCHMARK.json).
+
 ### Priority 7: Cross-Camera Route / GIS & Spatio-Temporal Trajectory Engine
 
 * **Cross-Camera Sighting Graph:** Dynamic programming DAG solver reconstructing the most plausible chronological trajectory across distributed municipal cameras.

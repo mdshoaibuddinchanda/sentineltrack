@@ -1,0 +1,57 @@
+{
+  "evaluation_name": "P6_APPEARANCE_PROXY_EVALUATION",
+  "true_cross_camera_identity_gt_available": false,
+  "warning": "NO TRUE CROSS_CAMERA IDENTITY GT \u2014 METRICS ARE APPEARANCE PROXY EVIDENCE ONLY",
+  "source": "datasets/experiments/multiframe_ocr_v1/frames.csv and datasets/video_images",
+  "source_description": "Verified ByteTrack track sequences; vehicle-region proxies expanded from plate-labelled frames; no camera IDs or same-vehicle cross-camera links.",
+  "track_identity_split": {
+    "calibration_tracks": 61,
+    "test_tracks": 27,
+    "no_track_overlap": true
+  },
+  "sample_count": 240,
+  "plate_region_masked_for_reid": true,
+  "calibration": {
+    "track_count": 61,
+    "positive_pairs": 155,
+    "negative_pairs": 276,
+    "positive_similarity": {
+      "count": 155,
+      "mean": 0.856995,
+      "p50": 0.883,
+      "p05": 0.6943
+    },
+    "negative_similarity": {
+      "count": 276,
+      "mean": 0.717083,
+      "p50": 0.7218,
+      "p95": 0.8239
+    },
+    "threshold": 0.874001,
+    "false_match_rate": 0.007246,
+    "false_non_match_rate": 0.458065,
+    "review_only": true,
+    "roc_auc": 0.90173
+  },
+  "locked_test": {
+    "track_count": 27,
+    "positive_pairs": 61,
+    "negative_pairs": 61,
+    "positive_similarity": {
+      "count": 61,
+      "mean": 0.872944,
+      "p50": 0.8809,
+      "p05": 0.7858
+    },
+    "negative_similarity": {
+      "count": 61,
+      "mean": 0.723173,
+      "p50": 0.7247,
+      "p95": 0.8234
+    },
+    "false_match_rate": 0.0,
+    "false_non_match_rate": 0.459016,
+    "roc_auc": 0.964794
+  },
+  "generated_at_utc": "2026-08-29T19:54:01.910089+00:00"
+}

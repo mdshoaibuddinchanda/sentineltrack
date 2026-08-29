@@ -1,0 +1,29 @@
+# Priority 6 is a conservative appearance fallback, not an identity authority.
+reid:
+  enabled: true
+  model_name: mobilenet_v3_small_imagenet
+  model_version: torchvision-0.20.1
+  checkpoint_url: https://download.pytorch.org/models/mobilenet_v3_small-047dcff4.pth
+  checkpoint_sha256: 047dcff4addef86ea5bc2eff13c9614dc11f47ab1160d0a71a25e7db994f4e1f
+  checkpoint_path: null
+  allow_checkpoint_download: true
+  device: auto
+  input_width: 224
+  input_height: 224
+  embedding_dimension: 576
+  top_k_crops_per_track: 5
+  minimum_crop_width: 32
+  minimum_crop_height: 32
+  minimum_crop_quality: 0.0
+  plate_region_masked_for_reid: true
+  plate_mask_padding_fraction: 0.15
+  gallery_max_tracks: 10000
+  gallery_ttl_seconds: 3600.0
+  search_time_window_seconds: 3600.0
+  minimum_similarity_for_support: 0.874001
+  minimum_similarity_for_review: 0.80
+  maximum_false_match_rate: 0.01
+  # No verified cross-camera identity GT exists locally; keep the fallback
+  # review-safe even if the appearance proxy separates positive/negative pairs.
+  review_only: true
+  require_class_compatibility: true
