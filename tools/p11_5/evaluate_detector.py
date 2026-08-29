@@ -131,7 +131,14 @@ def main() -> int:
     # Stream the custom IoU pass before validation. Some Ultralytics releases
     # retain validation allocations on the model and can OOM on a second pass.
     import torch  # type: ignore
-    predictions = model.predict(source=[str(path) for path in paths], imgsz=args.imgsz, conf=args.conf, batch=args.batch, device=args.device, stream=True, verbose=False)
+    def predictions_one_at_a_time():
+        for path in paths:
+            # This Ultralytics release may ignore ``batch=1`` for a large
+            # source list and construct an oversized tensor. Keep the custom
+            # correctness pass bounded to one image on small GPUs.
+            yield model.predict(source=str(path), imgsz=args.imgsz, conf=args.conf, device=args.device, verbose=False)[0]
+
+    predictions = predictions_one_at_a_time()
     totals = Counter()
     subsets: dict[str, Counter] = {"standard_aspect": Counter(), "square_or_tall": Counter(), "tiny_lt60": Counter(), "small_60_120": Counter(), "large_gt120": Counter()}
     for row, result in zip(rows, predictions):
