@@ -1,0 +1,17 @@
+window,method,population,eligible_tracks,tracks,exact_matches,exact_accuracy,character_accuracy,cer
+1,character_fusion,test_tracks_with_at_least_8_source_frames,6,6,1,0.166667,0.533333,0.483333
+1,current_voter,test_tracks_with_at_least_8_source_frames,6,6,1,0.166667,0.55,0.466667
+1,single_best,test_tracks_with_at_least_8_source_frames,6,6,1,0.166667,0.533333,0.483333
+1,weighted_vote,test_tracks_with_at_least_8_source_frames,6,6,1,0.166667,0.533333,0.483333
+3,character_fusion,test_tracks_with_at_least_8_source_frames,6,6,1,0.166667,0.65,0.35
+3,current_voter,test_tracks_with_at_least_8_source_frames,6,6,1,0.166667,0.666667,0.333333
+3,single_best,test_tracks_with_at_least_8_source_frames,6,6,1,0.166667,0.633333,0.366667
+3,weighted_vote,test_tracks_with_at_least_8_source_frames,6,6,1,0.166667,0.633333,0.366667
+5,character_fusion,test_tracks_with_at_least_8_source_frames,6,6,2,0.333333,0.65,0.283333
+5,current_voter,test_tracks_with_at_least_8_source_frames,6,6,3,0.5,0.833333,0.233333
+5,single_best,test_tracks_with_at_least_8_source_frames,6,6,1,0.166667,0.633333,0.333333
+5,weighted_vote,test_tracks_with_at_least_8_source_frames,6,6,2,0.333333,0.65,0.316667
+8,character_fusion,test_tracks_with_at_least_8_source_frames,6,6,3,0.5,0.783333,0.233333
+8,current_voter,test_tracks_with_at_least_8_source_frames,6,6,3,0.5,0.916667,0.2
+8,single_best,test_tracks_with_at_least_8_source_frames,6,6,1,0.166667,0.583333,0.333333
+8,weighted_vote,test_tracks_with_at_least_8_source_frames,6,6,2,0.333333,0.666667,0.3

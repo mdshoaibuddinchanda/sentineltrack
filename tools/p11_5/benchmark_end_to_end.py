@@ -9,6 +9,7 @@ import json
 import statistics
 import sys
 import time
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +37,40 @@ def gt_box(label: Path, width: int, height: int) -> list[float] | None:
     return [(xc - nw / 2) * width, (yc - nh / 2) * height, (xc + nw / 2) * width, (yc + nh / 2) * height]
 
 
+def truth_box(row: dict[str, str], width: int, height: int, data_root: Path) -> list[float] | None:
+    if row.get("bbox_json"):
+        values = json.loads(row["bbox_json"])
+        if values and len(values[0]) == 4:
+            return [float(value) for value in values[0]]
+        return None
+    label = row.get("output_label", "")
+    return gt_box(data_root / label, width, height) if label else None
+
+
+def load_multiframe_test_rows() -> list[dict[str, str]]:
+    dataset = ROOT / "datasets" / "experiments" / "multiframe_ocr_v1"
+    rows: list[dict[str, str]] = []
+    with (dataset / "frames.csv").open(encoding="utf-8", newline="") as handle:
+        for frame in csv.DictReader(handle):
+            if frame.get("split") != "test":
+                continue
+            annotation = ET.parse(ROOT / Path(frame["source_path"]).with_suffix(".xml")).getroot()
+            box = annotation.find(".//object/bndbox")
+            if box is None:
+                continue
+            values = [box.findtext(name) for name in ("xmin", "ymin", "xmax", "ymax")]
+            if any(value is None for value in values):
+                continue
+            rows.append({
+                "output_image": frame["source_path"],
+                "output_label": "",
+                "bbox_json": json.dumps([[float(value) for value in values]]),
+                "plate_text_normalized": frame["gt_text"],
+                "track_id": frame["track_id"],
+            })
+    return rows
+
+
 def sha256(path: Path) -> str:
     import hashlib
     digest = hashlib.sha256()
@@ -53,6 +88,7 @@ def run_model(model_path: Path, rows: list[dict[str, str]], data_root: Path, dev
     latencies: list[float] = []
     predictions: list[str] = []
     truths: list[str] = []
+    matched_flags: list[bool] = []
     tp = fp = fn = 0
     ocr_matched = 0
     for row in rows:
@@ -60,7 +96,7 @@ def run_model(model_path: Path, rows: list[dict[str, str]], data_root: Path, dev
         if image is None:
             continue
         height, width = image.shape[:2]
-        truth_box = gt_box(data_root / row["output_label"], width, height)
+        truth_box_value = truth_box(row, width, height, data_root)
         started = time.perf_counter()
         result = model.predict(source=image, imgsz=640, conf=0.25, device=device, verbose=False)[0]
         best_box = None
@@ -69,7 +105,7 @@ def run_model(model_path: Path, rows: list[dict[str, str]], data_root: Path, dev
             for box, confidence, cls in zip(result.boxes.xyxy.cpu().tolist(), result.boxes.conf.cpu().tolist(), result.boxes.cls.cpu().tolist()):
                 if int(cls) == 0 and float(confidence) > best_conf:
                     best_box, best_conf = box, float(confidence)
-        matched = best_box is not None and truth_box is not None and iou(best_box, truth_box) >= 0.5
+        matched = best_box is not None and truth_box_value is not None and iou(best_box, truth_box_value) >= 0.5
         if matched:
             tp += 1
             x1, y1, x2, y2 = [int(round(value)) for value in best_box]
@@ -80,15 +116,23 @@ def run_model(model_path: Path, rows: list[dict[str, str]], data_root: Path, dev
             predictions.append(text or "")
             truths.append(row.get("plate_text_normalized", ""))
             ocr_matched += 1
+            matched_flags.append(True)
         else:
             if best_box is not None:
                 fp += 1
-            if truth_box is not None:
+            if truth_box_value is not None:
                 fn += 1
             predictions.append("")
             truths.append(row.get("plate_text_normalized", ""))
+            matched_flags.append(False)
         latencies.append((time.perf_counter() - started) * 1000)
     ocr_metrics = eval_mod.calculate_metrics(predictions, truths)
+    # ``predictions`` only receives OCR output for matched detections; misses
+    # receive an empty string.  Keep the deployable full-frame metric and the
+    # conditional OCR metric on exactly the same row set as separate fields.
+    conditional_predictions = [prediction for prediction, matched in zip(predictions, matched_flags) if matched]
+    conditional_truths = [truth for truth, matched in zip(truths, matched_flags) if matched]
+    conditional_metrics = eval_mod.calculate_metrics(conditional_predictions, conditional_truths)
     precision = tp / max(1, tp + fp)
     recall = tp / max(1, tp + fn)
     return {
@@ -97,6 +141,8 @@ def run_model(model_path: Path, rows: list[dict[str, str]], data_root: Path, dev
         "images": len(rows), "detector_tp": tp, "detector_fp": fp, "detector_fn": fn,
         "detector_precision": round(precision, 6), "detector_recall": round(recall, 6),
         "ocr_matched_detections": ocr_matched,
+        "ocr_conditional_post_exact_accuracy": conditional_metrics.get("postprocessed_exact_accuracy", 0.0),
+        "ocr_conditional_post_cer": conditional_metrics.get("postprocessed_cer", 0.0),
         "end_to_end_post_exact_accuracy": ocr_metrics.get("postprocessed_exact_accuracy", 0.0),
         "end_to_end_raw_exact_accuracy": ocr_metrics.get("raw_exact_accuracy", 0.0),
         "end_to_end_post_cer": ocr_metrics.get("postprocessed_cer", 0.0),
@@ -108,31 +154,40 @@ def run_model(model_path: Path, rows: list[dict[str, str]], data_root: Path, dev
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--models", default="models/plate/production/best.pt")
+    parser.add_argument("--data", default="multiframe-test", help="multiframe-test or a detection derivative with non-empty OCR text")
     parser.add_argument("--device", default="0")
     args = parser.parse_args()
     import cv2  # type: ignore
     eval_mod = importlib.import_module("04_plate_ocr.training.evaluate")
     rec_mod = importlib.import_module("04_plate_ocr.recognizers")
-    data_root = ROOT / "datasets/experiments/plate_detection_v2_strict"
-    with (data_root / "manifest.csv").open(encoding="utf-8", newline="") as handle:
-        rows = [row for row in csv.DictReader(handle) if row.get("split") == "test"]
+    if args.data == "multiframe-test":
+        data_root = ROOT
+        rows = load_multiframe_test_rows()
+        dataset_name = "datasets/experiments/multiframe_ocr_v1 (source images; test sequences)"
+    else:
+        data_root = (ROOT / args.data).resolve()
+        with (data_root / "manifest.csv").open(encoding="utf-8", newline="") as handle:
+            rows = [row for row in csv.DictReader(handle) if row.get("split") == "test"]
+        if not rows or not all(row.get("plate_text_normalized", "").strip() for row in rows):
+            raise ValueError("Refusing E2E OCR evaluation: selected manifest does not have complete non-empty plate_text_normalized ground truth for every test row")
+        dataset_name = str(data_root.relative_to(ROOT)).replace("\\", "/")
     results = []
     for value in args.models.split(","):
         model_path = (ROOT / value.strip()).resolve()
         results.append(run_model(model_path, rows, data_root, args.device, eval_mod, rec_mod))
     report = {
-        "status": "COMPLETE_WITH_PLATE_ONLY_GT",
-        "dataset": str(data_root.relative_to(ROOT)).replace("\\", "/"),
+        "status": "COMPLETE_WITH_TEXT_GT",
+        "dataset": dataset_name,
         "split": "test",
-        "pipeline": "detector -> predicted crop -> PP-OCRv5 mobile -> existing structural decoder metrics",
-        "p5_safety": {"status": "UNAVAILABLE_NO_NEGATIVE_VEHICLE_OR_BACKGROUND_GT", "false_positive_rate": None, "note": "The strict test contains one positive plate object per image; it cannot support a safety FPR claim."},
+        "pipeline": "detector -> predicted AABB crop -> PP-OCRv5 mobile -> existing structural decoder metrics",
+        "p5_safety": {"status": "UNAVAILABLE_NO_NEGATIVE_VEHICLE_OR_BACKGROUND_GT", "false_positive_rate": None, "note": "The held-out sequence test contains positive plate objects only; it cannot support a safety FPR claim."},
         "results": results,
     }
     output = ROOT / "reports" / "p11_5" / "end_to_end_evaluation.json"
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, indent=2), encoding="utf-8")
     with (ROOT / "reports" / "p11_5" / "end_to_end_leaderboard.csv").open("w", encoding="utf-8", newline="") as handle:
-        fields = ["model", "model_sha256", "images", "detector_tp", "detector_fp", "detector_fn", "detector_precision", "detector_recall", "ocr_matched_detections", "end_to_end_post_exact_accuracy", "end_to_end_raw_exact_accuracy", "end_to_end_post_cer", "latency_ms", "fps"]
+        fields = ["model", "model_sha256", "images", "detector_tp", "detector_fp", "detector_fn", "detector_precision", "detector_recall", "ocr_matched_detections", "ocr_conditional_post_exact_accuracy", "ocr_conditional_post_cer", "end_to_end_post_exact_accuracy", "end_to_end_raw_exact_accuracy", "end_to_end_post_cer", "latency_ms", "fps"]
         writer = csv.DictWriter(handle, fieldnames=fields, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(results)

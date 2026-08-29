@@ -1,0 +1,199 @@
+{
+  "status": "COMPLETE",
+  "dataset": "datasets/experiments/multiframe_ocr_v1",
+  "split": "test",
+  "weights": "runs/p11_5/p3-yolo11s-v2-e20-b4-640-r3-clean/weights/best.pt",
+  "tracks": 20,
+  "frames": 143,
+  "detector": {
+    "tp": 143,
+    "fp": 0,
+    "fn": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "mean_latency_ms": 41.567
+  },
+  "recognizer": "PP-OCRv5 mobile on predicted AABB crops",
+  "paired_population": {
+    "minimum_window": 8,
+    "track_count": 6
+  },
+  "results": [
+    {
+      "window": 1,
+      "method": "character_fusion",
+      "population": "test_tracks_with_at_least_8_source_frames",
+      "eligible_tracks": 6,
+      "tracks": 6,
+      "exact_matches": 1,
+      "exact_accuracy": 0.166667,
+      "character_accuracy": 0.533333,
+      "cer": 0.483333
+    },
+    {
+      "window": 1,
+      "method": "current_voter",
+      "population": "test_tracks_with_at_least_8_source_frames",
+      "eligible_tracks": 6,
+      "tracks": 6,
+      "exact_matches": 1,
+      "exact_accuracy": 0.166667,
+      "character_accuracy": 0.55,
+      "cer": 0.466667
+    },
+    {
+      "window": 1,
+      "method": "single_best",
+      "population": "test_tracks_with_at_least_8_source_frames",
+      "eligible_tracks": 6,
+      "tracks": 6,
+      "exact_matches": 1,
+      "exact_accuracy": 0.166667,
+      "character_accuracy": 0.533333,
+      "cer": 0.483333
+    },
+    {
+      "window": 1,
+      "method": "weighted_vote",
+      "population": "test_tracks_with_at_least_8_source_frames",
+      "eligible_tracks": 6,
+      "tracks": 6,
+      "exact_matches": 1,
+      "exact_accuracy": 0.166667,
+      "character_accuracy": 0.533333,
+      "cer": 0.483333
+    },
+    {
+      "window": 3,
+      "method": "character_fusion",
+      "population": "test_tracks_with_at_least_8_source_frames",
+      "eligible_tracks": 6,
+      "tracks": 6,
+      "exact_matches": 1,
+      "exact_accuracy": 0.166667,
+      "character_accuracy": 0.65,
+      "cer": 0.35
+    },
+    {
+      "window": 3,
+      "method": "current_voter",
+      "population": "test_tracks_with_at_least_8_source_frames",
+      "eligible_tracks": 6,
+      "tracks": 6,
+      "exact_matches": 1,
+      "exact_accuracy": 0.166667,
+      "character_accuracy": 0.666667,
+      "cer": 0.333333
+    },
+    {
+      "window": 3,
+      "method": "single_best",
+      "population": "test_tracks_with_at_least_8_source_frames",
+      "eligible_tracks": 6,
+      "tracks": 6,
+      "exact_matches": 1,
+      "exact_accuracy": 0.166667,
+      "character_accuracy": 0.633333,
+      "cer": 0.366667
+    },
+    {
+      "window": 3,
+      "method": "weighted_vote",
+      "population": "test_tracks_with_at_least_8_source_frames",
+      "eligible_tracks": 6,
+      "tracks": 6,
+      "exact_matches": 1,
+      "exact_accuracy": 0.166667,
+      "character_accuracy": 0.633333,
+      "cer": 0.366667
+    },
+    {
+      "window": 5,
+      "method": "character_fusion",
+      "population": "test_tracks_with_at_least_8_source_frames",
+      "eligible_tracks": 6,
+      "tracks": 6,
+      "exact_matches": 2,
+      "exact_accuracy": 0.333333,
+      "character_accuracy": 0.65,
+      "cer": 0.283333
+    },
+    {
+      "window": 5,
+      "method": "current_voter",
+      "population": "test_tracks_with_at_least_8_source_frames",
+      "eligible_tracks": 6,
+      "tracks": 6,
+      "exact_matches": 3,
+      "exact_accuracy": 0.5,
+      "character_accuracy": 0.833333,
+      "cer": 0.233333
+    },
+    {
+      "window": 5,
+      "method": "single_best",
+      "population": "test_tracks_with_at_least_8_source_frames",
+      "eligible_tracks": 6,
+      "tracks": 6,
+      "exact_matches": 1,
+      "exact_accuracy": 0.166667,
+      "character_accuracy": 0.633333,
+      "cer": 0.333333
+    },
+    {
+      "window": 5,
+      "method": "weighted_vote",
+      "population": "test_tracks_with_at_least_8_source_frames",
+      "eligible_tracks": 6,
+      "tracks": 6,
+      "exact_matches": 2,
+      "exact_accuracy": 0.333333,
+      "character_accuracy": 0.65,
+      "cer": 0.316667
+    },
+    {
+      "window": 8,
+      "method": "character_fusion",
+      "population": "test_tracks_with_at_least_8_source_frames",
+      "eligible_tracks": 6,
+      "tracks": 6,
+      "exact_matches": 3,
+      "exact_accuracy": 0.5,
+      "character_accuracy": 0.783333,
+      "cer": 0.233333
+    },
+    {
+      "window": 8,
+      "method": "current_voter",
+      "population": "test_tracks_with_at_least_8_source_frames",
+      "eligible_tracks": 6,
+      "tracks": 6,
+      "exact_matches": 3,
+      "exact_accuracy": 0.5,
+      "character_accuracy": 0.916667,
+      "cer": 0.2
+    },
+    {
+      "window": 8,
+      "method": "single_best",
+      "population": "test_tracks_with_at_least_8_source_frames",
+      "eligible_tracks": 6,
+      "tracks": 6,
+      "exact_matches": 1,
+      "exact_accuracy": 0.166667,
+      "character_accuracy": 0.583333,
+      "cer": 0.333333
+    },
+    {
+      "window": 8,
+      "method": "weighted_vote",
+      "population": "test_tracks_with_at_least_8_source_frames",
+      "eligible_tracks": 6,
+      "tracks": 6,
+      "exact_matches": 2,
+      "exact_accuracy": 0.333333,
+      "character_accuracy": 0.666667,
+      "cer": 0.3
+    }
+  ]
+}

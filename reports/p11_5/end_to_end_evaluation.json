@@ -1,55 +1,59 @@
 {
-  "status": "COMPLETE_WITH_PLATE_ONLY_GT",
-  "dataset": "datasets/experiments/plate_detection_v2_strict",
+  "status": "COMPLETE_WITH_TEXT_GT",
+  "dataset": "datasets/experiments/multiframe_ocr_v1 (source images; test sequences)",
   "split": "test",
-  "pipeline": "detector -> predicted crop -> PP-OCRv5 mobile -> existing structural decoder metrics",
+  "pipeline": "detector -> predicted AABB crop -> PP-OCRv5 mobile -> existing structural decoder metrics",
   "p5_safety": {
     "status": "UNAVAILABLE_NO_NEGATIVE_VEHICLE_OR_BACKGROUND_GT",
     "false_positive_rate": null,
-    "note": "The strict test contains one positive plate object per image; it cannot support a safety FPR claim."
+    "note": "The held-out sequence test contains positive plate objects only; it cannot support a safety FPR claim."
   },
   "results": [
     {
       "model": "models/plate/production/best.pt",
       "model_sha256": "8603afbc9ee2c16f99971898ae98211048c01cc6668bc5d5cc46df13d5f9c8ba",
-      "images": 293,
-      "detector_tp": 278,
-      "detector_fp": 6,
-      "detector_fn": 15,
-      "detector_precision": 0.978873,
-      "detector_recall": 0.948805,
-      "ocr_matched_detections": 278,
-      "end_to_end_post_exact_accuracy": 0.099,
-      "end_to_end_raw_exact_accuracy": 0.0922,
-      "end_to_end_post_cer": 3.8947,
+      "images": 143,
+      "detector_tp": 143,
+      "detector_fp": 0,
+      "detector_fn": 0,
+      "detector_precision": 1.0,
+      "detector_recall": 1.0,
+      "ocr_matched_detections": 143,
+      "ocr_conditional_post_exact_accuracy": 0.3287,
+      "ocr_conditional_post_cer": 0.3143,
+      "end_to_end_post_exact_accuracy": 0.3287,
+      "end_to_end_raw_exact_accuracy": 0.2168,
+      "end_to_end_post_cer": 0.3143,
       "latency_ms": {
-        "mean": 31.686,
-        "p50": 25.631,
-        "p95": 70.828,
-        "p99": 81.348
+        "mean": 44.076,
+        "p50": 28.358,
+        "p95": 97.062,
+        "p99": 134.004
       },
-      "fps": 31.56
+      "fps": 22.688
     },
     {
       "model": "runs/p11_5/p3-yolo11s-v2-e20-b4-640-r3-clean/weights/best.pt",
       "model_sha256": "ede0b69bba65472eff10fc29250f58b352a3a79be73aa1b93f435f8533bac3c1",
-      "images": 293,
-      "detector_tp": 285,
-      "detector_fp": 8,
-      "detector_fn": 8,
-      "detector_precision": 0.972696,
-      "detector_recall": 0.972696,
-      "ocr_matched_detections": 285,
-      "end_to_end_post_exact_accuracy": 0.0956,
-      "end_to_end_raw_exact_accuracy": 0.0887,
-      "end_to_end_post_cer": 4.0444,
+      "images": 143,
+      "detector_tp": 143,
+      "detector_fp": 0,
+      "detector_fn": 0,
+      "detector_precision": 1.0,
+      "detector_recall": 1.0,
+      "ocr_matched_detections": 143,
+      "ocr_conditional_post_exact_accuracy": 0.3427,
+      "ocr_conditional_post_cer": 0.2669,
+      "end_to_end_post_exact_accuracy": 0.3427,
+      "end_to_end_raw_exact_accuracy": 0.2378,
+      "end_to_end_post_cer": 0.2669,
       "latency_ms": {
-        "mean": 26.152,
-        "p50": 25.095,
-        "p95": 33.3,
-        "p99": 37.119
+        "mean": 28.215,
+        "p50": 26.045,
+        "p95": 36.038,
+        "p99": 43.147
       },
-      "fps": 38.239
+      "fps": 35.443
     }
   ]
 }

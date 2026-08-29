@@ -1,8 +1,7 @@
-# Final Model Selection
+# P11.5C Model and Integration Selection
 
-Selection is based on measured evidence, not parameter count:
-
-- OCR: PP-OCRv5 mobile remains selected for the balanced profile because its expanded-validation exact ties server after postprocessing while retaining substantially lower latency and better character accuracy/CER.
-- Temporal: current voter with a 5-frame window is the balanced operational choice; 8-frame current voter has the highest measured exact on its smaller eligible subset.
-- P3: the authoritative clean-data YOLO11s candidate is selected over production when its locked-test evaluation is present; otherwise selection remains pending.
-- P1: retain YOLO11m vehicle model as operational baseline until a real vehicle GT corpus is supplied.
+- Detector: retain the clean-data YOLO11s P3 candidate for the current measured profile. The valid text-labelled E2E test gives it 0.3427 exact accuracy, 0.2669 CER, and 35.443 FPS.
+- Crop: retain the unpadded predicted AABB crop. On 143 held-out text-labelled frames, margin 0 scored 0.3427 exact; margins 2/4/6/8 scored 0.3077/0.2937/0.2517/0.2517. The GT AABB oracle reaches 0.4266, so remaining crop/recognition headroom is real but not solved by padding.
+- OBB: do not promote. OBB perspective warp scored 0.3357 exact and 0.2938 CER, below the candidate AABB path.
+- OCR: PP-OCRv5 mobile remains the deployable choice pending a compatible modern-recognizer environment and a valid fine-tuning checkpoint.
+- Temporal: current voter with a 5-frame window is the balanced operational profile; on the fixed 24-track GT-crop population, windows 5 and 8 tie at 0.666667 exact, while window 8 has lower CER. Predicted-crop temporal evidence is available separately and is limited to six eligible tracks.

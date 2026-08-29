@@ -1,0 +1,26 @@
+{
+  "environment": "PY312",
+  "paddle": {
+    "status": "UNAVAILABLE",
+    "error": "TypeError: Descriptors cannot be created directly.\nIf this call came from a _pb2.py file, your generated code is out of date and must be regenerated with protoc >= 3.19.0.\nIf you cannot immediately regenerate your protos, some other possible workarounds are:\n 1. Downgrade the protobuf package to 3.20.x or lower.\n 2. Set PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python (but this will use pure-Python parsing and will be much slower).\n\nMore information: https://developers.google.com/protocol-buffers/docs/news/2022-05-06#python-updates"
+  },
+  "paddleocr": {
+    "status": "UNAVAILABLE",
+    "error": "TypeError: Descriptors cannot be created directly.\nIf this call came from a _pb2.py file, your generated code is out of date and must be regenerated with protoc >= 3.19.0.\nIf you cannot immediately regenerate your protos, some other possible workarounds are:\n 1. Downgrade the protobuf package to 3.20.x or lower.\n 2. Set PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python (but this will use pure-Python parsing and will be much slower).\n\nMore information: https://developers.google.com/protocol-buffers/docs/news/2022-05-06#python-updates"
+  },
+  "algorithm_support": {
+    "svtrv2_documented": true,
+    "local_modern_recognition_check": "SVTR_LCNet",
+    "cached_model_families": [
+      "cls/ch_ppocr_mobile_v2.0_cls_infer/inference.pdmodel",
+      "det/en/en_PP-OCRv3_det_infer/inference.pdmodel",
+      "rec/en/en_PP-OCRv4_rec_infer/inference.pdmodel"
+    ]
+  },
+  "project_trainability": {
+    "onnx_ppocrv5_checkpoint_trainable_here": false,
+    "reason": "The project OCR artifacts are ONNX inference exports; no matching Paddle train checkpoint/config is present in the repository.",
+    "openocr_package_installed": false,
+    "parseq_or_mgp_str_package_installed": false
+  }
+}

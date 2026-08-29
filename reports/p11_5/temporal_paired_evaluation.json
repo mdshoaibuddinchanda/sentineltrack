@@ -1,0 +1,193 @@
+{
+  "status": "COMPLETE",
+  "dataset": "datasets/experiments/multiframe_ocr_v1",
+  "tracks": 88,
+  "frames": 583,
+  "recognizer": "PP-OCRv5 mobile",
+  "paired_population": {
+    "minimum_window": 8,
+    "track_count": 24
+  },
+  "inference_latency_ms": {
+    "p50": 9.532,
+    "p95": 21.755
+  },
+  "results": [
+    {
+      "window": 1,
+      "method": "character_fusion",
+      "population": "tracks_with_at_least_8_observations",
+      "eligible_tracks": 24,
+      "tracks": 24,
+      "exact_matches": 4,
+      "exact_accuracy": 0.166667,
+      "character_accuracy": 0.564854,
+      "cer": 0.271967
+    },
+    {
+      "window": 1,
+      "method": "current_voter",
+      "population": "tracks_with_at_least_8_observations",
+      "eligible_tracks": 24,
+      "tracks": 24,
+      "exact_matches": 10,
+      "exact_accuracy": 0.416667,
+      "character_accuracy": 0.60251,
+      "cer": 0.284519
+    },
+    {
+      "window": 1,
+      "method": "single_best",
+      "population": "tracks_with_at_least_8_observations",
+      "eligible_tracks": 24,
+      "tracks": 24,
+      "exact_matches": 4,
+      "exact_accuracy": 0.166667,
+      "character_accuracy": 0.564854,
+      "cer": 0.271967
+    },
+    {
+      "window": 1,
+      "method": "weighted_vote",
+      "population": "tracks_with_at_least_8_observations",
+      "eligible_tracks": 24,
+      "tracks": 24,
+      "exact_matches": 4,
+      "exact_accuracy": 0.166667,
+      "character_accuracy": 0.564854,
+      "cer": 0.271967
+    },
+    {
+      "window": 3,
+      "method": "character_fusion",
+      "population": "tracks_with_at_least_8_observations",
+      "eligible_tracks": 24,
+      "tracks": 24,
+      "exact_matches": 7,
+      "exact_accuracy": 0.291667,
+      "character_accuracy": 0.723849,
+      "cer": 0.192469
+    },
+    {
+      "window": 3,
+      "method": "current_voter",
+      "population": "tracks_with_at_least_8_observations",
+      "eligible_tracks": 24,
+      "tracks": 24,
+      "exact_matches": 13,
+      "exact_accuracy": 0.541667,
+      "character_accuracy": 0.774059,
+      "cer": 0.117155
+    },
+    {
+      "window": 3,
+      "method": "single_best",
+      "population": "tracks_with_at_least_8_observations",
+      "eligible_tracks": 24,
+      "tracks": 24,
+      "exact_matches": 7,
+      "exact_accuracy": 0.291667,
+      "character_accuracy": 0.707113,
+      "cer": 0.188285
+    },
+    {
+      "window": 3,
+      "method": "weighted_vote",
+      "population": "tracks_with_at_least_8_observations",
+      "eligible_tracks": 24,
+      "tracks": 24,
+      "exact_matches": 6,
+      "exact_accuracy": 0.25,
+      "character_accuracy": 0.702929,
+      "cer": 0.192469
+    },
+    {
+      "window": 5,
+      "method": "character_fusion",
+      "population": "tracks_with_at_least_8_observations",
+      "eligible_tracks": 24,
+      "tracks": 24,
+      "exact_matches": 6,
+      "exact_accuracy": 0.25,
+      "character_accuracy": 0.824268,
+      "cer": 0.129707
+    },
+    {
+      "window": 5,
+      "method": "current_voter",
+      "population": "tracks_with_at_least_8_observations",
+      "eligible_tracks": 24,
+      "tracks": 24,
+      "exact_matches": 16,
+      "exact_accuracy": 0.666667,
+      "character_accuracy": 0.874477,
+      "cer": 0.09205
+    },
+    {
+      "window": 5,
+      "method": "single_best",
+      "population": "tracks_with_at_least_8_observations",
+      "eligible_tracks": 24,
+      "tracks": 24,
+      "exact_matches": 9,
+      "exact_accuracy": 0.375,
+      "character_accuracy": 0.832636,
+      "cer": 0.112971
+    },
+    {
+      "window": 5,
+      "method": "weighted_vote",
+      "population": "tracks_with_at_least_8_observations",
+      "eligible_tracks": 24,
+      "tracks": 24,
+      "exact_matches": 7,
+      "exact_accuracy": 0.291667,
+      "character_accuracy": 0.824268,
+      "cer": 0.121339
+    },
+    {
+      "window": 8,
+      "method": "character_fusion",
+      "population": "tracks_with_at_least_8_observations",
+      "eligible_tracks": 24,
+      "tracks": 24,
+      "exact_matches": 7,
+      "exact_accuracy": 0.291667,
+      "character_accuracy": 0.807531,
+      "cer": 0.129707
+    },
+    {
+      "window": 8,
+      "method": "current_voter",
+      "population": "tracks_with_at_least_8_observations",
+      "eligible_tracks": 24,
+      "tracks": 24,
+      "exact_matches": 16,
+      "exact_accuracy": 0.666667,
+      "character_accuracy": 0.90795,
+      "cer": 0.075314
+    },
+    {
+      "window": 8,
+      "method": "single_best",
+      "population": "tracks_with_at_least_8_observations",
+      "eligible_tracks": 24,
+      "tracks": 24,
+      "exact_matches": 6,
+      "exact_accuracy": 0.25,
+      "character_accuracy": 0.782427,
+      "cer": 0.150628
+    },
+    {
+      "window": 8,
+      "method": "weighted_vote",
+      "population": "tracks_with_at_least_8_observations",
+      "eligible_tracks": 24,
+      "tracks": 24,
+      "exact_matches": 7,
+      "exact_accuracy": 0.291667,
+      "character_accuracy": 0.803347,
+      "cer": 0.146444
+    }
+  ]
+}

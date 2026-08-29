@@ -1,24 +1,27 @@
-# Temporal Report
+# Temporal OCR Report
 
-True sequence/registration-identity tracks only; no random equal-text grouping.
+The original table is retained as a historical cohort-shifting benchmark: each window had a different eligible-track denominator. The paired companion fixes the population to the same 24 tracks with at least eight observations.
 
-| window | method | eligible | exact | char | CER |
+## Paired GT-crop evaluation
+
+| window | method | eligible tracks | exact | character | CER |
 | --- | --- | --- | --- | --- | --- |
-| 1 | single_best | 88 | 0.215909 | 0.577143 | 0.24 |
-| 1 | current_voter | 88 | 0.329545 | 0.593143 | 0.250286 |
-| 1 | weighted_vote | 88 | 0.215909 | 0.577143 | 0.24 |
-| 1 | character_fusion | 88 | 0.215909 | 0.577143 | 0.24 |
-| 3 | single_best | 64 | 0.296875 | 0.665094 | 0.204403 |
-| 3 | current_voter | 64 | 0.515625 | 0.742138 | 0.127358 |
-| 3 | weighted_vote | 64 | 0.328125 | 0.691824 | 0.194969 |
-| 3 | character_fusion | 64 | 0.34375 | 0.713836 | 0.190252 |
-| 5 | single_best | 38 | 0.342105 | 0.806878 | 0.124339 |
-| 5 | current_voter | 38 | 0.631579 | 0.835979 | 0.108466 |
-| 5 | weighted_vote | 38 | 0.368421 | 0.81746 | 0.10582 |
-| 5 | character_fusion | 38 | 0.342105 | 0.804233 | 0.121693 |
-| 8 | single_best | 24 | 0.25 | 0.782427 | 0.150628 |
-| 8 | current_voter | 24 | 0.666667 | 0.90795 | 0.075314 |
-| 8 | weighted_vote | 24 | 0.291667 | 0.803347 | 0.146444 |
-| 8 | character_fusion | 24 | 0.291667 | 0.807531 | 0.129707 |
+| 1 | current_voter | 24 | 0.416667 | 0.602510 | 0.284519 |
+| 3 | current_voter | 24 | 0.541667 | 0.774059 | 0.117155 |
+| 5 | current_voter | 24 | 0.666667 | 0.874477 | 0.092050 |
+| 8 | current_voter | 24 | 0.666667 | 0.907950 | 0.075314 |
 
-Logit fusion is unavailable because the PP-OCRv5 ONNX interface exposes decoded text and character confidence, not timestep logits.
+## Paired predicted-crop evaluation
+
+The detector-predicted AABB evaluation has a smaller fixed population: six test tracks with at least eight source frames.
+
+| window | method | eligible tracks | exact | character | CER |
+| --- | --- | --- | --- | --- | --- |
+| 1 | current_voter | 6 | 0.166667 | 0.550000 | 0.466667 |
+| 3 | current_voter | 6 | 0.166667 | 0.666667 | 0.333333 |
+| 5 | current_voter | 6 | 0.500000 | 0.833333 | 0.233333 |
+| 8 | current_voter | 6 | 0.500000 | 0.916667 | 0.200000 |
+
+The paired results show temporal voting helps, but the predicted-crop integration remains materially weaker than the GT-crop upper-bound path. Machine-readable companions: `temporal_paired_evaluation.json` and `temporal_predicted_e2e.json`.
+
+Logit fusion remains unavailable because the PP-OCRv5 ONNX interface exposes decoded text and character confidence, not timestep logits.

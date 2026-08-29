@@ -1,0 +1,393 @@
+{
+  "status": "COMPLETE",
+  "dataset": "datasets/experiments/multiframe_ocr_v1 (source images; test sequences)",
+  "split": "test",
+  "rows": 143,
+  "purpose": "aggregate diagnosis of predicted detector crop to OCR accuracy collapse",
+  "aabb_models": [
+    {
+      "model": "runs/p11_5/p3-yolo11s-v2-e20-b4-640-r3-clean/weights/best.pt",
+      "model_sha256": "ede0b69bba65472eff10fc29250f58b352a3a79be73aa1b93f435f8533bac3c1",
+      "images": 143,
+      "detector": {
+        "tp": 143,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "all_class0_detections": 147,
+        "batch_elapsed_ms": 4118.238,
+        "mean_latency_ms": 28.799
+      },
+      "current_high_conf_geometry": {
+        "iou": {
+          "mean": 0.8286,
+          "p10": 0.7168,
+          "median": 0.841,
+          "p90": 0.9165
+        },
+        "confidence": {
+          "mean": 0.775,
+          "p10": 0.7011,
+          "median": 0.7831,
+          "p90": 0.8271
+        },
+        "width_px": {
+          "mean": 273.1956,
+          "p10": 105.6162,
+          "median": 194.5279,
+          "p90": 521.4737
+        },
+        "height_px": {
+          "mean": 106.6579,
+          "p10": 33.7048,
+          "median": 88.5504,
+          "p90": 202.8105
+        },
+        "aspect_ratio": {
+          "mean": 2.7071,
+          "p10": 1.7868,
+          "median": 2.8078,
+          "p90": 3.335
+        }
+      },
+      "crop_results": {
+        "aabb_margin_0": {
+          "all_images": {
+            "total_samples": 143,
+            "raw_exact_matches": 34,
+            "raw_exact_accuracy": 0.2378,
+            "raw_character_accuracy": 0.6278,
+            "raw_cer": 0.2726,
+            "raw_mean_edit_distance": 0.2702,
+            "postprocessed_exact_matches": 49,
+            "postprocessed_exact_accuracy": 0.3427,
+            "postprocessed_character_accuracy": 0.6398,
+            "postprocessed_cer": 0.2669,
+            "postprocessed_mean_edit_distance": 0.2643,
+            "grammar_valid_rate": 0.6224,
+            "empty_read_rate": 0.021
+          },
+          "recognizer_batch_ms": 1217.886,
+          "matched_detections": {
+            "total_samples": 143,
+            "raw_exact_matches": 34,
+            "raw_exact_accuracy": 0.2378,
+            "raw_character_accuracy": 0.6278,
+            "raw_cer": 0.2726,
+            "raw_mean_edit_distance": 0.2702,
+            "postprocessed_exact_matches": 49,
+            "postprocessed_exact_accuracy": 0.3427,
+            "postprocessed_character_accuracy": 0.6398,
+            "postprocessed_cer": 0.2669,
+            "postprocessed_mean_edit_distance": 0.2643,
+            "grammar_valid_rate": 0.6224,
+            "empty_read_rate": 0.021
+          },
+          "matched_count": 143
+        },
+        "aabb_margin_2": {
+          "all_images": {
+            "total_samples": 143,
+            "raw_exact_matches": 29,
+            "raw_exact_accuracy": 0.2028,
+            "raw_character_accuracy": 0.5494,
+            "raw_cer": 0.2924,
+            "raw_mean_edit_distance": 0.2901,
+            "postprocessed_exact_matches": 44,
+            "postprocessed_exact_accuracy": 0.3077,
+            "postprocessed_character_accuracy": 0.565,
+            "postprocessed_cer": 0.2903,
+            "postprocessed_mean_edit_distance": 0.2878,
+            "grammar_valid_rate": 0.5524,
+            "empty_read_rate": 0.007
+          },
+          "recognizer_batch_ms": 1130.656,
+          "matched_detections": {
+            "total_samples": 143,
+            "raw_exact_matches": 29,
+            "raw_exact_accuracy": 0.2028,
+            "raw_character_accuracy": 0.5494,
+            "raw_cer": 0.2924,
+            "raw_mean_edit_distance": 0.2901,
+            "postprocessed_exact_matches": 44,
+            "postprocessed_exact_accuracy": 0.3077,
+            "postprocessed_character_accuracy": 0.565,
+            "postprocessed_cer": 0.2903,
+            "postprocessed_mean_edit_distance": 0.2878,
+            "grammar_valid_rate": 0.5524,
+            "empty_read_rate": 0.007
+          },
+          "matched_count": 143
+        },
+        "aabb_margin_4": {
+          "all_images": {
+            "total_samples": 143,
+            "raw_exact_matches": 29,
+            "raw_exact_accuracy": 0.2028,
+            "raw_character_accuracy": 0.5268,
+            "raw_cer": 0.3157,
+            "raw_mean_edit_distance": 0.3132,
+            "postprocessed_exact_matches": 42,
+            "postprocessed_exact_accuracy": 0.2937,
+            "postprocessed_character_accuracy": 0.5374,
+            "postprocessed_cer": 0.3164,
+            "postprocessed_mean_edit_distance": 0.3138,
+            "grammar_valid_rate": 0.5175,
+            "empty_read_rate": 0.0
+          },
+          "recognizer_batch_ms": 1145.417,
+          "matched_detections": {
+            "total_samples": 143,
+            "raw_exact_matches": 29,
+            "raw_exact_accuracy": 0.2028,
+            "raw_character_accuracy": 0.5268,
+            "raw_cer": 0.3157,
+            "raw_mean_edit_distance": 0.3132,
+            "postprocessed_exact_matches": 42,
+            "postprocessed_exact_accuracy": 0.2937,
+            "postprocessed_character_accuracy": 0.5374,
+            "postprocessed_cer": 0.3164,
+            "postprocessed_mean_edit_distance": 0.3138,
+            "grammar_valid_rate": 0.5175,
+            "empty_read_rate": 0.0
+          },
+          "matched_count": 143
+        },
+        "aabb_margin_6": {
+          "all_images": {
+            "total_samples": 143,
+            "raw_exact_matches": 29,
+            "raw_exact_accuracy": 0.2028,
+            "raw_character_accuracy": 0.4619,
+            "raw_cer": 0.3468,
+            "raw_mean_edit_distance": 0.344,
+            "postprocessed_exact_matches": 36,
+            "postprocessed_exact_accuracy": 0.2517,
+            "postprocessed_character_accuracy": 0.4718,
+            "postprocessed_cer": 0.3573,
+            "postprocessed_mean_edit_distance": 0.3545,
+            "grammar_valid_rate": 0.4895,
+            "empty_read_rate": 0.0
+          },
+          "recognizer_batch_ms": 1147.579,
+          "matched_detections": {
+            "total_samples": 143,
+            "raw_exact_matches": 29,
+            "raw_exact_accuracy": 0.2028,
+            "raw_character_accuracy": 0.4619,
+            "raw_cer": 0.3468,
+            "raw_mean_edit_distance": 0.344,
+            "postprocessed_exact_matches": 36,
+            "postprocessed_exact_accuracy": 0.2517,
+            "postprocessed_character_accuracy": 0.4718,
+            "postprocessed_cer": 0.3573,
+            "postprocessed_mean_edit_distance": 0.3545,
+            "grammar_valid_rate": 0.4895,
+            "empty_read_rate": 0.0
+          },
+          "matched_count": 143
+        },
+        "aabb_margin_8": {
+          "all_images": {
+            "total_samples": 143,
+            "raw_exact_matches": 29,
+            "raw_exact_accuracy": 0.2028,
+            "raw_character_accuracy": 0.4117,
+            "raw_cer": 0.3814,
+            "raw_mean_edit_distance": 0.3782,
+            "postprocessed_exact_matches": 36,
+            "postprocessed_exact_accuracy": 0.2517,
+            "postprocessed_character_accuracy": 0.4209,
+            "postprocessed_cer": 0.3842,
+            "postprocessed_mean_edit_distance": 0.381,
+            "grammar_valid_rate": 0.3986,
+            "empty_read_rate": 0.007
+          },
+          "recognizer_batch_ms": 1150.275,
+          "matched_detections": {
+            "total_samples": 143,
+            "raw_exact_matches": 29,
+            "raw_exact_accuracy": 0.2028,
+            "raw_character_accuracy": 0.4117,
+            "raw_cer": 0.3814,
+            "raw_mean_edit_distance": 0.3782,
+            "postprocessed_exact_matches": 36,
+            "postprocessed_exact_accuracy": 0.2517,
+            "postprocessed_character_accuracy": 0.4209,
+            "postprocessed_cer": 0.3842,
+            "postprocessed_mean_edit_distance": 0.381,
+            "grammar_valid_rate": 0.3986,
+            "empty_read_rate": 0.007
+          },
+          "matched_count": 143
+        },
+        "oracle_best_iou_aabb": {
+          "all_images": {
+            "total_samples": 143,
+            "raw_exact_matches": 34,
+            "raw_exact_accuracy": 0.2378,
+            "raw_character_accuracy": 0.6278,
+            "raw_cer": 0.2719,
+            "raw_mean_edit_distance": 0.2695,
+            "postprocessed_exact_matches": 49,
+            "postprocessed_exact_accuracy": 0.3427,
+            "postprocessed_character_accuracy": 0.6398,
+            "postprocessed_cer": 0.2662,
+            "postprocessed_mean_edit_distance": 0.2636,
+            "grammar_valid_rate": 0.6224,
+            "empty_read_rate": 0.021
+          },
+          "recognizer_batch_ms": 1170.025,
+          "matched_detections": {
+            "total_samples": 143,
+            "raw_exact_matches": 34,
+            "raw_exact_accuracy": 0.2378,
+            "raw_character_accuracy": 0.6278,
+            "raw_cer": 0.2719,
+            "raw_mean_edit_distance": 0.2695,
+            "postprocessed_exact_matches": 49,
+            "postprocessed_exact_accuracy": 0.3427,
+            "postprocessed_character_accuracy": 0.6398,
+            "postprocessed_cer": 0.2662,
+            "postprocessed_mean_edit_distance": 0.2636,
+            "grammar_valid_rate": 0.6224,
+            "empty_read_rate": 0.021
+          },
+          "matched_count": 143
+        },
+        "gt_aabb_oracle": {
+          "all_images": {
+            "total_samples": 143,
+            "raw_exact_matches": 45,
+            "raw_exact_accuracy": 0.3147,
+            "raw_character_accuracy": 0.6681,
+            "raw_cer": 0.2345,
+            "raw_mean_edit_distance": 0.2329,
+            "postprocessed_exact_matches": 61,
+            "postprocessed_exact_accuracy": 0.4266,
+            "postprocessed_character_accuracy": 0.6836,
+            "postprocessed_cer": 0.2225,
+            "postprocessed_mean_edit_distance": 0.2209,
+            "grammar_valid_rate": 0.6434,
+            "empty_read_rate": 0.0
+          },
+          "recognizer_batch_ms": 1178.42
+        }
+      },
+      "interpretation": {
+        "current_aabb_metrics_are_full_frame": true,
+        "conditional_metrics_only_include_current_iou_ge_0_5": true,
+        "gt_aabb_is_an_ocr_upper_bound_not_a_deployable_path": true
+      }
+    }
+  ],
+  "obb_model": {
+    "model": "runs/p11_5/obb-yolo11s-v2-e20-b4-640-r3-clean/weights/best.pt",
+    "model_sha256": "b5da705740e53a96e324c982880b4cfce81fc7ec905fb4c124d3b73ef5c31d9d",
+    "images": 143,
+    "detector": {
+      "tp": 143,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "batch_elapsed_ms": 3316.299,
+      "mean_latency_ms": 23.191
+    },
+    "predicted_obb_geometry": {
+      "aabb_iou": {
+        "mean": 0.7781,
+        "p10": 0.663,
+        "median": 0.7862,
+        "p90": 0.8712
+      },
+      "warp_width_px": {
+        "mean": 275.993,
+        "p10": 107.0,
+        "median": 206.0,
+        "p90": 518.0
+      },
+      "warp_height_px": {
+        "mean": 110.1958,
+        "p10": 39.0,
+        "median": 94.0,
+        "p90": 200.0
+      }
+    },
+    "crop_results": {
+      "obb_aabb": {
+        "all_images": {
+          "total_samples": 143,
+          "raw_exact_matches": 31,
+          "raw_exact_accuracy": 0.2168,
+          "raw_character_accuracy": 0.5494,
+          "raw_cer": 0.298,
+          "raw_mean_edit_distance": 0.2959,
+          "postprocessed_exact_matches": 47,
+          "postprocessed_exact_accuracy": 0.3287,
+          "postprocessed_character_accuracy": 0.5657,
+          "postprocessed_cer": 0.2945,
+          "postprocessed_mean_edit_distance": 0.2921,
+          "grammar_valid_rate": 0.5315,
+          "empty_read_rate": 0.014
+        },
+        "recognizer_batch_ms": 1131.308,
+        "matched_detections": {
+          "total_samples": 143,
+          "raw_exact_matches": 31,
+          "raw_exact_accuracy": 0.2168,
+          "raw_character_accuracy": 0.5494,
+          "raw_cer": 0.298,
+          "raw_mean_edit_distance": 0.2959,
+          "postprocessed_exact_matches": 47,
+          "postprocessed_exact_accuracy": 0.3287,
+          "postprocessed_character_accuracy": 0.5657,
+          "postprocessed_cer": 0.2945,
+          "postprocessed_mean_edit_distance": 0.2921,
+          "grammar_valid_rate": 0.5315,
+          "empty_read_rate": 0.014
+        },
+        "matched_count": 143
+      },
+      "obb_perspective_warp": {
+        "all_images": {
+          "total_samples": 143,
+          "raw_exact_matches": 32,
+          "raw_exact_accuracy": 0.2238,
+          "raw_character_accuracy": 0.5374,
+          "raw_cer": 0.2973,
+          "raw_mean_edit_distance": 0.295,
+          "postprocessed_exact_matches": 48,
+          "postprocessed_exact_accuracy": 0.3357,
+          "postprocessed_character_accuracy": 0.553,
+          "postprocessed_cer": 0.2938,
+          "postprocessed_mean_edit_distance": 0.2912,
+          "grammar_valid_rate": 0.5664,
+          "empty_read_rate": 0.007
+        },
+        "recognizer_batch_ms": 1138.114,
+        "matched_detections": {
+          "total_samples": 143,
+          "raw_exact_matches": 32,
+          "raw_exact_accuracy": 0.2238,
+          "raw_character_accuracy": 0.5374,
+          "raw_cer": 0.2973,
+          "raw_mean_edit_distance": 0.295,
+          "postprocessed_exact_matches": 48,
+          "postprocessed_exact_accuracy": 0.3357,
+          "postprocessed_character_accuracy": 0.553,
+          "postprocessed_cer": 0.2938,
+          "postprocessed_mean_edit_distance": 0.2912,
+          "grammar_valid_rate": 0.5664,
+          "empty_read_rate": 0.007
+        },
+        "matched_count": 143
+      }
+    },
+    "interpretation": {
+      "obb_match_uses_polygon_aabb_iou_ge_0_5": true,
+      "obb_perspective_warp_is_the_downstream_test": true
+    }
+  }
+}

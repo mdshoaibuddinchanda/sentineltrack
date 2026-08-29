@@ -1,10 +1,14 @@
-# End-to-End Report
+# End-to-End Detector → OCR Report
 
-Pipeline: detector → predicted crop → PP-OCRv5 mobile → existing structural decoder metrics on strict real test.
+The earlier strict-detection E2E OCR table is retired: that manifest is detection-only and its OCR text columns are empty. The benchmark now refuses such a manifest and uses the text-labelled held-out sequence test (`multiframe_ocr_v1`, 143 test frames).
 
-| model | det R | OCR matched | E2E exact | E2E CER | P50 ms | P95 ms |
+Pipeline: detector → predicted AABB crop → PP-OCRv5 mobile → existing structural decoder metrics.
+
+| model | det P/R | OCR exact | OCR CER | P50 ms | P95 ms | FPS |
 | --- | --- | --- | --- | --- | --- | --- |
-| models/plate/production/best.pt | 0.948805 | 278 | 0.099 | 3.8947 | 25.631 | 70.828 |
-| runs/p11_5/p3-yolo11s-v2-e20-b4-640-r3-clean/weights/best.pt | 0.972696 | 285 | 0.0956 | 4.0444 | 25.095 | 33.3 |
+| production | 1.000 / 1.000 | 0.3287 (47/143) | 0.3143 | 28.358 | 97.062 | 22.688 |
+| P11.5 candidate | 1.000 / 1.000 | 0.3427 (49/143) | 0.2669 | 26.045 | 36.038 | 35.443 |
 
-P5 safety FPR is unavailable because the strict plate test contains positive plate objects only and no negative vehicle/background GT.
+On this valid text-labelled held-out set, the candidate improves exact accuracy by 1.40 percentage points and CER by 0.0474 while reducing measured mean latency from 44.076 ms to 28.215 ms. There are no negative vehicle/background examples in this set, so safety FPR is not claimable here.
+
+The corresponding machine-readable evidence is `end_to_end_evaluation.json` and `end_to_end_leaderboard.csv`.
