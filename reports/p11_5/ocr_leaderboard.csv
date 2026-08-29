@@ -1,7 +1,10 @@
-candidate,status,artifact,locked_dataset,exact_test,char_accuracy_test,cer_test,latency_p50_ms,latency_p95_ms,notes
-PP-OCRv5 mobile,PASS,models/ocr/PP-OCRv5_mobile_rec_infer.onnx,datasets/plate_ocr/test,0.5787,0.7839,0.1557,10.53,24.85,Selected current baseline
-PP-OCRv5 server,PASS,models/ocr/PP-OCRv5_server_rec_infer.onnx,datasets/plate_ocr/test,0.5787,0.7721,0.1652,413.81,594.96,Measured but not selected due speed/character accuracy
-OCR V2 fine-tune,NOT_TRAINED,,datasets/experiments/plate_ocr_v2,,,,,,,Derivative corpus exists; no trained artifact
-SVTRv2,NOT_EVALUATED,,,,,,,,,No local artifact/result in this run
-RepSVTR,NOT_EVALUATED,,,,,,,,,No local artifact/result in this run
-PARSeq,NOT_EVALUATED,,,,,,,,,No local artifact/result in this run
+candidate,family,split,samples,raw_exact_accuracy,postprocessed_exact_accuracy,raw_character_accuracy,postprocessed_character_accuracy,raw_cer,postprocessed_cer,p50_latency_ms,p95_latency_ms,throughput_crops_per_sec
+ppocr_mobile,PP-OCRv5,legacy_val,147,0.5442,0.6463,0.8294,0.8465,0.1221,0.1064,10.023,17.301,91.689
+ppocr_mobile,PP-OCRv5,expanded_val,150,0.5533,0.6533,0.8329,0.8497,0.1196,0.1042,10.248,19.342,89.902
+ppocr_mobile,PP-OCRv5,locked_test,178,0.5,0.5787,0.7762,0.7839,0.1604,0.1557,9.33,16.26,97.69
+ppocr_server,PP-OCRv5,legacy_val,147,0.6122,0.6463,0.7887,0.7944,0.152,0.147,460.103,611.752,2.163
+ppocr_server,PP-OCRv5,expanded_val,150,0.62,0.6533,0.793,0.7986,0.149,0.1441,468.011,585.855,2.193
+ppocr_server,PP-OCRv5,locked_test,178,0.5618,0.5787,0.7697,0.7721,0.1646,0.1652,442.15,671.762,2.181
+easyocr_rec_only,EasyOCR,legacy_val,147,0.0136,0.0272,0.1956,0.2006,0.3854,0.3769,35.211,73.106,12.765
+easyocr_rec_only,EasyOCR,expanded_val,150,0.0267,0.04,0.2056,0.2105,0.379,0.3706,36.654,73.207,24.019
+easyocr_rec_only,EasyOCR,locked_test,178,0.0562,0.0618,0.2108,0.2155,0.3896,0.386,32.677,73.472,26.638

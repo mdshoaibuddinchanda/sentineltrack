@@ -1,10 +1,11 @@
-logical_name,stage,status,artifact,dataset,sha256,measured_metric,notes
-vehicle_detector,P1,NOT_EVALUATED,models/vehicle/yolo11m.pt,,d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95,,No vehicle GT corpus
-plate_detector,P3,PASS,models/plate/production/best.pt,datasets/plate_detection/test,8603afbc9ee2c16f99971898ae98211048c01cc6668bc5d5cc46df13d5f9c8ba,F1=0.8547,Current measured baseline
-ocr_mobile,P4,PASS,models/ocr/PP-OCRv5_mobile_rec_infer.onnx,datasets/plate_ocr/test,4e16deb22c4da6468bdca539b2cd3c8687825538b67109177c47d359ab994cd7,exact=0.5787,Selected current OCR baseline
-ocr_server,P4,PASS,models/ocr/PP-OCRv5_server_rec_infer.onnx,datasets/plate_ocr/test,13d0dda27d63dc0f4938af48df2c55b33f3c989a0bd5eacb8410e30f1735f644,exact=0.5787,Measured alternative; not selected
-plate_detection_v2,P7,DERIVATIVE_READY_NOT_TRAINED,datasets/experiments/plate_detection_v2,datasets/experiments/plate_detection_v2,,,5281 unique images
-plate_detection_obb_v1,P13,DERIVATIVE_READY_NOT_TRAINED,datasets/experiments/plate_detection_obb_v1,datasets/experiments/plate_detection_obb_v1,,,5281 derived OBB labels
-plate_ocr_v2,P18,DERIVATIVE_READY_NOT_TRAINED,datasets/experiments/plate_ocr_v2,datasets/experiments/plate_ocr_v2,,,Legacy test preserved
-temporal_consensus,P22,IMPLEMENTED_NOT_EVALUATED,tools/p11_5/temporal.py,,,,No locked frame-level OCR track
-synthetic_indian_v1,P9,SMOKE_GENERATED,datasets/experiments/synthetic_indian_v1,datasets/experiments/synthetic_indian_v1,,,8 examples seed 115; not used for claims
+run_id,task,model_family,variant,dataset_sha256,seed,epochs,batch,imgsz,precision,device,training_time_seconds,metrics_json,weight_path,weight_sha256,status,decision,notes
+baseline-p1,P1,Ultralytics,YOLO11m-vehicle,,115,0,1,960,fp32,0,,,models/vehicle/yolo11m.pt,d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95,BASELINE,NOT_EVALUATED,No vehicle GT corpus; operational probe only
+baseline-p3,P3,Ultralytics,production-detector,,115,0,1,640,fp32,0,,,models/plate/production/best.pt,8603afbc9ee2c16f99971898ae98211048c01cc6668bc5d5cc46df13d5f9c8ba,BASELINE,MEASURED,Frozen production reference; do not overwrite
+baseline-ocr-mobile,P4,PP-OCRv5,mobile,,115,0,1,48,fp32,cpu,,,models/ocr/PP-OCRv5_mobile_rec_infer.onnx,4e16deb22c4da6468bdca539b2cd3c8687825538b67109177c47d359ab994cd7,BASELINE,SELECTED,Current accuracy/latency reference
+baseline-ocr-server,P4,PP-OCRv5,server,,115,0,1,48,fp32,cpu,,,models/ocr/PP-OCRv5_server_rec_infer.onnx,13d0dda27d63dc0f4938af48df2c55b33f3c989a0bd5eacb8410e30f1735f644,BASELINE,REFERENCE,Accuracy tie on expanded validation; slower runtime
+foundation-detection-v2,P3,Ultralytics,V2-upstream,f5a95ba304c6bac54e55752cc90f7a1451fe63ae1c1ced66a00ab6044ca34db4,115,0,0,640,amp,0,,,datasets/experiments/plate_detection_v2,,FROZEN,REFERENCE,5281 rows; pHash review required
+foundation-detection-v2-strict,P3,Ultralytics,V2-strict,ff07e390a16b006eeb20e49dc5e6e23dd8480675ccf6b9c6edf662f1a264be2b,115,0,0,640,amp,0,,,datasets/experiments/plate_detection_v2_strict,,FROZEN,SELECTED,4854 rows; exact cross-split pHash source copies removed
+foundation-obb-v1,OBB,Ultralytics,derived-obb,,115,0,0,640,amp,0,,,datasets/experiments/plate_detection_obb_v1,,DERIVED,NOT_TRAINED,No OBB checkpoint yet
+foundation-ocr-v2,P4,PP-OCRv5,OCR-V2,9ffad4f56f9aa3b6f5041ab33715ef8d2ac684aca231b66e7fe27e7814b486f7,115,0,0,48,fp32,cpu,,,datasets/experiments/plate_ocr_v2,,FROZEN,REFERENCE,Legacy locked test preserved
+foundation-multiframe-v1,TEMPORAL,PP-OCRv5,multiframe-mobile,,115,0,0,48,fp32,cpu,,,datasets/experiments/multiframe_ocr_v1,,FROZEN,SELECTED,88 real tracks across 10 sequences
+foundation-synthetic-v2,SYNTHETIC,Generator,100k-degradation-corpus,,115,0,0,640,fp32,cpu,,,datasets/experiments/synthetic_indian_v2,,PLANNED,NOT_AUTHORITATIVE,Generated locally; images are ignored and not committed
