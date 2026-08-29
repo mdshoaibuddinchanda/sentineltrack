@@ -1,0 +1,12 @@
+flowchart TD
+  NOTE[PROJECTED ARCHITECTURE — NOT A CAPACITY MEASUREMENT]
+  CAM[80,000 cameras] --> GW[Department and edge gateways]
+  GW --> DIST[District / city shards]
+  DIST --> REG1[Regional zone 1]
+  DIST --> REG2[Regional zone 2]
+  DIST --> REGN[Regional zones N]
+  REG1 --> STATE[State control plane]
+  REG2 --> STATE
+  REGN --> STATE
+  STATE --> OPS[Governance, reporting, catalogue, audit]
+  NOTE -.-> STATE

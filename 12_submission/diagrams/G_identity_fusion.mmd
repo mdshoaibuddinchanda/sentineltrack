@@ -1,0 +1,17 @@
+flowchart TD
+  A[Candidate observation] --> B{Plate quality}
+  B -->|strong / exact| C[ANPR dominates]
+  C --> C1[ReID skipped or diagnostic only]
+  C1 --> Z[Identity source ANPR]
+  B -->|partial / degraded| D[Plate score + ReID score + time + feasibility]
+  D --> E{Plausible and corroborated?}
+  E -->|yes| F[ANPR_REID_SUPPORT]
+  E -->|no| G[Review / reject]
+  B -->|none usable| H[Appearance + time + feasibility]
+  H --> I[REID_REVIEW only]
+  D --> J{Physically infeasible?}
+  J -->|yes| K[Strong penalty / reject]
+  J -->|no| E
+  H --> L{Stale stream epoch?}
+  L -->|yes| K
+  L -->|no| I

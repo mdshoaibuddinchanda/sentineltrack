@@ -1,0 +1,18 @@
+flowchart TD
+  A[Packet / frame with PTS] --> B[Ingest camera_id + stream_epoch]
+  B --> C{Sampling decision}
+  C -->|stale / over budget| D[Drop with metric]
+  C -->|accepted| E[Bounded inference queue]
+  E --> F[Vehicle detection]
+  F --> G[ByteTrack per camera]
+  G --> H[Quality-ranked vehicle crops]
+  H --> I[Plate detection and mask]
+  I --> J[OCR and five-frame voting]
+  J --> K{ANPR quality}
+  K -->|strong| L[ANPR identity]
+  K -->|partial / none| M[Conditional P6 track embedding]
+  M --> N[Temporal and optional route feasibility]
+  L --> O[Deterministic fusion and safeguards]
+  N --> O
+  O --> P[Alert / review / reject explanation]
+  P --> Q[Event store, audit, WebSocket]

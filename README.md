@@ -22,7 +22,8 @@ SENTINEL STREAM INGESTION (RTSP / HLS)
  03_PLATE_DETECTION: Padded Vehicle Cropper + 960px Magnifier + Dedicated Plate YOLO
                   │
                   ▼
-   [NEXT: 04_PLATE_OCR -> 05_TARGET_MATCHING -> 06_VEHICLE_REID -> 07_ROUTE_ENGINE]
+04_PLATE_OCR -> 05_TARGET_MATCHING -> 06_VEHICLE_REID -> 07_ROUTE_ENGINE
+                  -> 08_BACKEND -> 09_DASHBOARD -> 10_SECURITY -> 11_SCALE
 ```
 
 ---
@@ -80,6 +81,10 @@ SENTINEL STREAM INGESTION (RTSP / HLS)
 * **Evidence boundary:** Local data has no verified same-vehicle cross-camera identity ground truth. P6 reports are explicitly `P6_APPEARANCE_PROXY_EVALUATION`; they do not claim cross-camera Rank-1/mAP accuracy.
 * **Bounded search:** Candidate lookup uses camera/epoch/class/time pruning, optional P7 feasibility, and an in-memory normalized matrix; no vector database or 80k-camera capacity claim is made.
 
+### Priority 12: Final Hackathon Submission Package
+
+The evaluator-facing package is in [`12_submission/README.md`](12_submission/README.md). It contains the official requirements matrix, evidence inventory, HLD, architecture diagrams, demo runbooks, model register, 80k rollout projection, HA/DR, security/privacy, department requirements, cost model, presentation outline, and final checklist.
+
 Run the P6 unit tests and bounded evaluation:
 
 ```bash
@@ -107,9 +112,8 @@ See [`reports/p6/P6_REPORT.md`](reports/p6/P6_REPORT.md), [`reports/p6/P6_EVALUA
 git clone https://github.com/mdshoaibuddinchanda/sentineltrack.git
 cd sentineltrack
 
-# Create and activate Python 3.12 environment
-conda create -n py312 python=3.12 -y
-conda activate py312
+# Activate the project Python 3.12 environment
+conda activate PY312
 pip install -r requirements.txt
 ```
 
@@ -123,12 +127,6 @@ cp .env.example .env
 
 Edit `.env` with your Sentinel host and database credentials.
 *(Note: `.env.example` contains development-only default credentials for local Docker Postgres).*
-
-### 3. Start Database
-
-```bash
-docker run -d --name sentinel-postgres -p 5432:5432 -e POSTGRES_USER=sentinel -e POSTGRES_PASSWORD=sentinel_dev -e POSTGRES_DB=sentinel postgis/postgis:16-3.4
-```
 
 ### 3. Start Database
 
@@ -152,7 +150,7 @@ python -m 04_plate_ocr.scripts.setup_ocr_models
 
 ## Testing & Validation
 
-Run the automated test suite (66 unit tests across Priorities 0–4):
+Run the automated Python test suite:
 
 ```bash
 python -m pytest -v
