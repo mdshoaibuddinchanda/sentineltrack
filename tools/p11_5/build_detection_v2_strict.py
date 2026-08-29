@@ -19,11 +19,14 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
+from PIL import Image, ImageOps
+
 
 ROOT = Path(__file__).resolve().parents[2]
 UPSTREAM = ROOT / "datasets" / "experiments" / "plate_detection_v2"
 OUTPUT = ROOT / "datasets" / "experiments" / "plate_detection_v2_strict"
 REPORT = ROOT / "reports" / "p11_5" / "dataset" / "DETECTION_V2_STRICT_FREEZE.json"
+KNOWN_CORRUPT_JPEG_SHA256 = "75a3933904200f80e22f640dd37e947d7428937877306623cecc46086b7782c6"
 
 
 def copy_or_link(source: Path, destination: Path) -> str:
@@ -32,6 +35,17 @@ def copy_or_link(source: Path, destination: Path) -> str:
     # while scanning, and a hardlink would mutate the upstream/source inode.
     shutil.copy2(source, destination)
     return "copy"
+
+
+def digest(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def normalize_known_corrupt_jpeg(path: Path, source_sha256: str) -> bool:
+    if source_sha256 != KNOWN_CORRUPT_JPEG_SHA256:
+        return False
+    ImageOps.exif_transpose(Image.open(path)).save(path, "JPEG", subsampling=0, quality=100)
+    return True
 
 
 def main() -> int:
@@ -61,6 +75,7 @@ def main() -> int:
     link_modes = Counter()
     split_counts = Counter()
     source_counts = Counter()
+    normalized_count = 0
     output_rows: list[dict[str, Any]] = []
     for row in selected:
         source_image = UPSTREAM / row["output_image"]
@@ -69,7 +84,8 @@ def main() -> int:
         label_out = OUTPUT / row["output_label"]
         link_modes["image_" + copy_or_link(source_image, image_out)] += 1
         link_modes["label_" + copy_or_link(source_label, label_out)] += 1
-        output_rows.append({**row, "output_image": image_out.relative_to(OUTPUT).as_posix(), "output_label": label_out.relative_to(OUTPUT).as_posix()})
+        normalized_count += int(normalize_known_corrupt_jpeg(image_out, row.get("sha256", "")))
+        output_rows.append({**row, "output_image": image_out.relative_to(OUTPUT).as_posix(), "output_label": label_out.relative_to(OUTPUT).as_posix(), "materialized_sha256": digest(image_out)})
         split_counts[row.get("split", "")] += 1
         source_counts[row.get("source_dataset", "")] += 1
 
@@ -96,6 +112,8 @@ def main() -> int:
         "split_counts": dict(split_counts),
         "source_contribution": dict(source_counts),
         "link_modes": dict(link_modes),
+        "materialized_normalization_count": normalized_count,
+        "materialized_normalization": "Ultralytics-compatible JPEG repair for the known source with missing EOI marker; source sha256 remains recorded in sha256.",
         "policy": "retain canonical plate_detection rows; exclude non-canonical rows in exact cross-split pHash groups",
         "notes": [
             "The upstream plate_detection_v2 derivative was not modified.",

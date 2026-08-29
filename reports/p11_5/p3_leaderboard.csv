@@ -1,0 +1,3 @@
+run_id,weights,imgsz,batch,precision,recall,f1,map50,map50_95,tiny_recall,square_or_tall_recall,p50_ms,p95_ms,fps
+baseline-production-strict-640,models\plate\production\best.pt,640,1,0.940984,0.940984,0.940984,0.9772707266590659,0.6461673770900098,0.8,0.987342,20.0105,25.5603,47.712
+p3-yolo11s-v2-e20-b4-640-r3-clean-authoritative,runs\p11_5\p3-yolo11s-v2-e20-b4-640-r3-clean\weights\best.pt,640,1,0.967742,0.983607,0.97561,0.9927233410046997,0.7827292419538258,0.8,0.974684,18.2064,21.0783,53.873

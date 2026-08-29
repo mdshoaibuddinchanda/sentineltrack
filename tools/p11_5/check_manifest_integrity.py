@@ -29,7 +29,7 @@ def main() -> int:
     checked = 0
     mismatches = []
     for row in csv.DictReader(manifest.open(encoding="utf-8", newline="")):
-        expected = row.get("image_sha256") or row.get("sha256") or ""
+        expected = row.get("materialized_sha256") or row.get("image_sha256") or row.get("sha256") or ""
         path = data_root / (row.get("output_image") or row.get("image", ""))
         if not expected or not path.is_file():
             continue

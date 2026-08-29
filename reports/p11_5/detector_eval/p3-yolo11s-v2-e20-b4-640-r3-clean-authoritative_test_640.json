@@ -1,0 +1,86 @@
+{
+  "run_id": "p3-yolo11s-v2-e20-b4-640-r3-clean-authoritative",
+  "weights": "runs\\p11_5\\p3-yolo11s-v2-e20-b4-640-r3-clean\\weights\\best.pt",
+  "weights_sha256": "ede0b69bba65472eff10fc29250f58b352a3a79be73aa1b93f435f8533bac3c1",
+  "dataset": "datasets/experiments/plate_detection_v2_strict",
+  "dataset_manifest_sha256": "13cdc1f68224fad1fb87fa764f0229b615fc702fe134df8ad73d3cce1196a47b",
+  "split": "test",
+  "imgsz": 640,
+  "batch": 1,
+  "device": "0",
+  "conf": 0.25,
+  "images": 293,
+  "tp": 300,
+  "fp": 10,
+  "fn": 5,
+  "precision": 0.967742,
+  "recall": 0.983607,
+  "f1": 0.97561,
+  "map50": 0.9927233410046997,
+  "map50_95": 0.7827292419538258,
+  "subsets": {
+    "standard_aspect": {
+      "gt": 226,
+      "tp": 223,
+      "recall": 0.986726
+    },
+    "square_or_tall": {
+      "gt": 79,
+      "tp": 77,
+      "recall": 0.974684
+    },
+    "tiny_lt60": {
+      "gt": 10,
+      "tp": 8,
+      "recall": 0.8
+    },
+    "small_60_120": {
+      "gt": 51,
+      "tp": 49,
+      "recall": 0.960784
+    },
+    "large_gt120": {
+      "gt": 244,
+      "tp": 243,
+      "recall": 0.995902
+    }
+  },
+  "latency": {
+    "1": {
+      "batch": 1,
+      "samples": 10,
+      "latency_ms_per_image": {
+        "mean": 18.5623,
+        "p50": 18.2064,
+        "p90": 19.3559,
+        "p95": 21.0783,
+        "p99": 22.4563
+      },
+      "fps": 53.873
+    },
+    "2": {
+      "batch": 2,
+      "samples": 20,
+      "latency_ms_per_image": {
+        "mean": 17.879,
+        "p50": 17.739,
+        "p90": 19.1316,
+        "p95": 20.1257,
+        "p99": 20.921
+      },
+      "fps": 55.931
+    },
+    "4": {
+      "batch": 4,
+      "samples": 40,
+      "latency_ms_per_image": {
+        "mean": 16.8935,
+        "p50": 16.5692,
+        "p90": 17.4841,
+        "p95": 18.118,
+        "p99": 18.6252
+      },
+      "fps": 59.194
+    }
+  }
+}

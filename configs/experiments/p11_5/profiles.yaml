@@ -12,11 +12,11 @@ profiles:
     precision: fp32
     minimum_vram_mb: 0
   development:
-    status: validated_baseline_only
+    status: locally_validated_candidate
     p1: models/vehicle/yolo11m.pt
-    p3: models/plate/production/best.pt
+    p3: runs/p11_5/p3-yolo11s-v2-e20-b4-640-r3-clean/weights/best.pt
     ocr: models/ocr/PP-OCRv5_mobile_rec_infer.onnx
-    temporal: current_multiframe_voter
+    temporal: current_multiframe_voter_window5
     runtime: pytorch_onnx_cpu_mix
     precision: fp32
     minimum_vram_mb: 0

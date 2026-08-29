@@ -1,0 +1,2 @@
+run_id,weights,imgsz,precision,recall,f1,map50,map50_95
+obb-yolo11s-v2-e20-b4-640-r3-clean-authoritative,runs\p11_5\obb-yolo11s-v2-e20-b4-640-r3-clean\weights\best.pt,640,0.9965846051729302,0.9958787719290948,0.996232,0.9949658703071672,0.8975787627780786

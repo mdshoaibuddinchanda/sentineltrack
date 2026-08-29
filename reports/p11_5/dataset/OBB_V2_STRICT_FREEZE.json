@@ -1,0 +1,18 @@
+{
+  "status": "FROZEN_READY_FOR_TRAINING",
+  "upstream_manifest_sha256": "3b17b37f5f0c3b8183b6060c58272adb3435b8288bd1f11af98d3bb25d49336f",
+  "strict_detection_manifest_sha256": "13cdc1f68224fad1fb87fa764f0229b615fc702fe134df8ad73d3cce1196a47b",
+  "selected_unique_images": 4854,
+  "split_counts": {
+    "test": 293,
+    "train": 3924,
+    "val": 637
+  },
+  "link_modes": {
+    "image_copy": 4854,
+    "label_copy": 4854
+  },
+  "materialized_normalization_count": 1,
+  "materialized_normalization": "Ultralytics-compatible JPEG repair for the known source with missing EOI marker; source sha256 remains recorded in sha256.",
+  "geometry": "polygon_min_area_rect where available; axis-aligned fallback retained from upstream"
+}

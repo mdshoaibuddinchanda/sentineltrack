@@ -1,21 +1,24 @@
-# P11.5 temporal report
+# Temporal Report
 
-`tools/p11_5/temporal.py` now provides a pure, test-covered weighted consensus
-policy. It normalizes candidate strings, filters by confidence and crop
-quality, aggregates support across frame indices, and returns an auditable
-consensus result. It does not assert that a consensus is ground truth.
+True sequence/registration-identity tracks only; no random equal-text grouping.
 
-The source audit found 654 sequence-capable `video_images` frames across ten
-inferred video IDs. Those XML annotations provide detection boxes and many
-plate-like names, but there is no locked frame-level OCR track benchmark with a
-defined train/validation/test protocol. Therefore current voter, best-3,
-best-5, best-8, character fusion, logit fusion, learned fusion, quality-aware
-escalation, and temporal promotion are `NOT_EVALUATED`.
+| window | method | eligible | exact | char | CER |
+| --- | --- | --- | --- | --- | --- |
+| 1 | single_best | 88 | 0.215909 | 0.577143 | 0.24 |
+| 1 | current_voter | 88 | 0.329545 | 0.593143 | 0.250286 |
+| 1 | weighted_vote | 88 | 0.215909 | 0.577143 | 0.24 |
+| 1 | character_fusion | 88 | 0.215909 | 0.577143 | 0.24 |
+| 3 | single_best | 64 | 0.296875 | 0.665094 | 0.204403 |
+| 3 | current_voter | 64 | 0.515625 | 0.742138 | 0.127358 |
+| 3 | weighted_vote | 64 | 0.328125 | 0.691824 | 0.194969 |
+| 3 | character_fusion | 64 | 0.34375 | 0.713836 | 0.190252 |
+| 5 | single_best | 38 | 0.342105 | 0.806878 | 0.124339 |
+| 5 | current_voter | 38 | 0.631579 | 0.835979 | 0.108466 |
+| 5 | weighted_vote | 38 | 0.368421 | 0.81746 | 0.10582 |
+| 5 | character_fusion | 38 | 0.342105 | 0.804233 | 0.121693 |
+| 8 | single_best | 24 | 0.25 | 0.782427 | 0.150628 |
+| 8 | current_voter | 24 | 0.666667 | 0.90795 | 0.075314 |
+| 8 | weighted_vote | 24 | 0.291667 | 0.803347 | 0.146444 |
+| 8 | character_fusion | 24 | 0.291667 | 0.807531 | 0.129707 |
 
-Required evidence before promotion:
-
-1. define track boundaries and frame order from the source video metadata;
-2. validate frame-level text labels and identity grouping;
-3. compare single-frame and each temporal policy on the same locked track set;
-4. record exact match, character accuracy, CER, false-correction rate, and
-   latency/VRAM under the intended stream load.
+Logit fusion is unavailable because the PP-OCRv5 ONNX interface exposes decoded text and character confidence, not timestep logits.

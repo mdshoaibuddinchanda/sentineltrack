@@ -31,6 +31,36 @@ models:
     training_run_id: unknown
     minimum_vram_mb: 4096
     recommended_batch: 1
+  - logical_name: plate_detector_p11_5_candidate
+    architecture: custom YOLO11s
+    family: YOLO11
+    source: P11.5 isolated transfer-learning candidate
+    source_version: ultralytics-8.3.235
+    license: inherited_source_license_not_recorded
+    weight_path: runs/p11_5/p3-yolo11s-v2-e20-b4-640-r3-clean/weights/best.pt
+    sha256: ede0b69bba65472eff10fc29250f58b352a3a79be73aa1b93f435f8533bac3c1
+    input_size: 640
+    precision: amp_training_fp32_inference
+    runtime: Ultralytics/PyTorch
+    dataset_version: plate_detection_v2_strict
+    training_run_id: p3-yolo11s-v2-e20-b4-640-r3-clean
+    minimum_vram_mb: 4096
+    recommended_batch: 1
+  - logical_name: plate_detector_obb_p11_5_candidate
+    architecture: YOLO11s-OBB
+    family: YOLO11
+    source: P11.5 isolated OBB transfer-learning candidate
+    source_version: ultralytics-8.3.235
+    license: inherited_source_license_not_recorded
+    weight_path: runs/p11_5/obb-yolo11s-v2-e20-b4-640-r3-clean/weights/best.pt
+    sha256: b5da705740e53a96e324c982880b4cfce81fc7ec905fb4c124d3b73ef5c31d9d
+    input_size: 640
+    precision: amp_training_fp32_inference
+    runtime: Ultralytics/PyTorch
+    dataset_version: plate_detection_obb_v2_strict
+    training_run_id: obb-yolo11s-v2-e20-b4-640-r3-clean
+    minimum_vram_mb: 4096
+    recommended_batch: 1
   - logical_name: ocr_recognizer_mobile
     architecture: PP-OCRv5 Mobile recognition
     family: PP-OCRv5

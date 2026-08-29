@@ -1,0 +1,86 @@
+{
+  "run_id": "baseline-production-strict-640",
+  "weights": "models\\plate\\production\\best.pt",
+  "weights_sha256": "8603afbc9ee2c16f99971898ae98211048c01cc6668bc5d5cc46df13d5f9c8ba",
+  "dataset": "datasets/experiments/plate_detection_v2_strict",
+  "dataset_manifest_sha256": "ff07e390a16b006eeb20e49dc5e6e23dd8480675ccf6b9c6edf662f1a264be2b",
+  "split": "test",
+  "imgsz": 640,
+  "batch": 1,
+  "device": "0",
+  "conf": 0.25,
+  "images": 293,
+  "tp": 287,
+  "fp": 18,
+  "fn": 18,
+  "precision": 0.940984,
+  "recall": 0.940984,
+  "f1": 0.940984,
+  "map50": 0.9772707266590659,
+  "map50_95": 0.6461673770900098,
+  "subsets": {
+    "standard_aspect": {
+      "gt": 226,
+      "tp": 209,
+      "recall": 0.924779
+    },
+    "square_or_tall": {
+      "gt": 79,
+      "tp": 78,
+      "recall": 0.987342
+    },
+    "tiny_lt60": {
+      "gt": 10,
+      "tp": 8,
+      "recall": 0.8
+    },
+    "small_60_120": {
+      "gt": 51,
+      "tp": 49,
+      "recall": 0.960784
+    },
+    "large_gt120": {
+      "gt": 244,
+      "tp": 230,
+      "recall": 0.942623
+    }
+  },
+  "latency": {
+    "1": {
+      "batch": 1,
+      "samples": 10,
+      "latency_ms_per_image": {
+        "mean": 20.9593,
+        "p50": 20.0105,
+        "p90": 25.1614,
+        "p95": 25.5603,
+        "p99": 25.8794
+      },
+      "fps": 47.712
+    },
+    "2": {
+      "batch": 2,
+      "samples": 20,
+      "latency_ms_per_image": {
+        "mean": 17.3866,
+        "p50": 16.8562,
+        "p90": 18.1008,
+        "p95": 19.9287,
+        "p99": 21.391
+      },
+      "fps": 57.516
+    },
+    "4": {
+      "batch": 4,
+      "samples": 40,
+      "latency_ms_per_image": {
+        "mean": 16.4732,
+        "p50": 16.3559,
+        "p90": 17.1569,
+        "p95": 17.2663,
+        "p99": 17.3538
+      },
+      "fps": 60.705
+    }
+  }
+}

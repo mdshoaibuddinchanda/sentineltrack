@@ -18,9 +18,11 @@
     "video_images": 504
   },
   "link_modes": {
-    "image_hardlink": 4854,
-    "label_hardlink": 4854
+    "image_copy": 4854,
+    "label_copy": 4854
   },
+  "materialized_normalization_count": 1,
+  "materialized_normalization": "Ultralytics-compatible JPEG repair for the known source with missing EOI marker; source sha256 remains recorded in sha256.",
   "policy": "retain canonical plate_detection rows; exclude non-canonical rows in exact cross-split pHash groups",
   "notes": [
     "The upstream plate_detection_v2 derivative was not modified.",
