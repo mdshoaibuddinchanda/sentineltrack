@@ -6,7 +6,7 @@ P11.5C corrected the detector-to-OCR evaluation, diagnosed crop geometry, proved
 
 ## Key correction
 
-The prior strict E2E OCR result was invalid for OCR claims: `plate_detection_v2_strict` contains plate boxes but empty OCR text labels. The corrected benchmark now rejects manifests without non-empty text ground truth and evaluates the 143 text-labelled test frames from `multiframe_ocr_v1`.
+The prior strict E2E OCR result was invalid for OCR claims: `plate_detection_v2_strict` contains plate boxes but incomplete OCR supervision (only 37 of 293 test rows have non-empty text). The corrected benchmark now rejects manifests without complete text ground truth and evaluates the 143 fully text-labelled test frames from `multiframe_ocr_v1`.
 
 ## Measured results
 

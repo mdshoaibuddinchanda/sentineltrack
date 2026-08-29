@@ -1,6 +1,6 @@
 # End-to-End Detector → OCR Report
 
-The earlier strict-detection E2E OCR table is retired: that manifest is detection-only and its OCR text columns are empty. The benchmark now refuses such a manifest and uses the text-labelled held-out sequence test (`multiframe_ocr_v1`, 143 test frames).
+The earlier strict-detection E2E OCR table is retired: that manifest has incomplete OCR supervision (only 37 of its 293 test rows have non-empty text). The benchmark now refuses such a manifest and uses the fully text-labelled held-out sequence test (`multiframe_ocr_v1`, 143 test frames).
 
 Pipeline: detector → predicted AABB crop → PP-OCRv5 mobile → existing structural decoder metrics.
 
