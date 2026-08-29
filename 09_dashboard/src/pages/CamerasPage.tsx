@@ -25,34 +25,46 @@ export function CamerasPage({ cameras, onSelectCamera }: CamerasPageProps) {
   // Synchronize routeCameraId with cameras array (handling async load)
   useEffect(() => {
     if (routeCameraId) {
-      const match = cameras.find((c) => c.camera_id === routeCameraId);
-      if (match) {
-        setSelectedCam(match);
-        if (match.latitude && match.longitude) {
-          setSearchingNearby(true);
-          searchNearbyCameras(match.latitude, match.longitude, 5000)
-            .then((res) => setNearbyCams(res.filter((c) => c.camera_id !== match.camera_id)))
-            .catch(() => setNearbyCams([]))
-            .finally(() => setSearchingNearby(false));
-        } else {
-          setNearbyCams([]);
-        }
-      } else {
-        setSelectedCam(null);
-        setNearbyCams([]);
-      }
-    } else if (cameras.length > 0 && !selectedCam) {
-      const first = cameras[0];
-      setSelectedCam(first);
-      if (first.latitude && first.longitude) {
-        setSearchingNearby(true);
-        searchNearbyCameras(first.latitude, first.longitude, 5000)
-          .then((res) => setNearbyCams(res.filter((c) => c.camera_id !== first.camera_id)))
-          .catch(() => setNearbyCams([]))
-          .finally(() => setSearchingNearby(false));
-      }
+      setSelectedCam(cameras.find((c) => c.camera_id === routeCameraId) ?? null);
+    } else {
+      setSelectedCam((current) => current ?? cameras[0] ?? null);
     }
   }, [routeCameraId, cameras]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const camera = selectedCam;
+
+    if (!camera?.latitude || !camera?.longitude) {
+      setNearbyCams([]);
+      setSearchingNearby(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setSearchingNearby(true);
+    searchNearbyCameras(camera.latitude, camera.longitude, 5000)
+      .then((res) => {
+        if (!cancelled) {
+          setNearbyCams(res.filter((c) => c.camera_id !== camera.camera_id));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setNearbyCams([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setSearchingNearby(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCam]);
 
   const filteredCameras = cameras.filter((cam) => {
     const matchesSearch =
@@ -64,24 +76,10 @@ export function CamerasPage({ cameras, onSelectCamera }: CamerasPageProps) {
     return matchesSearch && matchesStatus;
   });
 
-  const handleSelectCamera = async (cam: Camera) => {
+  const handleSelectCamera = (cam: Camera) => {
     setSelectedCam(cam);
     onSelectCamera?.(cam.camera_id);
     navigate(`/cameras/${encodeURIComponent(cam.camera_id)}`);
-
-    if (cam.latitude && cam.longitude) {
-      try {
-        setSearchingNearby(true);
-        const res = await searchNearbyCameras(cam.latitude, cam.longitude, 5000);
-        setNearbyCams(res.filter((c) => c.camera_id !== cam.camera_id));
-      } catch {
-        setNearbyCams([]);
-      } finally {
-        setSearchingNearby(false);
-      }
-    } else {
-      setNearbyCams([]);
-    }
   };
 
   return (

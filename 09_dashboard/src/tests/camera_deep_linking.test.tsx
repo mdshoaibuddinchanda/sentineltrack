@@ -1,9 +1,13 @@
 import { describe, it, expect, vi } from "vitest";
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { CamerasPage } from "../pages/CamerasPage";
 import { Camera } from "../types/api";
+
+vi.mock("../api/cameras", () => ({
+  searchNearbyCameras: vi.fn().mockResolvedValue([]),
+}));
 
 describe("Camera Deep Linking & Asynchronous Loading Tests", () => {
   const mockCameras: Camera[] = [
@@ -33,7 +37,7 @@ describe("Camera Deep Linking & Asynchronous Loading Tests", () => {
     },
   ];
 
-  it("selects requested camera from route URL parameter", () => {
+  it("selects requested camera from route URL parameter", async () => {
     render(
       <MemoryRouter initialEntries={["/cameras/cam_vastrapur_01"]}>
         <Routes>
@@ -45,11 +49,13 @@ describe("Camera Deep Linking & Asynchronous Loading Tests", () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText("Vastrapur Lake East")).toBeDefined();
-    expect(screen.getAllByText("Urban Security").length).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(screen.getByText("Vastrapur Lake East")).toBeDefined();
+      expect(screen.getAllByText("Urban Security").length).toBeGreaterThan(0);
+    });
   });
 
-  it("asynchronously synchronizes camera selection once camera list arrives", () => {
+  it("asynchronously synchronizes camera selection once camera list arrives", async () => {
     const { rerender } = render(
       <MemoryRouter initialEntries={["/cameras/cam_vastrapur_01"]}>
         <Routes>
@@ -76,8 +82,10 @@ describe("Camera Deep Linking & Asynchronous Loading Tests", () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText("Vastrapur Lake East")).toBeDefined();
-    expect(screen.getAllByText("Urban Security").length).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(screen.getByText("Vastrapur Lake East")).toBeDefined();
+      expect(screen.getAllByText("Urban Security").length).toBeGreaterThan(0);
+    });
   });
 
   it("displays truthful not-found state when requested camera ID does not exist", () => {
