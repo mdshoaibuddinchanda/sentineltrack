@@ -1,9 +1,8 @@
-"""Diagnose the detector-to-OCR handoff on the locked strict test split.
+"""Diagnose the plate recognition chain on the locked strict test split.
 
-This is intentionally an aggregate-only diagnostic.  It does not write crops,
-raw detector predictions, or model artifacts.  It compares the current
-highest-confidence AABB path with offline oracle selection, padding, GT crops,
-and (when supplied) an OBB model's perspective-warp crop.
+This is intentionally an aggregate-only diagnostic. It does not write crops,
+raw detector predictions, or model artifacts. Every class-0 prediction and
+every GT box is matched one-to-one before crop variants are compared.
 """
 
 from __future__ import annotations
@@ -19,6 +18,8 @@ import time
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any, Iterable
+
+from detection_matching import greedy_one_to_one_matches
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -64,6 +65,20 @@ def truth_box(row: dict[str, str], width: int, height: int, data_root: Path) -> 
     return gt_box(data_root / label, width, height) if label else None
 
 
+def truth_boxes(row: dict[str, str], width: int, height: int, data_root: Path) -> list[dict[str, Any]]:
+    """Return every GT plate box and its text for one source frame."""
+    if row.get("bbox_json"):
+        values = json.loads(row["bbox_json"])
+        texts = json.loads(row["gt_texts_json"]) if row.get("gt_texts_json") else []
+        return [
+            {"box": [float(value) for value in box], "text": str(texts[index] if index < len(texts) else row.get("plate_text_normalized", ""))}
+            for index, box in enumerate(values)
+            if isinstance(box, list) and len(box) == 4
+        ]
+    single = truth_box(row, width, height, data_root)
+    return [{"box": single, "text": row.get("plate_text_normalized", "")} ] if single is not None else []
+
+
 def load_multiframe_test_rows() -> list[dict[str, str]]:
     """Load text-labelled held-out sequence frames with XML box supervision."""
     dataset = ROOT / "datasets" / "experiments" / "multiframe_ocr_v1"
@@ -74,16 +89,21 @@ def load_multiframe_test_rows() -> list[dict[str, str]]:
                 continue
             xml_path = ROOT / Path(frame["source_path"]).with_suffix(".xml")
             annotation = ET.parse(xml_path).getroot()
-            box = annotation.find(".//object/bndbox")
-            if box is None:
-                continue
-            values = [box.findtext(name) for name in ("xmin", "ymin", "xmax", "ymax")]
-            if any(value is None for value in values):
+            boxes = []
+            for obj in annotation.findall(".//object"):
+                box = obj.find("bndbox")
+                if box is None:
+                    continue
+                values = [box.findtext(name) for name in ("xmin", "ymin", "xmax", "ymax")]
+                if any(value is None for value in values):
+                    continue
+                boxes.append([float(value) for value in values])
+            if not boxes:
                 continue
             rows.append({
                 "output_image": frame["source_path"],
                 "output_label": "",
-                "bbox_json": json.dumps([[float(value) for value in values]]),
+                "bbox_json": json.dumps(boxes),
                 "plate_text_normalized": frame["gt_text"],
                 "track_id": frame["track_id"],
             })
@@ -212,13 +232,16 @@ def evaluate_crops(
 ) -> dict[str, Any]:
     prepared = []
     for crop in crops:
+        if crop is None:
+            prepared.append(None)
+            continue
         image, _ = eval_mod.preprocess_crop(crop, variant="raw", target_height=48)
         prepared.append(image)
     started = time.perf_counter()
     # The deployable path and the reference benchmark call recognize() per
     # crop.  The ONNX model's dynamic-width batch path can decode a different
     # time horizon, so it is deliberately not used for this comparison.
-    outputs = [recognizer.recognize(image) for image in prepared]
+    outputs = [recognizer.recognize(image) if image is not None else ("", 0.0, []) for image in prepared]
     elapsed = (time.perf_counter() - started) * 1000
     predictions = [item[0] or "" for item in outputs]
     all_metrics = eval_mod.calculate_metrics(predictions, truths)
@@ -261,44 +284,44 @@ def run_aabb_model(model_path: Path, rows: list[dict[str, str]], data_root: Path
     confidences: list[float] = []
     all_detections = 0
     fp = fn = tp = 0
-    image_rows: list[tuple[dict[str, str], Any, list[float] | None]] = []
+    image_rows: list[tuple[dict[str, str], Any, list[dict[str, Any]]]] = []
     for row in rows:
         image = cv2.imread(str(data_root / row["output_image"]), cv2.IMREAD_COLOR)
         if image is None:
             continue
         h, w = image.shape[:2]
-        image_rows.append((row, image, truth_box(row, w, h, data_root)))
+        image_rows.append((row, image, truth_boxes(row, w, h, data_root)))
     detector_started = time.perf_counter()
-    for index, (row, image, truth) in enumerate(image_rows, start=1):
+    for index, (row, image, ground_truths) in enumerate(image_rows, start=1):
         result = model.predict(source=image, imgsz=640, conf=0.25, device=device, verbose=False)[0]
         detections = detection_items(result)
         all_detections += len(detections)
-        current = max(detections, key=lambda item: item["conf"], default=None)
-        oracle = max(detections, key=lambda item: iou(item["box"], truth) if truth is not None else 0.0, default=None)
-        current_match = bool(current and truth is not None and iou(current["box"], truth) >= 0.5)
-        if current_match:
-            tp += 1
-        else:
+        matches = greedy_one_to_one_matches(detections, [entry["box"] for entry in ground_truths])
+        matched_by_gt = {item["ground_truth_index"]: item for item in matches}
+        tp += len(matches)
+        fp += len(detections) - len(matches)
+        fn += len(ground_truths) - len(matches)
+        for gt_index, ground_truth in enumerate(ground_truths):
+            match = matched_by_gt.get(gt_index)
+            current = detections[match["prediction_index"]] if match is not None else None
+            oracle = max(detections, key=lambda item: iou(item["box"], ground_truth["box"]), default=None)
+            current_match = match is not None
+            truths.append(str(ground_truth["text"]))
+            current_mask.append(current_match)
             if current is not None:
-                fp += 1
-            if truth is not None:
-                fn += 1
-        truths.append(row.get("plate_text_normalized", ""))
-        current_mask.append(current_match)
-        if current is not None and truth is not None:
-            current_iou = iou(current["box"], truth)
-            ious.append(current_iou)
-            confidences.append(current["conf"])
-            cw = max(0.0, current["box"][2] - current["box"][0])
-            ch = max(0.0, current["box"][3] - current["box"][1])
-            widths.append(cw)
-            heights.append(ch)
-            aspects.append(cw / max(ch, 1.0))
-        for margin in (0, 2, 4, 6, 8):
-            current_crops[f"aabb_margin_{margin}"].append(crop_from_box(image, current["box"] if current else None, margin))
-        oracle_crops.append(crop_from_box(image, oracle["box"] if oracle else None, 0))
-        gt_crops.append(crop_from_box(image, truth, 0))
-        oracle_mask.append(bool(oracle and truth is not None and iou(oracle["box"], truth) >= 0.5))
+                current_iou = iou(current["box"], ground_truth["box"])
+                ious.append(current_iou)
+                confidences.append(current["conf"])
+                cw = max(0.0, current["box"][2] - current["box"][0])
+                ch = max(0.0, current["box"][3] - current["box"][1])
+                widths.append(cw)
+                heights.append(ch)
+                aspects.append(cw / max(ch, 1.0))
+            for margin in (0, 2, 4, 6, 8):
+                current_crops[f"aabb_margin_{margin}"].append(crop_from_box(image, current["box"] if current else None, margin))
+            oracle_crops.append(crop_from_box(image, oracle["box"] if oracle else None, 0))
+            gt_crops.append(crop_from_box(image, ground_truth["box"], 0))
+            oracle_mask.append(bool(oracle and iou(oracle["box"], ground_truth["box"]) >= 0.5))
         if index % 50 == 0 or index == len(image_rows):
             print(f"{model_path.name}: detector {index}/{len(image_rows)}", flush=True)
 
@@ -320,7 +343,7 @@ def run_aabb_model(model_path: Path, rows: list[dict[str, str]], data_root: Path
             "batch_elapsed_ms": round(detector_elapsed_ms, 3),
             "mean_latency_ms": round(detector_elapsed_ms / max(1, len(image_rows)), 3),
         },
-        "current_high_conf_geometry": {
+        "matched_detection_geometry": {
             "iou": summarize_numbers(ious),
             "confidence": summarize_numbers(confidences),
             "width_px": summarize_numbers(widths),
@@ -329,8 +352,9 @@ def run_aabb_model(model_path: Path, rows: list[dict[str, str]], data_root: Path
         },
         "crop_results": crop_results,
         "interpretation": {
-            "current_aabb_metrics_are_full_frame": True,
-            "conditional_metrics_only_include_current_iou_ge_0_5": True,
+            "detector_counts_use_all_class0_predictions_and_all_gt_boxes": True,
+            "current_aabb_metrics_are_plate_recognition_chain_metrics": True,
+            "conditional_metrics_only_include_one_to_one_matches_at_iou_ge_0_5": True,
             "gt_aabb_is_an_ocr_upper_bound_not_a_deployable_path": True,
         },
     }
@@ -349,39 +373,37 @@ def run_obb_model(model_path: Path, rows: list[dict[str, str]], data_root: Path,
     warp_widths: list[float] = []
     warp_heights: list[float] = []
     tp = fp = fn = 0
-    image_rows: list[tuple[dict[str, str], Any, list[float] | None]] = []
+    image_rows: list[tuple[dict[str, str], Any, list[dict[str, Any]]]] = []
     for row in rows:
         image = cv2.imread(str(data_root / row["output_image"]), cv2.IMREAD_COLOR)
         if image is None:
             continue
         h, w = image.shape[:2]
-        image_rows.append((row, image, truth_box(row, w, h, data_root)))
+        image_rows.append((row, image, truth_boxes(row, w, h, data_root)))
     detector_started = time.perf_counter()
-    for index, (row, image, truth) in enumerate(image_rows, start=1):
+    for index, (row, image, ground_truths) in enumerate(image_rows, start=1):
         result = model.predict(source=image, imgsz=640, conf=0.25, device=device, verbose=False)[0]
         detections = obb_items(result)
-        current = max(detections, key=lambda item: item["conf"], default=None)
-        current_match = bool(current and truth is not None and iou(current["box"], truth) >= 0.5)
-        if current_match:
-            tp += 1
-        else:
-            if current is not None:
-                fp += 1
-            if truth is not None:
-                fn += 1
-        truths.append(row.get("plate_text_normalized", ""))
-        masks.append(current_match)
-        if current is None:
-            aabb_crops.append(None)
-            warp_crops.append(None)
-        else:
-            aabb_crops.append(crop_from_box(image, current["box"], 0))
-            warp = warp_quad(image, current["polygon"])
-            warp_crops.append(warp)
-            warp_heights.append(float(warp.shape[0]))
-            warp_widths.append(float(warp.shape[1]))
-            if truth is not None:
-                ious.append(iou(current["box"], truth))
+        matches = greedy_one_to_one_matches(detections, [entry["box"] for entry in ground_truths])
+        matched_by_gt = {item["ground_truth_index"]: item for item in matches}
+        tp += len(matches)
+        fp += len(detections) - len(matches)
+        fn += len(ground_truths) - len(matches)
+        for gt_index, ground_truth in enumerate(ground_truths):
+            match = matched_by_gt.get(gt_index)
+            current = detections[match["prediction_index"]] if match is not None else None
+            truths.append(str(ground_truth["text"]))
+            masks.append(match is not None)
+            if current is None:
+                aabb_crops.append(None)
+                warp_crops.append(None)
+            else:
+                aabb_crops.append(crop_from_box(image, current["box"], 0))
+                warp = warp_quad(image, current["polygon"])
+                warp_crops.append(warp)
+                warp_heights.append(float(warp.shape[0]))
+                warp_widths.append(float(warp.shape[1]))
+                ious.append(iou(current["box"], ground_truth["box"]))
         if index % 50 == 0 or index == len(image_rows):
             print(f"{model_path.name}: detector {index}/{len(image_rows)}", flush=True)
     detector_elapsed_ms = (time.perf_counter() - detector_started) * 1000
@@ -397,7 +419,11 @@ def run_obb_model(model_path: Path, rows: list[dict[str, str]], data_root: Path,
             "obb_aabb": evaluate_crops(aabb_crops, truths, eval_mod, recognizer, masks),
             "obb_perspective_warp": evaluate_crops(warp_crops, truths, eval_mod, recognizer, masks),
         },
-        "interpretation": {"obb_match_uses_polygon_aabb_iou_ge_0_5": True, "obb_perspective_warp_is_the_downstream_test": True},
+        "interpretation": {
+            "detector_counts_use_all_class0_predictions_and_all_gt_boxes": True,
+            "obb_match_uses_polygon_aabb_iou_ge_0_5": True,
+            "obb_perspective_warp_is_the_downstream_test": True,
+        },
     }
 
 

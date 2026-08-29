@@ -4,11 +4,11 @@ Generated from local PY312 files and reports. A missing checkpoint or interrupte
 
 | Requested item | Status | Evidence / result |
 |---|---|---|
-| YOLO11m/l/x plate tournament | INCOMPLETE_LOCAL_EVIDENCE | No comparable completed m/l/x plate tournament; existing YOLO11s reference end-to-end exact 0.3427. |
-| YOLO26 tournament | INCOMPLETE_LOCAL_EVIDENCE | Installed Ultralytics family support: True; YOLO26m has smoke evidence, while l/x have no completed run. |
-| SVTRv2 / PARSeq / MGP-STR | BLOCKED_LOCAL_RUNTIME_AND_CHECKPOINTS | No runnable local package/checkpoint for these requested candidates. |
-| OCR fine-tuning | NOT_COMPLETED | Only ONNX PP-OCRv5 inference exports are available; no compatible train checkpoint/config/export toolchain is present. |
-| Full-scale synthetic curriculum | CORPUS_COMPLETE_SCREENING_ONLY | 100000 generated; bounded screens only, full-scale training pending. |
+| YOLO11m/l/x plate tournament | FULL_ARCHITECTURE_TOURNAMENT_DEFERRED_NOT_REQUIRED_FOR_P11_5_FREEZE | No comparable completed m/l/x plate tournament; existing YOLO11s reference end-to-end exact 0.3427. |
+| YOLO26 tournament | FULL_ARCHITECTURE_TOURNAMENT_DEFERRED_NOT_REQUIRED_FOR_P11_5_FREEZE | YOLO26m smoke evidence remains diagnostic; l/x are intentionally not started. Production runtime remains pinned and the YOLO26 dependency is isolated. |
+| SVTRv2 / PARSeq / MGP-STR | DEFERRED_NOT_REQUIRED_FOR_P11_5_FREEZE | No comparable local production integration/checkpoint was evaluated; these are optional future candidates. |
+| OCR fine-tuning | INTERRUPTED_RESOURCE_LIMITED_NO_CHECKPOINT | Official PaddleOCR training was attempted in an isolated environment, but the CPU run did not reach its first logging interval and produced no checkpoint or metric. PP-OCRv5 Mobile ONNX remains selected. |
+| Full-scale synthetic curriculum | REJECTED_BY_BOUNDED_SCREEN | 100000 generated; real-only won the bounded screen, so synthetic addition is rejected. |
 | Production crop modification | EVALUATED_NO_PROMOTION | AABB 0.3427; OBB 0.3357; production left unchanged. |
 
 ## Detector candidate evidence
@@ -21,12 +21,12 @@ Smoke rows are one-epoch diagnostics; they are not a fair ranking against the co
 | YOLO11l plate | TRAINED_SMOKE_EVALUATED_NOT_FINAL | 1 | 0.0830 | 0.0249 | 0.0538 | 42.3785 |
 | YOLO11x plate | READY_FOR_ISOLATED_TRAINING | - | - | - | - | - |
 | YOLO26m plate | TRAINED_SMOKE_EVALUATED_NOT_FINAL | 1 | 0.3884 | 0.1599 | 0.3910 | 35.8937 |
-| YOLO26l plate | READY_FOR_ISOLATED_TRAINING | - | - | - | - | - |
-| YOLO26x plate | READY_FOR_ISOLATED_TRAINING | - | - | - | - | - |
+| YOLO26l plate | BLOCKED_PACKAGE | - | - | - | - | - |
+| YOLO26x plate | BLOCKED_PACKAGE | - | - | - | - | - |
 
 ## Interpretation
 
-The requested list was not previously completed in full. The existing work is a valid measured baseline and screening package, but it does not justify claiming a full model tournament, modern OCR integration, OCR fine-tuning, or full-scale synthetic training. The crop item is intentionally an evaluation/no-promotion decision because the measured alternative was worse.
+P11.5 freeze decision: all locally feasible evidence and accounting work is complete. Full architecture tournaments, modern OCR alternatives, longer OCR optimization, and full-scale synthetic training are optional future research—not blockers for this freeze. The crop item is an evaluation/no-promotion decision because the measured alternative was worse.
 
 ## Reproducibility
 

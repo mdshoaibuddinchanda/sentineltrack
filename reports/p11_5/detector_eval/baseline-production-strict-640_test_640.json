@@ -3,10 +3,10 @@
   "weights": "models\\plate\\production\\best.pt",
   "weights_sha256": "8603afbc9ee2c16f99971898ae98211048c01cc6668bc5d5cc46df13d5f9c8ba",
   "dataset": "datasets/experiments/plate_detection_v2_strict",
-  "dataset_manifest_sha256": "ff07e390a16b006eeb20e49dc5e6e23dd8480675ccf6b9c6edf662f1a264be2b",
+  "dataset_manifest_sha256": "13cdc1f68224fad1fb87fa764f0229b615fc702fe134df8ad73d3cce1196a47b",
   "split": "test",
   "imgsz": 640,
-  "batch": 1,
+  "batch": 4,
   "device": "0",
   "conf": 0.25,
   "images": 293,
@@ -16,8 +16,8 @@
   "precision": 0.940984,
   "recall": 0.940984,
   "f1": 0.940984,
-  "map50": 0.9772707266590659,
-  "map50_95": 0.6461673770900098,
+  "map50": 0.9780687256963778,
+  "map50_95": 0.6468958227846279,
   "subsets": {
     "standard_aspect": {
       "gt": 226,
@@ -50,37 +50,37 @@
       "batch": 1,
       "samples": 10,
       "latency_ms_per_image": {
-        "mean": 20.9593,
-        "p50": 20.0105,
-        "p90": 25.1614,
-        "p95": 25.5603,
-        "p99": 25.8794
+        "mean": 21.6176,
+        "p50": 21.0613,
+        "p90": 23.8111,
+        "p95": 24.804,
+        "p99": 25.5984
       },
-      "fps": 47.712
+      "fps": 46.259
     },
     "2": {
       "batch": 2,
       "samples": 20,
       "latency_ms_per_image": {
-        "mean": 17.3866,
-        "p50": 16.8562,
-        "p90": 18.1008,
-        "p95": 19.9287,
-        "p99": 21.391
+        "mean": 20.2872,
+        "p50": 20.1937,
+        "p90": 21.663,
+        "p95": 21.7919,
+        "p99": 21.8951
       },
-      "fps": 57.516
+      "fps": 49.292
     },
     "4": {
       "batch": 4,
       "samples": 40,
       "latency_ms_per_image": {
-        "mean": 16.4732,
-        "p50": 16.3559,
-        "p90": 17.1569,
-        "p95": 17.2663,
-        "p99": 17.3538
+        "mean": 21.0145,
+        "p50": 21.0345,
+        "p90": 21.6473,
+        "p95": 21.7472,
+        "p99": 21.8272
       },
-      "fps": 60.705
+      "fps": 47.586
     }
   }
 }

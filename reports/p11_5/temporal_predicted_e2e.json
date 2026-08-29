@@ -7,11 +7,13 @@
   "frames": 143,
   "detector": {
     "tp": 143,
-    "fp": 0,
+    "fp": 4,
     "fn": 0,
-    "precision": 1.0,
+    "precision": 0.972789,
     "recall": 1.0,
-    "mean_latency_ms": 41.567
+    "f1": 0.986207,
+    "mean_latency_ms": 38.969,
+    "matching": "all class-0 predictions and all GT boxes greedily matched one-to-one at IoU >= 0.5"
   },
   "recognizer": "PP-OCRv5 mobile on predicted AABB crops",
   "paired_population": {

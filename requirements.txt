@@ -1,6 +1,6 @@
 # Core SentinelTrack Production Runtime Dependencies
 torch>=2.2.0
-ultralytics>=8.4.132
+ultralytics==8.3.235
 opencv-python>=4.8.0
 psycopg[binary]>=3.1.0
 requests>=2.31.0

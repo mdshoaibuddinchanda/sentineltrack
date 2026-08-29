@@ -1,6 +1,5 @@
 import sys
 from pathlib import Path
-import inspect
 from types import SimpleNamespace
 from typing import Optional
 
@@ -101,14 +100,7 @@ class CameraByteTracker:
             fuse_score=True,
         )
 
-        # Ultralytics changed BYTETracker's constructor in newer releases:
-        # frame_rate was removed and the tracker now derives cadence from its
-        # args/state. Keep the project API stable across supported versions.
-        tracker_params = inspect.signature(BYTETracker).parameters
-        if 'frame_rate' in tracker_params:
-            self.tracker = BYTETracker(self.args, frame_rate=self.frame_rate)
-        else:
-            self.tracker = BYTETracker(self.args)
+        self.tracker = BYTETracker(self.args, frame_rate=self.frame_rate)
 
         self.last_pts_ms: Optional[float] = None
         self.last_epoch: int = 0

@@ -1,5 +1,24 @@
-schema_version: 1
-generated_for_git_sha: 23f575d1ab13b6ce99879763bee4ebdaae864416
+schema_version: 2
+# This manifest is evidence for the bounded P11.5 freeze.  These fields are
+# intentionally explicit so a generated report cannot be mistaken for a
+# model or dataset provenance claim.
+baseline_git_sha: 084e96f1fa66c175925b3eb02d70e4f69a85b2cc
+p11_5_freeze_parent_sha: 084e96f1fa66c175925b3eb02d70e4f69a85b2cc
+generated_at: 2026-08-29T16:14:00+05:30
+runtime:
+  environment: PY312
+  python: 3.12.12
+  operating_system: Windows
+  gpu: NVIDIA GeForce RTX 3050 Laptop GPU
+  vram_mb: 4096
+  driver: 610.88
+  cuda_user_mode_driver: 13.3
+  pytorch: 2.5.1+cu121
+  pytorch_cuda: 12.1
+  ultralytics: 8.3.235
+  onnxruntime: 1.24.2
+  production_dependency_file: requirements.txt
+  experiment_dependency_file: requirements-experiments-yolo26.txt
 models:
   - logical_name: vehicle_detector
     architecture: YOLO11m
@@ -28,6 +47,8 @@ models:
     precision: fp32
     runtime: Ultralytics/PyTorch
     dataset_version: plate_detection_v1
+    evaluation_dataset_manifest_sha256: 13cdc1f68224fad1fb87fa764f0229b615fc702fe134df8ad73d3cce1196a47b
+    evaluation_dataset_manifest_role: p11_5_strict_test
     training_run_id: unknown
     minimum_vram_mb: 4096
     recommended_batch: 1
@@ -43,6 +64,7 @@ models:
     precision: amp_training_fp32_inference
     runtime: Ultralytics/PyTorch
     dataset_version: plate_detection_v2_strict
+    dataset_manifest_sha256: 13cdc1f68224fad1fb87fa764f0229b615fc702fe134df8ad73d3cce1196a47b
     training_run_id: p3-yolo11s-v2-e20-b4-640-r3-clean
     minimum_vram_mb: 4096
     recommended_batch: 1
@@ -58,6 +80,8 @@ models:
     precision: amp_training_fp32_inference
     runtime: Ultralytics/PyTorch
     dataset_version: plate_detection_obb_v2_strict
+    dataset_manifest_sha256: 13cdc1f68224fad1fb87fa764f0229b615fc702fe134df8ad73d3cce1196a47b
+    dataset_manifest_role: strict_detection_input_for_obb_derivative
     training_run_id: obb-yolo11s-v2-e20-b4-640-r3-clean
     minimum_vram_mb: 4096
     recommended_batch: 1
@@ -73,6 +97,7 @@ models:
     precision: fp32
     runtime: ONNX Runtime CPU
     dataset_version: plate_ocr_v1
+    dataset_manifest_sha256: 9ffad4f56f9aa3b6f5041ab33715ef8d2ac684aca231b66e7fe27e7814b486f7
     training_run_id: unknown
     minimum_vram_mb: 0
     recommended_batch: 1
@@ -88,6 +113,7 @@ models:
     precision: fp32
     runtime: ONNX Runtime CPU
     dataset_version: plate_ocr_v1
+    dataset_manifest_sha256: 9ffad4f56f9aa3b6f5041ab33715ef8d2ac684aca231b66e7fe27e7814b486f7
     training_run_id: unknown
     minimum_vram_mb: 0
     recommended_batch: 1

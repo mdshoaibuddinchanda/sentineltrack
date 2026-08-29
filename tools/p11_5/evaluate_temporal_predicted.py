@@ -13,6 +13,8 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
+from detection_matching import greedy_one_to_one_matches
+
 
 ROOT = Path(__file__).resolve().parents[2]
 DATASET = ROOT / "datasets" / "experiments" / "multiframe_ocr_v1"
@@ -48,13 +50,18 @@ def load_rows() -> list[dict[str, str]]:
             xml_path = ROOT / Path(row["source_path"]).with_suffix(".xml")
             import xml.etree.ElementTree as ET
             root = ET.parse(xml_path).getroot()
-            box = root.find(".//object/bndbox")
-            if box is None:
+            boxes = []
+            for obj in root.findall(".//object"):
+                box = obj.find("bndbox")
+                if box is None:
+                    continue
+                values = [box.findtext(name) for name in ("xmin", "ymin", "xmax", "ymax")]
+                if any(value is None for value in values):
+                    continue
+                boxes.append([float(value) for value in values])
+            if not boxes:
                 continue
-            values = [box.findtext(name) for name in ("xmin", "ymin", "xmax", "ymax")]
-            if any(value is None for value in values):
-                continue
-            row["bbox"] = json.dumps([float(value) for value in values])
+            row["bboxes"] = json.dumps(boxes)
             rows.append(row)
     return rows
 
@@ -94,33 +101,36 @@ def main() -> int:
         image = cv2.imread(str(ROOT / row["source_path"]), cv2.IMREAD_COLOR)
         if image is None:
             continue
-        truth = [float(value) for value in json.loads(row["bbox"])]
+        truths_for_frame = json.loads(row["bboxes"])
+        truth_texts = [row.get("gt_text", "")] * len(truths_for_frame)
         started = time.perf_counter()
         result = model.predict(source=image, imgsz=640, conf=0.25, device=args.device, verbose=False)[0]
         latencies.append((time.perf_counter() - started) * 1000)
-        best_box = None
-        best_conf = -1.0
+        detections: list[dict[str, Any]] = []
         if result.boxes is not None:
             for box, confidence, cls in zip(result.boxes.xyxy.cpu().tolist(), result.boxes.conf.cpu().tolist(), result.boxes.cls.cpu().tolist()):
-                if int(cls) == 0 and float(confidence) > best_conf:
-                    best_box, best_conf = [float(value) for value in box], float(confidence)
-        matched = best_box is not None and iou(best_box, truth) >= 0.5
-        if matched:
-            tp += 1
-            crop = crop_from_box(image, best_box)
-            prepared, _ = eval_mod.preprocess_crop(crop, variant="raw", target_height=48)
-            text, confidence, char_confidences = recognizer.recognize(prepared)
-            quality = quality_mod.crop_quality(crop)
-        else:
-            if best_box is not None:
-                fp += 1
-            fn += 1
-            text, confidence, char_confidences = "", 0.0, []
-            quality = {"score": 0.0}
-        observations[row["track_id"]].append({
-            "text": text or "", "confidence": float(confidence or 0.0), "quality": float(quality.get("score", 0.0)),
-            "frame_index": int(row["frame_index"]), "char_confidences": char_confidences, "gt": row["gt_text"],
-        })
+                if int(cls) == 0:
+                    detections.append({"box": [float(value) for value in box[:4]], "conf": float(confidence)})
+        matches = greedy_one_to_one_matches(detections, truths_for_frame)
+        matched_by_gt = {item["ground_truth_index"]: item for item in matches}
+        tp += len(matches)
+        fp += len(detections) - len(matches)
+        fn += len(truths_for_frame) - len(matches)
+        for gt_index, truth in enumerate(truths_for_frame):
+            match = matched_by_gt.get(gt_index)
+            if match is not None:
+                matched_box = detections[match["prediction_index"]]["box"]
+                crop = crop_from_box(image, matched_box)
+                prepared, _ = eval_mod.preprocess_crop(crop, variant="raw", target_height=48)
+                text, confidence, char_confidences = recognizer.recognize(prepared)
+                quality = quality_mod.crop_quality(crop)
+            else:
+                text, confidence, char_confidences = "", 0.0, []
+                quality = {"score": 0.0}
+            observations[row["track_id"]].append({
+                "text": text or "", "confidence": float(confidence or 0.0), "quality": float(quality.get("score", 0.0)),
+                "frame_index": int(row["frame_index"]), "char_confidences": char_confidences, "gt": truth_texts[gt_index],
+            })
         if index % 50 == 0 or index == len(rows):
             print(f"{model_path.name}: predicted temporal {index}/{len(rows)}", flush=True)
 
@@ -161,7 +171,7 @@ def main() -> int:
     output = {
         "status": "COMPLETE", "dataset": str(DATASET.relative_to(ROOT)).replace("\\", "/"), "split": "test",
         "weights": args.weights.replace("\\", "/"), "tracks": len(observations), "frames": sum(len(items) for items in observations.values()),
-        "detector": {"tp": tp, "fp": fp, "fn": fn, "precision": round(tp / max(1, tp + fp), 6), "recall": round(tp / max(1, tp + fn), 6), "mean_latency_ms": round(statistics.mean(latencies), 3) if latencies else None},
+        "detector": {"tp": tp, "fp": fp, "fn": fn, "precision": round(tp / max(1, tp + fp), 6), "recall": round(tp / max(1, tp + fn), 6), "f1": round(2 * tp / max(1, 2 * tp + fp + fn), 6), "mean_latency_ms": round(statistics.mean(latencies), 3) if latencies else None, "matching": "all class-0 predictions and all GT boxes greedily matched one-to-one at IoU >= 0.5"},
         "recognizer": "PP-OCRv5 mobile on predicted AABB crops", "paired_population": {"minimum_window": 8, "track_count": len(paired_ids)}, "results": rows_out,
     }
     REPORT_DIR.mkdir(parents=True, exist_ok=True)

@@ -6,49 +6,326 @@
   "purpose": "aggregate diagnosis of predicted detector crop to OCR accuracy collapse",
   "aabb_models": [
     {
+      "model": "models/plate/production/best.pt",
+      "model_sha256": "8603afbc9ee2c16f99971898ae98211048c01cc6668bc5d5cc46df13d5f9c8ba",
+      "images": 143,
+      "detector": {
+        "tp": 143,
+        "fp": 3,
+        "fn": 0,
+        "precision": 0.979452,
+        "recall": 1.0,
+        "all_class0_detections": 146,
+        "batch_elapsed_ms": 4568.717,
+        "mean_latency_ms": 31.949
+      },
+      "matched_detection_geometry": {
+        "iou": {
+          "mean": 0.7351,
+          "p10": 0.6189,
+          "median": 0.7414,
+          "p90": 0.8412
+        },
+        "confidence": {
+          "mean": 0.8224,
+          "p10": 0.7506,
+          "median": 0.8368,
+          "p90": 0.8556
+        },
+        "width_px": {
+          "mean": 282.2322,
+          "p10": 110.276,
+          "median": 200.5071,
+          "p90": 543.4235
+        },
+        "height_px": {
+          "mean": 117.2188,
+          "p10": 40.3076,
+          "median": 93.4495,
+          "p90": 225.2887
+        },
+        "aspect_ratio": {
+          "mean": 2.5101,
+          "p10": 1.7482,
+          "median": 2.5955,
+          "p90": 3.1028
+        }
+      },
+      "crop_results": {
+        "aabb_margin_0": {
+          "all_images": {
+            "total_samples": 143,
+            "raw_exact_matches": 31,
+            "raw_exact_accuracy": 0.2168,
+            "raw_character_accuracy": 0.5148,
+            "raw_cer": 0.3164,
+            "raw_mean_edit_distance": 0.3137,
+            "postprocessed_exact_matches": 47,
+            "postprocessed_exact_accuracy": 0.3287,
+            "postprocessed_character_accuracy": 0.5311,
+            "postprocessed_cer": 0.3143,
+            "postprocessed_mean_edit_distance": 0.3114,
+            "grammar_valid_rate": 0.5455,
+            "empty_read_rate": 0.014
+          },
+          "recognizer_batch_ms": 1179.979,
+          "matched_detections": {
+            "total_samples": 143,
+            "raw_exact_matches": 31,
+            "raw_exact_accuracy": 0.2168,
+            "raw_character_accuracy": 0.5148,
+            "raw_cer": 0.3164,
+            "raw_mean_edit_distance": 0.3137,
+            "postprocessed_exact_matches": 47,
+            "postprocessed_exact_accuracy": 0.3287,
+            "postprocessed_character_accuracy": 0.5311,
+            "postprocessed_cer": 0.3143,
+            "postprocessed_mean_edit_distance": 0.3114,
+            "grammar_valid_rate": 0.5455,
+            "empty_read_rate": 0.014
+          },
+          "matched_count": 143
+        },
+        "aabb_margin_2": {
+          "all_images": {
+            "total_samples": 143,
+            "raw_exact_matches": 25,
+            "raw_exact_accuracy": 0.1748,
+            "raw_character_accuracy": 0.4527,
+            "raw_cer": 0.3432,
+            "raw_mean_edit_distance": 0.3404,
+            "postprocessed_exact_matches": 40,
+            "postprocessed_exact_accuracy": 0.2797,
+            "postprocessed_character_accuracy": 0.4668,
+            "postprocessed_cer": 0.346,
+            "postprocessed_mean_edit_distance": 0.3429,
+            "grammar_valid_rate": 0.4965,
+            "empty_read_rate": 0.0
+          },
+          "recognizer_batch_ms": 1166.876,
+          "matched_detections": {
+            "total_samples": 143,
+            "raw_exact_matches": 25,
+            "raw_exact_accuracy": 0.1748,
+            "raw_character_accuracy": 0.4527,
+            "raw_cer": 0.3432,
+            "raw_mean_edit_distance": 0.3404,
+            "postprocessed_exact_matches": 40,
+            "postprocessed_exact_accuracy": 0.2797,
+            "postprocessed_character_accuracy": 0.4668,
+            "postprocessed_cer": 0.346,
+            "postprocessed_mean_edit_distance": 0.3429,
+            "grammar_valid_rate": 0.4965,
+            "empty_read_rate": 0.0
+          },
+          "matched_count": 143
+        },
+        "aabb_margin_4": {
+          "all_images": {
+            "total_samples": 143,
+            "raw_exact_matches": 18,
+            "raw_exact_accuracy": 0.1259,
+            "raw_character_accuracy": 0.4103,
+            "raw_cer": 0.3708,
+            "raw_mean_edit_distance": 0.3681,
+            "postprocessed_exact_matches": 32,
+            "postprocessed_exact_accuracy": 0.2238,
+            "postprocessed_character_accuracy": 0.423,
+            "postprocessed_cer": 0.3764,
+            "postprocessed_mean_edit_distance": 0.3733,
+            "grammar_valid_rate": 0.4476,
+            "empty_read_rate": 0.0
+          },
+          "recognizer_batch_ms": 1167.936,
+          "matched_detections": {
+            "total_samples": 143,
+            "raw_exact_matches": 18,
+            "raw_exact_accuracy": 0.1259,
+            "raw_character_accuracy": 0.4103,
+            "raw_cer": 0.3708,
+            "raw_mean_edit_distance": 0.3681,
+            "postprocessed_exact_matches": 32,
+            "postprocessed_exact_accuracy": 0.2238,
+            "postprocessed_character_accuracy": 0.423,
+            "postprocessed_cer": 0.3764,
+            "postprocessed_mean_edit_distance": 0.3733,
+            "grammar_valid_rate": 0.4476,
+            "empty_read_rate": 0.0
+          },
+          "matched_count": 143
+        },
+        "aabb_margin_6": {
+          "all_images": {
+            "total_samples": 143,
+            "raw_exact_matches": 20,
+            "raw_exact_accuracy": 0.1399,
+            "raw_character_accuracy": 0.3729,
+            "raw_cer": 0.4103,
+            "raw_mean_edit_distance": 0.4072,
+            "postprocessed_exact_matches": 29,
+            "postprocessed_exact_accuracy": 0.2028,
+            "postprocessed_character_accuracy": 0.3856,
+            "postprocessed_cer": 0.4145,
+            "postprocessed_mean_edit_distance": 0.411,
+            "grammar_valid_rate": 0.3916,
+            "empty_read_rate": 0.007
+          },
+          "recognizer_batch_ms": 1162.58,
+          "matched_detections": {
+            "total_samples": 143,
+            "raw_exact_matches": 20,
+            "raw_exact_accuracy": 0.1399,
+            "raw_character_accuracy": 0.3729,
+            "raw_cer": 0.4103,
+            "raw_mean_edit_distance": 0.4072,
+            "postprocessed_exact_matches": 29,
+            "postprocessed_exact_accuracy": 0.2028,
+            "postprocessed_character_accuracy": 0.3856,
+            "postprocessed_cer": 0.4145,
+            "postprocessed_mean_edit_distance": 0.411,
+            "grammar_valid_rate": 0.3916,
+            "empty_read_rate": 0.007
+          },
+          "matched_count": 143
+        },
+        "aabb_margin_8": {
+          "all_images": {
+            "total_samples": 143,
+            "raw_exact_matches": 15,
+            "raw_exact_accuracy": 0.1049,
+            "raw_character_accuracy": 0.3242,
+            "raw_cer": 0.4449,
+            "raw_mean_edit_distance": 0.4413,
+            "postprocessed_exact_matches": 23,
+            "postprocessed_exact_accuracy": 0.1608,
+            "postprocessed_character_accuracy": 0.3326,
+            "postprocessed_cer": 0.4492,
+            "postprocessed_mean_edit_distance": 0.4453,
+            "grammar_valid_rate": 0.3427,
+            "empty_read_rate": 0.007
+          },
+          "recognizer_batch_ms": 1135.741,
+          "matched_detections": {
+            "total_samples": 143,
+            "raw_exact_matches": 15,
+            "raw_exact_accuracy": 0.1049,
+            "raw_character_accuracy": 0.3242,
+            "raw_cer": 0.4449,
+            "raw_mean_edit_distance": 0.4413,
+            "postprocessed_exact_matches": 23,
+            "postprocessed_exact_accuracy": 0.1608,
+            "postprocessed_character_accuracy": 0.3326,
+            "postprocessed_cer": 0.4492,
+            "postprocessed_mean_edit_distance": 0.4453,
+            "grammar_valid_rate": 0.3427,
+            "empty_read_rate": 0.007
+          },
+          "matched_count": 143
+        },
+        "oracle_best_iou_aabb": {
+          "all_images": {
+            "total_samples": 143,
+            "raw_exact_matches": 31,
+            "raw_exact_accuracy": 0.2168,
+            "raw_character_accuracy": 0.5148,
+            "raw_cer": 0.3164,
+            "raw_mean_edit_distance": 0.3137,
+            "postprocessed_exact_matches": 47,
+            "postprocessed_exact_accuracy": 0.3287,
+            "postprocessed_character_accuracy": 0.5311,
+            "postprocessed_cer": 0.3143,
+            "postprocessed_mean_edit_distance": 0.3114,
+            "grammar_valid_rate": 0.5455,
+            "empty_read_rate": 0.014
+          },
+          "recognizer_batch_ms": 1163.701,
+          "matched_detections": {
+            "total_samples": 143,
+            "raw_exact_matches": 31,
+            "raw_exact_accuracy": 0.2168,
+            "raw_character_accuracy": 0.5148,
+            "raw_cer": 0.3164,
+            "raw_mean_edit_distance": 0.3137,
+            "postprocessed_exact_matches": 47,
+            "postprocessed_exact_accuracy": 0.3287,
+            "postprocessed_character_accuracy": 0.5311,
+            "postprocessed_cer": 0.3143,
+            "postprocessed_mean_edit_distance": 0.3114,
+            "grammar_valid_rate": 0.5455,
+            "empty_read_rate": 0.014
+          },
+          "matched_count": 143
+        },
+        "gt_aabb_oracle": {
+          "all_images": {
+            "total_samples": 143,
+            "raw_exact_matches": 45,
+            "raw_exact_accuracy": 0.3147,
+            "raw_character_accuracy": 0.6681,
+            "raw_cer": 0.2345,
+            "raw_mean_edit_distance": 0.2329,
+            "postprocessed_exact_matches": 61,
+            "postprocessed_exact_accuracy": 0.4266,
+            "postprocessed_character_accuracy": 0.6836,
+            "postprocessed_cer": 0.2225,
+            "postprocessed_mean_edit_distance": 0.2209,
+            "grammar_valid_rate": 0.6434,
+            "empty_read_rate": 0.0
+          },
+          "recognizer_batch_ms": 1207.546
+        }
+      },
+      "interpretation": {
+        "detector_counts_use_all_class0_predictions_and_all_gt_boxes": true,
+        "current_aabb_metrics_are_plate_recognition_chain_metrics": true,
+        "conditional_metrics_only_include_one_to_one_matches_at_iou_ge_0_5": true,
+        "gt_aabb_is_an_ocr_upper_bound_not_a_deployable_path": true
+      }
+    },
+    {
       "model": "runs/p11_5/p3-yolo11s-v2-e20-b4-640-r3-clean/weights/best.pt",
       "model_sha256": "ede0b69bba65472eff10fc29250f58b352a3a79be73aa1b93f435f8533bac3c1",
       "images": 143,
       "detector": {
         "tp": 143,
-        "fp": 0,
+        "fp": 4,
         "fn": 0,
-        "precision": 1.0,
+        "precision": 0.972789,
         "recall": 1.0,
         "all_class0_detections": 147,
-        "batch_elapsed_ms": 4118.238,
-        "mean_latency_ms": 28.799
+        "batch_elapsed_ms": 2708.135,
+        "mean_latency_ms": 18.938
       },
-      "current_high_conf_geometry": {
+      "matched_detection_geometry": {
         "iou": {
-          "mean": 0.8286,
-          "p10": 0.7168,
+          "mean": 0.8299,
+          "p10": 0.7188,
           "median": 0.841,
           "p90": 0.9165
         },
         "confidence": {
-          "mean": 0.775,
-          "p10": 0.7011,
+          "mean": 0.7736,
+          "p10": 0.6983,
           "median": 0.7831,
           "p90": 0.8271
         },
         "width_px": {
-          "mean": 273.1956,
+          "mean": 273.1245,
           "p10": 105.6162,
           "median": 194.5279,
           "p90": 521.4737
         },
         "height_px": {
-          "mean": 106.6579,
+          "mean": 106.5601,
           "p10": 33.7048,
           "median": 88.5504,
           "p90": 202.8105
         },
         "aspect_ratio": {
-          "mean": 2.7071,
+          "mean": 2.712,
           "p10": 1.7868,
-          "median": 2.8078,
-          "p90": 3.335
+          "median": 2.8318,
+          "p90": 3.3559
         }
       },
       "crop_results": {
@@ -58,29 +335,29 @@
             "raw_exact_matches": 34,
             "raw_exact_accuracy": 0.2378,
             "raw_character_accuracy": 0.6278,
-            "raw_cer": 0.2726,
-            "raw_mean_edit_distance": 0.2702,
+            "raw_cer": 0.2719,
+            "raw_mean_edit_distance": 0.2695,
             "postprocessed_exact_matches": 49,
             "postprocessed_exact_accuracy": 0.3427,
             "postprocessed_character_accuracy": 0.6398,
-            "postprocessed_cer": 0.2669,
-            "postprocessed_mean_edit_distance": 0.2643,
+            "postprocessed_cer": 0.2662,
+            "postprocessed_mean_edit_distance": 0.2636,
             "grammar_valid_rate": 0.6224,
             "empty_read_rate": 0.021
           },
-          "recognizer_batch_ms": 1217.886,
+          "recognizer_batch_ms": 1229.132,
           "matched_detections": {
             "total_samples": 143,
             "raw_exact_matches": 34,
             "raw_exact_accuracy": 0.2378,
             "raw_character_accuracy": 0.6278,
-            "raw_cer": 0.2726,
-            "raw_mean_edit_distance": 0.2702,
+            "raw_cer": 0.2719,
+            "raw_mean_edit_distance": 0.2695,
             "postprocessed_exact_matches": 49,
             "postprocessed_exact_accuracy": 0.3427,
             "postprocessed_character_accuracy": 0.6398,
-            "postprocessed_cer": 0.2669,
-            "postprocessed_mean_edit_distance": 0.2643,
+            "postprocessed_cer": 0.2662,
+            "postprocessed_mean_edit_distance": 0.2636,
             "grammar_valid_rate": 0.6224,
             "empty_read_rate": 0.021
           },
@@ -92,29 +369,29 @@
             "raw_exact_matches": 29,
             "raw_exact_accuracy": 0.2028,
             "raw_character_accuracy": 0.5494,
-            "raw_cer": 0.2924,
-            "raw_mean_edit_distance": 0.2901,
+            "raw_cer": 0.291,
+            "raw_mean_edit_distance": 0.2887,
             "postprocessed_exact_matches": 44,
             "postprocessed_exact_accuracy": 0.3077,
             "postprocessed_character_accuracy": 0.565,
-            "postprocessed_cer": 0.2903,
-            "postprocessed_mean_edit_distance": 0.2878,
+            "postprocessed_cer": 0.2888,
+            "postprocessed_mean_edit_distance": 0.2864,
             "grammar_valid_rate": 0.5524,
             "empty_read_rate": 0.007
           },
-          "recognizer_batch_ms": 1130.656,
+          "recognizer_batch_ms": 1169.888,
           "matched_detections": {
             "total_samples": 143,
             "raw_exact_matches": 29,
             "raw_exact_accuracy": 0.2028,
             "raw_character_accuracy": 0.5494,
-            "raw_cer": 0.2924,
-            "raw_mean_edit_distance": 0.2901,
+            "raw_cer": 0.291,
+            "raw_mean_edit_distance": 0.2887,
             "postprocessed_exact_matches": 44,
             "postprocessed_exact_accuracy": 0.3077,
             "postprocessed_character_accuracy": 0.565,
-            "postprocessed_cer": 0.2903,
-            "postprocessed_mean_edit_distance": 0.2878,
+            "postprocessed_cer": 0.2888,
+            "postprocessed_mean_edit_distance": 0.2864,
             "grammar_valid_rate": 0.5524,
             "empty_read_rate": 0.007
           },
@@ -136,7 +413,7 @@
             "grammar_valid_rate": 0.5175,
             "empty_read_rate": 0.0
           },
-          "recognizer_batch_ms": 1145.417,
+          "recognizer_batch_ms": 1181.611,
           "matched_detections": {
             "total_samples": 143,
             "raw_exact_matches": 29,
@@ -159,30 +436,30 @@
             "total_samples": 143,
             "raw_exact_matches": 29,
             "raw_exact_accuracy": 0.2028,
-            "raw_character_accuracy": 0.4619,
-            "raw_cer": 0.3468,
-            "raw_mean_edit_distance": 0.344,
+            "raw_character_accuracy": 0.4626,
+            "raw_cer": 0.346,
+            "raw_mean_edit_distance": 0.3433,
             "postprocessed_exact_matches": 36,
             "postprocessed_exact_accuracy": 0.2517,
-            "postprocessed_character_accuracy": 0.4718,
-            "postprocessed_cer": 0.3573,
-            "postprocessed_mean_edit_distance": 0.3545,
+            "postprocessed_character_accuracy": 0.4725,
+            "postprocessed_cer": 0.3559,
+            "postprocessed_mean_edit_distance": 0.3531,
             "grammar_valid_rate": 0.4895,
             "empty_read_rate": 0.0
           },
-          "recognizer_batch_ms": 1147.579,
+          "recognizer_batch_ms": 1166.023,
           "matched_detections": {
             "total_samples": 143,
             "raw_exact_matches": 29,
             "raw_exact_accuracy": 0.2028,
-            "raw_character_accuracy": 0.4619,
-            "raw_cer": 0.3468,
-            "raw_mean_edit_distance": 0.344,
+            "raw_character_accuracy": 0.4626,
+            "raw_cer": 0.346,
+            "raw_mean_edit_distance": 0.3433,
             "postprocessed_exact_matches": 36,
             "postprocessed_exact_accuracy": 0.2517,
-            "postprocessed_character_accuracy": 0.4718,
-            "postprocessed_cer": 0.3573,
-            "postprocessed_mean_edit_distance": 0.3545,
+            "postprocessed_character_accuracy": 0.4725,
+            "postprocessed_cer": 0.3559,
+            "postprocessed_mean_edit_distance": 0.3531,
             "grammar_valid_rate": 0.4895,
             "empty_read_rate": 0.0
           },
@@ -193,30 +470,30 @@
             "total_samples": 143,
             "raw_exact_matches": 29,
             "raw_exact_accuracy": 0.2028,
-            "raw_character_accuracy": 0.4117,
-            "raw_cer": 0.3814,
-            "raw_mean_edit_distance": 0.3782,
+            "raw_character_accuracy": 0.4124,
+            "raw_cer": 0.3785,
+            "raw_mean_edit_distance": 0.3754,
             "postprocessed_exact_matches": 36,
             "postprocessed_exact_accuracy": 0.2517,
-            "postprocessed_character_accuracy": 0.4209,
-            "postprocessed_cer": 0.3842,
-            "postprocessed_mean_edit_distance": 0.381,
+            "postprocessed_character_accuracy": 0.4216,
+            "postprocessed_cer": 0.3814,
+            "postprocessed_mean_edit_distance": 0.3782,
             "grammar_valid_rate": 0.3986,
             "empty_read_rate": 0.007
           },
-          "recognizer_batch_ms": 1150.275,
+          "recognizer_batch_ms": 1137.126,
           "matched_detections": {
             "total_samples": 143,
             "raw_exact_matches": 29,
             "raw_exact_accuracy": 0.2028,
-            "raw_character_accuracy": 0.4117,
-            "raw_cer": 0.3814,
-            "raw_mean_edit_distance": 0.3782,
+            "raw_character_accuracy": 0.4124,
+            "raw_cer": 0.3785,
+            "raw_mean_edit_distance": 0.3754,
             "postprocessed_exact_matches": 36,
             "postprocessed_exact_accuracy": 0.2517,
-            "postprocessed_character_accuracy": 0.4209,
-            "postprocessed_cer": 0.3842,
-            "postprocessed_mean_edit_distance": 0.381,
+            "postprocessed_character_accuracy": 0.4216,
+            "postprocessed_cer": 0.3814,
+            "postprocessed_mean_edit_distance": 0.3782,
             "grammar_valid_rate": 0.3986,
             "empty_read_rate": 0.007
           },
@@ -238,7 +515,7 @@
             "grammar_valid_rate": 0.6224,
             "empty_read_rate": 0.021
           },
-          "recognizer_batch_ms": 1170.025,
+          "recognizer_batch_ms": 1188.762,
           "matched_detections": {
             "total_samples": 143,
             "raw_exact_matches": 34,
@@ -272,12 +549,13 @@
             "grammar_valid_rate": 0.6434,
             "empty_read_rate": 0.0
           },
-          "recognizer_batch_ms": 1178.42
+          "recognizer_batch_ms": 1196.505
         }
       },
       "interpretation": {
-        "current_aabb_metrics_are_full_frame": true,
-        "conditional_metrics_only_include_current_iou_ge_0_5": true,
+        "detector_counts_use_all_class0_predictions_and_all_gt_boxes": true,
+        "current_aabb_metrics_are_plate_recognition_chain_metrics": true,
+        "conditional_metrics_only_include_one_to_one_matches_at_iou_ge_0_5": true,
         "gt_aabb_is_an_ocr_upper_bound_not_a_deployable_path": true
       }
     }
@@ -292,8 +570,8 @@
       "fn": 0,
       "precision": 1.0,
       "recall": 1.0,
-      "batch_elapsed_ms": 3316.299,
-      "mean_latency_ms": 23.191
+      "batch_elapsed_ms": 3499.97,
+      "mean_latency_ms": 24.475
     },
     "predicted_obb_geometry": {
       "aabb_iou": {
@@ -332,7 +610,7 @@
           "grammar_valid_rate": 0.5315,
           "empty_read_rate": 0.014
         },
-        "recognizer_batch_ms": 1131.308,
+        "recognizer_batch_ms": 1254.588,
         "matched_detections": {
           "total_samples": 143,
           "raw_exact_matches": 31,
@@ -366,7 +644,7 @@
           "grammar_valid_rate": 0.5664,
           "empty_read_rate": 0.007
         },
-        "recognizer_batch_ms": 1138.114,
+        "recognizer_batch_ms": 2209.164,
         "matched_detections": {
           "total_samples": 143,
           "raw_exact_matches": 32,
@@ -386,6 +664,7 @@
       }
     },
     "interpretation": {
+      "detector_counts_use_all_class0_predictions_and_all_gt_boxes": true,
       "obb_match_uses_polygon_aabb_iou_ge_0_5": true,
       "obb_perspective_warp_is_the_downstream_test": true
     }

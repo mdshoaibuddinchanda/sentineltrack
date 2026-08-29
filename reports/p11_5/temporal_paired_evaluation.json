@@ -9,8 +9,8 @@
     "track_count": 24
   },
   "inference_latency_ms": {
-    "p50": 9.532,
-    "p95": 21.755
+    "p50": 8.64,
+    "p95": 17.593
   },
   "results": [
     {
