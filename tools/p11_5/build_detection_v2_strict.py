@@ -28,12 +28,10 @@ REPORT = ROOT / "reports" / "p11_5" / "dataset" / "DETECTION_V2_STRICT_FREEZE.js
 
 def copy_or_link(source: Path, destination: Path) -> str:
     destination.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        os.link(source, destination)
-        return "hardlink"
-    except OSError:
-        shutil.copy2(source, destination)
-        return "copy"
+    # Derived datasets must be copy-isolated: Ultralytics may repair a JPEG
+    # while scanning, and a hardlink would mutate the upstream/source inode.
+    shutil.copy2(source, destination)
+    return "copy"
 
 
 def main() -> int:

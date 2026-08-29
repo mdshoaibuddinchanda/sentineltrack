@@ -20,12 +20,9 @@ REPORT = ROOT / "reports" / "p11_5" / "dataset" / "OBB_V2_STRICT_FREEZE.json"
 
 def link_or_copy(source: Path, destination: Path) -> str:
     destination.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        os.link(source, destination)
-        return "hardlink"
-    except OSError:
-        shutil.copy2(source, destination)
-        return "copy"
+    # Keep OBB training/evaluation isolated from the upstream derivative.
+    shutil.copy2(source, destination)
+    return "copy"
 
 
 def main() -> int:
