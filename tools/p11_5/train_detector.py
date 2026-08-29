@@ -61,6 +61,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--weights", required=True, help="Existing local .pt or an Ultralytics model name")
+    parser.add_argument("--variant", default="", help="Registry label for this candidate")
     parser.add_argument("--data", default="datasets/experiments/plate_detection_v2_strict/dataset.yaml")
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--batch", type=int, default=1)
@@ -98,7 +99,7 @@ def main() -> int:
         "run_id": args.run_id,
         "task": "P3_detection",
         "model_family": "Ultralytics",
-        "variant": Path(args.weights).stem,
+        "variant": args.variant or Path(args.weights).stem,
         "dataset_sha256": dataset_sha or "",
         "seed": args.seed,
         "epochs": args.epochs,
