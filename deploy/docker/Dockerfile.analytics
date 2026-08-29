@@ -15,8 +15,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements-analytics.txt /app/
-RUN pip install --no-cache-dir -r requirements-analytics.txt
+COPY requirements/analytics.txt /app/requirements/analytics.txt
+RUN pip install --no-cache-dir -r requirements/analytics.txt
 
 COPY . /app/
 

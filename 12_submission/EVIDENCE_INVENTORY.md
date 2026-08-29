@@ -22,14 +22,14 @@ website accessed on 30 August 2026.
 | Claim or decision | Value | Classification | Authoritative source |
 |---|---|---|---|
 | P12 base | `1f48aad81a35553ff1e80866a17b1784313efa1b` | `MEASURED_TEST` | Git history; P6 exact CI run `33274638726` |
-| Python runtime | PY312, Python 3.12.12 | `MEASURED_LOCAL` | `configs/model_manifest.yaml`; local audit |
-| Local hardware | NVIDIA RTX 3050 Laptop GPU, 4096 MiB, CUDA 12.1, PyTorch 2.5.1+cu121 | `MEASURED_LOCAL` | `configs/model_manifest.yaml`; P6 benchmark |
-| P1 detector | YOLO11m | `MEASURED_LOCAL` | `configs/model_manifest.yaml`; `reports/p11_5/MODEL_REPORT.md` |
+| Python runtime | PY312, Python 3.12.12 | `MEASURED_LOCAL` | `reports/p11_5/model_manifest_evidence.yaml`; local audit |
+| Local hardware | NVIDIA RTX 3050 Laptop GPU, 4096 MiB, CUDA 12.1, PyTorch 2.5.1+cu121 | `MEASURED_LOCAL` | `reports/p11_5/model_manifest_evidence.yaml`; P6 benchmark |
+| P1 detector | YOLO11m | `MEASURED_LOCAL` | `models/manifest.json`; `reports/p11_5/MODEL_REPORT.md` |
 | P1 external vehicle accuracy | No authoritative vehicle GT available | `NOT_MEASURED` | `reports/p11_5/MODEL_REPORT.md` |
 | P3 production detector | F1 `0.940984` | `MEASURED_TEST` | `reports/p11_5/detector_eval/baseline-production-strict-640_test_640.json` |
 | P3 selected YOLO11s candidate | TP `300`, FP `10`, FN `5`, F1 `0.975610`, mAP50-95 `0.783111` | `MEASURED_TEST` | `reports/p11_5/detector_eval/p3-yolo11s-v2-e20-b4-640-r3-clean-authoritative_test_640.json` |
 | Plate recognition chain | TP `143`, FP `4`, FN `0`, F1 `0.986207`; OCR exact `49/143 = 0.3427`; CER `0.2662`; throughput `33.51 FPS` | `MEASURED_TEST` | `reports/p11_5/end_to_end_evaluation.json` |
-| OCR production model | PP-OCRv5 Mobile ONNX | `MEASURED_LOCAL` | `configs/model_manifest.yaml`; `reports/plate_ocr/ppocr_mobile_test_evaluation.json` |
+| OCR production model | PP-OCRv5 Mobile ONNX | `MEASURED_LOCAL` | `models/manifest.json`; `reports/plate_ocr/ppocr_mobile_test_evaluation.json` |
 | OCR locked test readout | P50 `10.53 ms`, P95 `24.85 ms`, `79.54` crops/s | `MEASURED_TEST` | `reports/plate_ocr/ppocr_mobile_test_evaluation.json` |
 | OCR fine-tuning | Attempt stopped resource-limited; no checkpoint or result | `NOT_MEASURED` | `reports/p11_5/OCR_FINETUNE.md` |
 | P2 tracking identity | Per-camera `(camera_id, stream_epoch, track_id)` with reset on discontinuity | `MEASURED_TEST` | `docs/p11_runtime_mainframe.md`; `02_tracking/`; tests |
@@ -40,7 +40,7 @@ website accessed on 30 August 2026.
 | P10 controls | Opaque session cookie, Argon2id, CSRF, RBAC, audit, rate limiting and WebSocket authorization | `MEASURED_TEST` | `docs/priority10_baseline.md`; `docs/security/`; `10_security/tests/` |
 | P11 sampling | Base `1 FPS`, burst `5 FPS`, bounded queues and stale-frame dropping | `MEASURED_TEST` | `11_scale_deployment/config.py`; `docs/p11_runtime_mainframe.md`; tests |
 | P11 safe statewide capacity | Not measured; no single-frame or local-node result is converted into safe camera capacity | `NOT_MEASURED` | `reports/p11_5/CAPACITY_DELTA.md` |
-| P6 appearance model | MobileNetV3-Small ImageNet, 576-D, L2 normalized, checkpoint SHA-256 `047dcff4addef86ea5bc2eff13c9614dc11f47ab1160d0a71a25e7db994f4e1f` | `MEASURED_LOCAL` | `configs/model_manifest.yaml`; `reports/p6/P6_BENCHMARK.json` |
+| P6 appearance model | MobileNetV3-Small ImageNet, 576-D, L2 normalized, checkpoint SHA-256 `047dcff4addef86ea5bc2eff13c9614dc11f47ab1160d0a71a25e7db994f4e1f` | `MEASURED_LOCAL` | `models/manifest.json`; `reports/p6/P6_BENCHMARK.json` |
 | P6 plate masking | Plate region masked by default; OCR text never enters ReID | `MEASURED_TEST` | `06_vehicle_reid/extractor.py`; `tests/test_p6_vehicle_reid.py` |
 | P6 identity ground truth | No verified true cross-camera vehicle-ID GT | `NOT_MEASURED` | `reports/p6/P6_REPORT.md`; `reports/p6/P6_EVALUATION.json` |
 | P6 proxy evaluation | 240 samples; 61 calibration tracks and 27 locked tracks with no track overlap | `MEASURED_TEST` / `SIMULATED` | `reports/p6/P6_EVALUATION.json` |

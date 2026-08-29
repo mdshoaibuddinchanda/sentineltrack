@@ -1,0 +1,7 @@
+# GitHub Actions backend gate. Run from repository root.
+-r api.txt
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+pytest-timeout>=2.3.0
+httpx>=0.27.0
+opencv-python-headless>=4.10.0

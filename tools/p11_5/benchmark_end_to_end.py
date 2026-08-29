@@ -203,7 +203,7 @@ def run_model(model_path: Path, rows: list[dict[str, str]], data_root: Path, dev
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--models", default="models/plate/production/best.pt")
+    parser.add_argument("--models", default="models/plate/yolo11s_plate_v2.pt")
     parser.add_argument("--data", default="multiframe-test", help="multiframe-test or a detection derivative with non-empty OCR text")
     parser.add_argument("--device", default="0")
     args = parser.parse_args()

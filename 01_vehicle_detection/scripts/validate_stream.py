@@ -11,15 +11,11 @@ if str(MODULE_DIR) not in sys.path:
 
 import cv2
 
-try:
-    from 00_foundation.streams.reader import RTSPReader
-    from 00_foundation.streams.models import FramePacket
-except Exception:
-    import importlib
-    reader_mod = importlib.import_module('00_foundation.streams.reader')
-    models_mod = importlib.import_module('00_foundation.streams.models')
-    RTSPReader = reader_mod.RTSPReader
-    FramePacket = models_mod.FramePacket
+import importlib
+reader_mod = importlib.import_module('00_foundation.streams.reader')
+models_mod = importlib.import_module('00_foundation.streams.models')
+RTSPReader = reader_mod.RTSPReader
+FramePacket = models_mod.FramePacket
 
 from detector import VehicleDetector
 

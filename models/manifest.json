@@ -1,32 +1,77 @@
 {
+  "schema_version": 3,
+  "manifest_type": "operational_runtime_models",
   "models": [
     {
       "logical_name": "vehicle_detector",
+      "architecture": "YOLO11m",
+      "model_version": "ultralytics-8.3.235",
       "file_path": "models/vehicle/yolo11m.pt",
       "sha256": "d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95",
       "size_bytes": 40684120,
-      "required": true
+      "required": true,
+      "selected": true,
+      "source": "Ultralytics YOLO11m pretrained artifact",
+      "license": "Ultralytics license terms apply; verify for deployment",
+      "runtime": "Ultralytics/PyTorch",
+      "consumer": "01_vehicle_detection.detector.VehicleDetector"
     },
     {
       "logical_name": "plate_detector",
-      "file_path": "models/plate/production/best.pt",
-      "sha256": "8603afbc9ee2c16f99971898ae98211048c01cc6668bc5d5cc46df13d5f9c8ba",
-      "size_bytes": 19171155,
-      "required": true
+      "architecture": "custom YOLO11s single-class license_plate",
+      "model_version": "p11_5-clean-r3",
+      "file_path": "models/plate/yolo11s_plate_v2.pt",
+      "sha256": "ede0b69bba65472eff10fc29250f58b352a3a79be73aa1b93f435f8533bac3c1",
+      "size_bytes": 19143443,
+      "required": true,
+      "selected": true,
+      "source": "SentinelTrack P11.5 isolated clean candidate",
+      "license": "Project-trained artifact; dataset and base-model terms apply",
+      "runtime": "Ultralytics/PyTorch",
+      "consumer": "03_plate_detection.detector.PlateDetector"
     },
     {
       "logical_name": "ocr_recognizer_mobile",
+      "architecture": "PP-OCRv5 Mobile recognition",
+      "model_version": "PP-OCRv5 ONNX export",
       "file_path": "models/ocr/PP-OCRv5_mobile_rec_infer.onnx",
       "sha256": "4e16deb22c4da6468bdca539b2cd3c8687825538b67109177c47d359ab994cd7",
       "size_bytes": 7830888,
-      "required": true
+      "required": true,
+      "selected": true,
+      "source": "PP-OCRv5 Mobile ONNX artifact",
+      "license": "Upstream PaddleOCR/model license terms apply; verify for deployment",
+      "runtime": "ONNX Runtime CPU",
+      "consumer": "04_plate_ocr.recognizers.paddle_rec"
     },
     {
-      "logical_name": "ocr_recognizer_server",
-      "file_path": "models/ocr/PP-OCRv5_server_rec_infer.onnx",
-      "sha256": "13d0dda27d63dc0f4938af48df2c55b33f3c989a0bd5eacb8410e30f1735f644",
-      "size_bytes": 84505505,
-      "required": true
+      "logical_name": "ocr_mobile_dictionary",
+      "architecture": "PP-OCRv5 Mobile English dictionary",
+      "model_version": "PP-OCRv5 ONNX export support asset",
+      "file_path": "models/ocr/ppocr_mobile_dict.txt",
+      "sha256": "e025a66d31f327ba0c232e03f407ae8d105e1e709e7ccb3f408aa778c24e70d6",
+      "size_bytes": 1416,
+      "required": true,
+      "selected": true,
+      "source": "PP-OCRv5 Mobile ONNX support asset",
+      "license": "Upstream PaddleOCR/model license terms apply; verify for deployment",
+      "runtime": "PaddleOCR dictionary",
+      "consumer": "04_plate_ocr.recognizers.paddle_rec"
+    },
+    {
+      "logical_name": "vehicle_appearance_reid_fallback",
+      "architecture": "MobileNetV3-Small pooled feature extractor",
+      "model_version": "torchvision-0.20.1 ImageNet-1K V1",
+      "file_path": "models/reid/mobilenet_v3_small-047dcff4.pth",
+      "sha256": "047dcff4addef86ea5bc2eff13c9614dc11f47ab1160d0a71a25e7db994f4e1f",
+      "size_bytes": 10306551,
+      "required": false,
+      "selected": true,
+      "source": "https://download.pytorch.org/models/mobilenet_v3_small-047dcff4.pth",
+      "license": "BSD-3-Clause torchvision implementation; ImageNet weight terms apply",
+      "runtime": "PyTorch/torchvision",
+      "consumer": "06_vehicle_reid.extractor.AppearanceEmbeddingExtractor",
+      "review_only": true
     }
   ]
 }

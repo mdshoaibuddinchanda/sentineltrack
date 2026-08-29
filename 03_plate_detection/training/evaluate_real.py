@@ -30,7 +30,7 @@ def compute_iou(box1, box2):
     return inter / union if union > 0 else 0.0
 
 
-def evaluate_production_model(model_path: str = 'models/plate/production/best.pt', conf_thresh: float = 0.25):
+def evaluate_production_model(model_path: str = 'models/plate/yolo11s_plate_v2.pt', conf_thresh: float = 0.25):
     print(f'[EVALUATION] Evaluating production plate detector: {model_path}')
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
 

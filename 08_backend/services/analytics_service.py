@@ -60,6 +60,8 @@ class AnalyticsWorker:
         self._plate_pipeline = None
         self._ocr_pipeline = None
         self._target_pipeline = None
+        self._reid_service = None
+        self._reid_last_capture_pts: dict[tuple[str, int, int], float] = {}
 
 
     def _lazy_init_models(self):
@@ -127,6 +129,147 @@ class AnalyticsWorker:
                 self.metrics.inc_errors()
                 self._target_pipeline = None
 
+            # 6. Conditional P6 appearance fallback. The extractor is lazy so
+            # a strong ANPR result never loads or runs the appearance model.
+            try:
+                reid_mod = importlib.import_module("06_vehicle_reid.service")
+                self._reid_service = reid_mod.VehicleReIDService()
+            except Exception as e:
+                logger.exception(f"Failed to initialize optional P6 ReID service: {e}")
+                self.metrics.inc_errors()
+                self._reid_service = None
+
+    @staticmethod
+    def _reid_evidence_level(reid_service, plate_observations, track_ocr, p5_candidate):
+        evidence_mod = importlib.import_module("06_vehicle_reid.models")
+        AppearanceEvidence = evidence_mod.AppearanceEvidence
+        if p5_candidate is not None:
+            return reid_service.fusion.infer_evidence_level(p5_candidate)
+        if track_ocr is not None and getattr(track_ocr, "best_text", None):
+            return AppearanceEvidence.PARTIAL_PLATE
+        if plate_observations:
+            return AppearanceEvidence.PARTIAL_PLATE
+        return AppearanceEvidence.NO_USABLE_PLATE
+
+    def _reid_capture_due(self, track) -> bool:
+        """Limit appearance extraction to one crop per track per second."""
+        key = (str(track.camera_id), int(track.stream_epoch), int(track.track_id))
+        current_pts = float(getattr(track, "last_pts_ms", 0.0))
+        previous_pts = self._reid_last_capture_pts.get(key)
+        if previous_pts is not None and current_pts >= previous_pts and current_pts - previous_pts < 1000.0:
+            return False
+        self._reid_last_capture_pts[key] = current_pts
+        if len(self._reid_last_capture_pts) > 20000:
+            self._reid_last_capture_pts = dict(list(self._reid_last_capture_pts.items())[-10000:])
+        return True
+
+    def _process_reid_for_track(self, packet, track, plate_observations, track_ocr, p5_candidate):
+        """Run the bounded P6 gate and return operator-visible diagnostics."""
+        if self._reid_service is None:
+            return {
+                "track_id": int(track.track_id),
+                "ran": False,
+                "identity_source": "REID_UNAVAILABLE",
+                "reason": ["REID_SERVICE_UNAVAILABLE"],
+            }
+
+        evidence_level = self._reid_evidence_level(
+            self._reid_service,
+            plate_observations,
+            track_ocr,
+            p5_candidate,
+        )
+        evidence_name = evidence_level.value
+
+        # This call returns before extraction for STRONG_PLATE and proves the
+        # expensive appearance path is gated by ANPR evidence.
+        if evidence_name == "STRONG_PLATE":
+            process = self._reid_service.add_track_crop(
+                track,
+                None,
+                evidence_level=evidence_level,
+                event_time_utc=packet.event_time_utc,
+            )
+            fusion = self._reid_service.fuse_p5_candidate(
+                p5_candidate,
+                None,
+                evidence_level=evidence_level,
+            )
+            fused = fusion.to_dict()
+            fused.update({"track_id": int(track.track_id), "ran": process.ran, "stored": process.stored})
+            return fused
+
+        if not self._reid_capture_due(track):
+            return {
+                "track_id": int(track.track_id),
+                "ran": False,
+                "identity_source": "REID_REVIEW" if evidence_name == "NO_USABLE_PLATE" else "ANPR_REID_SUPPORT",
+                "evidence_level": evidence_name,
+                "reason": ["REID_CAPTURE_THROTTLED"],
+            }
+
+        cropper = importlib.import_module("03_plate_detection.cropper")
+        crop, cx1, cy1, _, _ = cropper.crop_vehicle(
+            packet.frame,
+            x1=track.x1,
+            y1=track.y1,
+            x2=track.x2,
+            y2=track.y2,
+            padding=0.08,
+        )
+        selected_plate = max(plate_observations, key=lambda item: item.quality_score) if plate_observations else None
+        plate_bbox = None
+        if selected_plate is not None:
+            plate_bbox = (
+                selected_plate.x1 - cx1,
+                selected_plate.y1 - cy1,
+                selected_plate.x2 - cx1,
+                selected_plate.y2 - cy1,
+            )
+
+        process = self._reid_service.add_track_crop(
+            track,
+            crop,
+            plate_bbox=plate_bbox,
+            evidence_level=evidence_level,
+            event_time_utc=packet.event_time_utc,
+            source_frame_metadata={
+                "camera_id": packet.camera_id,
+                "stream_epoch": packet.stream_epoch,
+                "pts_ms": packet.pts_ms,
+                "event_time_source": packet.event_time_source,
+                "event_time_quality": packet.event_time_quality,
+                "plate_region_masked_for_reid": True,
+            },
+        )
+        reid_candidate = None
+        if process.profile is not None:
+            candidates = self._reid_service.search_track(process.track_key, top_k=1)
+            reid_candidate = candidates[0] if candidates else None
+        fusion = self._reid_service.fuse_p5_candidate(
+            p5_candidate,
+            reid_candidate,
+            evidence_level=evidence_level,
+        )
+        fused = fusion.to_dict()
+        fused.update({
+            "track_id": int(track.track_id),
+            "ran": process.ran,
+            "stored": process.stored,
+            "model_available": process.model_available,
+        })
+        if process.skip_reason:
+            fused.setdefault("reasons", []).append(process.skip_reason)
+        if process.error:
+            fused.setdefault("reasons", []).append("REID_MODEL_UNAVAILABLE")
+        if reid_candidate is not None:
+            fused["candidate_track"] = {
+                "camera_id": reid_candidate.candidate_track.camera_id,
+                "stream_epoch": reid_candidate.candidate_track.stream_epoch,
+                "track_id": reid_candidate.candidate_track.track_id,
+            }
+        return fused
+
     def start(self):
         with self._lock:
             if self._running:
@@ -185,6 +328,7 @@ class AnalyticsWorker:
                 tracker = self._tracker_registry.get_tracker(packet.camera_id)
                 tracks = tracker.update(packet, dets)
 
+                plate_observations = []
                 if tracks and self._plate_pipeline:
                     plate_observations = self._plate_pipeline.process(packet, tracks)
                     self.metrics.inc_analytics(plates=len(plate_observations))
@@ -204,43 +348,57 @@ class AnalyticsWorker:
                                     self._ocr_pipeline.process_observation(obs, plate_crop)
                                     self.metrics.inc_analytics(ocr=1)
 
-                    # 4. Multi-Frame Track Consensus & P5 Target Matching
-                    for trk in tracks:
-                        if self._ocr_pipeline:
-                            track_ocr = self._ocr_pipeline.get_track_result(
-                                packet.camera_id, packet.stream_epoch, trk.track_id
-                            )
-                            if track_ocr and track_ocr.best_text:
-                                # Propagate UTC event-timing contract
-                                track_ocr.event_time_utc = packet.event_time_utc
-                                track_ocr.event_time_source = packet.event_time_source
-                                track_ocr.event_time_quality = packet.event_time_quality
-                                track_ocr.ingest_time_utc = packet.ingest_time_utc
+                # 4. Multi-Frame Track Consensus, P5 Target Matching, and
+                # conditional P6 appearance fallback.
+                packet_reid = []
+                for trk in tracks:
+                    track_ocr = None
+                    cands = []
+                    if self._ocr_pipeline:
+                        track_ocr = self._ocr_pipeline.get_track_result(
+                            packet.camera_id, packet.stream_epoch, trk.track_id
+                        )
+                        if track_ocr and track_ocr.best_text:
+                            # Propagate UTC event-timing contract
+                            track_ocr.event_time_utc = packet.event_time_utc
+                            track_ocr.event_time_source = packet.event_time_source
+                            track_ocr.event_time_quality = packet.event_time_quality
+                            track_ocr.ingest_time_utc = packet.ingest_time_utc
 
-                                # 5. P5 Target Matching Pipeline
-                                if self._target_pipeline:
-                                    cands, alerts, sighting = self._target_pipeline.process_track_ocr_result(track_ocr)
-                                    if sighting:
-                                        self.metrics.inc_analytics(sightings=1)
-                                        self._dispatch_event(SightingCreatedEvent(payload={
-                                            "sighting_id": sighting.sighting_id,
-                                            "camera_id": sighting.camera_id,
-                                            "registration": sighting.registration_candidate,
-                                            "match_score": sighting.match_score,
-                                            "match_class": sighting.match_class.value if hasattr(sighting.match_class, "value") else str(sighting.match_class)
-                                        }))
+                            # 5. P5 Target Matching Pipeline
+                            if self._target_pipeline:
+                                cands, alerts, sighting = self._target_pipeline.process_track_ocr_result(track_ocr)
+                                if sighting:
+                                    self.metrics.inc_analytics(sightings=1)
+                                    self._dispatch_event(SightingCreatedEvent(payload={
+                                        "sighting_id": sighting.sighting_id,
+                                        "camera_id": sighting.camera_id,
+                                        "registration": sighting.registration_candidate,
+                                        "match_score": sighting.match_score,
+                                        "match_class": sighting.match_class.value if hasattr(sighting.match_class, "value") else str(sighting.match_class)
+                                    }))
 
-                                    for alt in alerts:
-                                        self.metrics.inc_analytics(alerts=1)
-                                        self._dispatch_event(AlertCreatedEvent(payload={
-                                            "alert_id": alt.alert_id,
-                                            "camera_id": alt.camera_id,
-                                            "registration": alt.registration,
-                                            "severity": alt.severity.value if hasattr(alt.severity, "value") else str(alt.severity),
-                                            "match_score": alt.match_score
-                                        }))
+                                for alt in alerts:
+                                    self.metrics.inc_analytics(alerts=1)
+                                    self._dispatch_event(AlertCreatedEvent(payload={
+                                        "alert_id": alt.alert_id,
+                                        "camera_id": alt.camera_id,
+                                        "registration": alt.registration,
+                                        "severity": alt.severity.value if hasattr(alt.severity, "value") else str(alt.severity),
+                                        "match_score": alt.match_score
+                                    }))
 
-                results.append({"status": "PROCESSED", "camera_id": packet.camera_id, "pts_ms": packet.pts_ms})
+                    track_plates = [obs for obs in plate_observations if obs.track_id == trk.track_id]
+                    reid_result = self._process_reid_for_track(
+                        packet,
+                        trk,
+                        track_plates,
+                        track_ocr,
+                        cands[0] if cands else None,
+                    )
+                    packet_reid.append(reid_result)
+
+                results.append({"status": "PROCESSED", "camera_id": packet.camera_id, "pts_ms": packet.pts_ms, "reid": packet_reid})
 
         except Exception as e:
             logger.exception(f"Error during analytics batch execution: {e}")
@@ -318,7 +476,8 @@ class AnalyticsWorker:
                     "plate_detector": self._plate_detector is not None,
                     "plate_pipeline": self._plate_pipeline is not None,
                     "ocr_pipeline": self._ocr_pipeline is not None,
-                    "target_pipeline": self._target_pipeline is not None
+                    "target_pipeline": self._target_pipeline is not None,
+                    "reid_fallback": self._reid_service is not None,
                 }
             }
 

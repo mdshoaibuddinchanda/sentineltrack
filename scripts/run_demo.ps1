@@ -8,7 +8,7 @@ Write-Host "==================================================" -ForegroundColor
 
 # 1. Environment & Preflight Validation
 Write-Host "[1/4] Running Pre-Flight Environment Checks..." -ForegroundColor Yellow
-python tools/p11/preflight.py
+python tools/preflight.py
 if ($LASTEXITCODE -ne 0) {
     Write-Host "[ERROR] Pre-flight validation failed. Please address errors above." -ForegroundColor Red
     exit $LASTEXITCODE

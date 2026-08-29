@@ -58,7 +58,7 @@ def main():
     )
 
     print('[INFO] Initializing VehicleDetector (yolo11m.pt)...')
-    detector = VehicleDetector(model_path='yolo11m.pt', confidence=0.25, imgsz=960)
+    detector = VehicleDetector(model_path='models/vehicle/yolo11m.pt', confidence=0.25, imgsz=960)
 
     print('[INFO] Running inference...')
     detections = detector.detect(packet)

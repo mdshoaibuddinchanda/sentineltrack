@@ -1,5 +1,5 @@
 # Non-blocking Plate Detector Model Sweep Experiments
-# Candidate outputs MUST save to models/plate/candidates/ and NOT overwrite models/plate/production/best.pt
+# Candidate outputs MUST save to models/plate/candidates/ and NOT overwrite the canonical selected model.
 
 baseline:
   model: 'yolo11s.pt'
@@ -7,7 +7,7 @@ baseline:
   epochs: 10
   batch_size: 4
   status: 'production_frozen'
-  weights: 'models/plate/production/best.pt'
+  weights: 'models/plate/yolo11s_plate_v2.pt'
 
 challengers:
   - id: 'yolo11s_640_long'

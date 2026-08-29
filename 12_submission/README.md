@@ -59,7 +59,7 @@ All diagrams are reproducible Mermaid sources under [`diagrams/`](diagrams/).
 
 Use the repository's conda environment `PY312` and the exact frozen commit
 recorded in the evidence inventory. Model files are external artifacts whose
-paths and SHA-256 values are recorded in `configs/model_manifest.yaml` and the
+paths and SHA-256 values are recorded in `models/manifest.json` and the
 P11.5/P6 reports. Do not commit credentials or private organizer feeds.
 
 Native demo commands and the Docker demo path are documented in

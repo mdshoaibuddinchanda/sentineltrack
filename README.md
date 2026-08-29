@@ -1,189 +1,202 @@
 # SentinelTrack
 
-**Production-oriented multi-camera vehicle intelligence and ANPR platform developed for the Sentinel Gujarat CCTV integration challenge.**
+[![CI](https://github.com/mdshoaibuddinchanda/sentineltrack/actions/workflows/ci.yml/badge.svg?branch=release-cleanup)](https://github.com/mdshoaibuddinchanda/sentineltrack/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/Python-3.12-blue)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/API-FastAPI-009688)](https://fastapi.tiangolo.com/)
+[![Frontend](https://img.shields.io/badge/UI-React%20%2B%20TypeScript-61dafb)](09_dashboard/)
+[![Database](https://img.shields.io/badge/Database-PostgreSQL%20%2B%20PostGIS-336791)](https://www.postgresql.org/)
 
----
+SentinelTrack is a production-oriented, multi-camera vehicle intelligence and ANPR platform prepared for the Sentinel Gujarat CCTV integration challenge. It combines plate-first identity evidence with conservative tracking, route feasibility, auditability, and a review-safe vehicle appearance fallback.
 
-## System Architecture
+This repository contains the implementation, reproducible evidence, and final hackathon submission package. It does not claim that appearance-only matching establishes a police identity.
+
+## At a glance
+
+| Capability | Implementation | Safety boundary |
+| --- | --- | --- |
+| Stream ingestion | RTSP/HLS readers, PTS health, bounded queues | UTC provenance is preserved |
+| Vehicle detection | YOLO11m, pinned Ultralytics runtime | Canonical path is in `models/manifest.json` |
+| Tracking | Per-camera ByteTrack with epoch/gap resets | Track IDs are camera/epoch scoped |
+| Plate detection | Selected P11.5 clean single-class YOLO candidate | Cropped coordinates are reprojected to frame space |
+| Plate OCR | PP-OCRv5 Mobile ONNX and multi-frame consensus | Strong identity requires corroboration |
+| Target matching | Normalization, confusion-aware fuzzy matching, watchlists | Existing P5 alert safeguards remain authoritative |
+| Vehicle ReID | MobileNetV3-Small 576-D appearance baseline | Fallback only; appearance-only is `POSSIBLE/REVIEW` |
+| Route reasoning | Chronological camera graph and lower-bound feasibility | Not road-level routing |
+| Operations | FastAPI/WebSocket backend and React dashboard | Security and audit surfaces are tested |
+
+## Architecture
+
+```mermaid
+flowchart LR
+  A[RTSP / HLS streams] --> B[00 Foundation\nreaders + UTC/PTS]
+  B --> C[01 YOLO11m\nvehicle detection]
+  C --> D[02 ByteTrack\nper-camera epoch state]
+  D --> E[03 Plate detection\nvehicle crop + reprojection]
+  E --> F[04 PP-OCRv5\nmulti-frame consensus]
+  F --> G[05 Target matching\nwatchlist + safeguards]
+  D --> H{Plate evidence gate}
+  H -->|Strong plate| G
+  H -->|Partial / none| I[06 Vehicle ReID\nmasked appearance embedding]
+  I --> J[07 Route feasibility\noptional chronological support]
+  J --> K[08 Backend\nevents + persistence]
+  G --> K
+  K --> L[09 Dashboard]
+  K --> M[10 Security]
+  K --> N[11 Scale and deployment]
+```
+
+The identity hierarchy is deliberate: strong ANPR wins; partial plates may receive appearance and temporal support; no-plate appearance suggestions remain review-only. P6 cannot bypass P5 matching, watchlist logic, OCR normalization, or alert safeguards.
+
+## Priority status
+
+| Stage | Status | Scope |
+| --- | --- | --- |
+| P0 | Complete | Foundation and ingestion |
+| P1 | Complete | Vehicle detection |
+| P2 | Complete | Single-camera tracking |
+| P3 | Complete | Plate detection and crop provenance |
+| P4 | Complete | OCR and temporal consensus |
+| P5 | Complete | Target matching and watchlists |
+| P6 | Frozen | Conservative vehicle appearance fallback |
+| P7 | Complete | Chronological route/feasibility engine |
+| P8 | Complete | Backend orchestration and event delivery |
+| P9 | Complete | Operator dashboard |
+| P10 | Complete | Security and privacy controls |
+| P11 | Complete | Scale/deployment evidence |
+| P12 | Complete | Final hackathon submission package |
+
+## Repository layout
 
 ```text
-SENTINEL STREAM INGESTION (RTSP / HLS)
-                  │
-                  ▼
- 00_FOUNDATION: Dynamic PTS Health Monitor & Unified Stream Resolver (PostGIS)
-                  │
-                  ▼
- 01_VEHICLE_DETECTION: YOLO11 Vehicle Detector (Car, Truck, Bus, Motorcycle)
-                  │
-                  ▼
- 02_TRACKING: Cadence-Aware ByteTrack (Isolated Per-Camera State & Gap Reset)
-                  │
-                  ▼
- 03_PLATE_DETECTION: Padded Vehicle Cropper + 960px Magnifier + Dedicated Plate YOLO
-                  │
-                  ▼
-04_PLATE_OCR -> 05_TARGET_MATCHING -> 06_VEHICLE_REID -> 07_ROUTE_ENGINE
-                  -> 08_BACKEND -> 09_DASHBOARD -> 10_SECURITY -> 11_SCALE
+00_foundation/       streams, catalogue, registry
+01_vehicle_detection YOLO11m detector and benchmarks
+02_tracking/         ByteTrack and track lifecycle
+03_plate_detection/  plate model, cropper, quality, training
+04_plate_ocr/        OCR, grammar, voting, evaluation
+05_target_matching/  watchlists, scoring, alerts, history
+06_vehicle_reid/     bounded appearance fallback
+07_route_engine/     chronological route/feasibility logic
+08_backend/          API, services, event bus, worker
+09_dashboard/        React + TypeScript control-room UI
+10_security/         auth, authorization, audit, CSRF
+11_scale_deployment/ scheduler, capacity, health, deployment
+12_submission/       evaluator-facing package and diagrams
+configs/             runtime and experiment configuration
+docs/                architecture, operations, security, release docs
+models/              operational manifest and local model directories
+reports/             tracked evidence and evaluation artifacts
+scripts/             setup and demo entry points
+tools/               preflight, benchmark, evaluation, and evidence tools
+tests/               cross-stage contract tests
 ```
 
----
+Large datasets, generated runs, caches, and model binaries are local/ignored artifacts. They are inventoried in [`docs/release/REPOSITORY_AUDIT.md`](docs/release/REPOSITORY_AUDIT.md); `runs/` is evidence/experiment storage, never the production source of truth.
 
-## Priority Stages Implemented
+## Canonical runtime models
 
-### Priority 0: Foundation & Ingestion
+The operational source of truth is [`models/manifest.json`](models/manifest.json). Runtime code resolves model paths from the repository root and does not depend on CWD downloads, `runs/`, Torch cache, or a developer’s absolute path.
 
-* **Catalogue Client & Resilient Parser**: Multi-key parser with schema fallback support.
-* **PostgreSQL / PostGIS Registry**: Geospatial indexing with `ST_MakePoint`, health event logs, and `ON CONFLICT` upserts.
-* **Unified Stream Resolver**: Automatic RTSP/TCP probing with seamless fallback to HLS/HTTPS.
-* **Dynamic PTS Health Tracking**: Sliding-window median interval tracking avoiding static FPS assumptions.
+| Consumer | Model | Canonical path |
+| --- | --- | --- |
+| P1 | YOLO11m | `models/vehicle/yolo11m.pt` |
+| P3 | Selected P11.5 clean YOLO11s plate model | `models/plate/yolo11s_plate_v2.pt` |
+| P4 | PP-OCRv5 Mobile recognition ONNX | `models/ocr/PP-OCRv5_mobile_rec_infer.onnx` |
+| P6 | MobileNetV3-Small ImageNet appearance baseline, 576-D | `models/reid/mobilenet_v3_small-047dcff4.pth` |
 
-### Priority 1: Vehicle Detection
+The P6 checkpoint is optional at runtime and remains review-only. Superseded and experimental artifacts are retained outside the operational manifest for provenance.
 
-* **Vehicle Filtering**: Passes COCO vehicle classes (`car`, `motorcycle`, `bus`, `truck`).
-* **PTS-Based Sampling**: 150 ms interval sampling cadence (~6.7 FPS).
-* **Hardware Benchmarking**: Optimized for GPU acceleration with low VRAM footprint.
+## Configuration precedence
 
-### Priority 2: Single-Camera Vehicle Tracking
+Use this order when changing a runtime setting:
 
-* **Isolated Camera Registry**: Independent ByteTrack instances per camera feed to prevent ID collisions.
-* **Cadence-Aware Kalman Filter**: Matches ByteTrack frame rate directly to the 150 ms sampling cadence.
-* **Epoch & Gap Reset Safeguards**: Automatically invalidates tracks on stream restarts or PTS gaps > 1500 ms.
+1. Checked-in subsystem YAML under `configs/`.
+2. Environment variables from `.env` (never commit `.env`).
+3. Explicit command-line arguments.
 
-### Priority 3: License Plate Detection & Provenance
+`models/manifest.json` controls model identity, path, required/optional status, and SHA-256. Experiment profiles and historical model evidence do not override it.
 
-* **Padded Vehicle Cropping**: Extracts vehicle ROIs with 8% margin to protect bumper edges.
-* **High-Resolution Magnification**: Dynamically scales crops to 960 px before plate localization.
-* **Dedicated Single-Class Plate Model**: Enforces `{0: 'license_plate'}` contract, rejecting generic COCO false positives.
-* **Verified Real Dataset Workflow**: Uses open verified ANPR dataset (CC-BY-4.0) with strict **Real-Only Validation & Test** splits and zero hash overlap.
-* **Coordinate Re-Projection**: Accurately projects local crop coordinates back to full 1920x1080 CCTV space.
-* **Quality & Top-K Accumulation**: Evaluates sharpness (Laplacian variance), contrast, and retains the top candidate crops per track.
-
-### Priority 4: License Plate OCR & Multi-Frame Consensus
-
-* **Production Recognizer:** `PP-OCRv5_mobile_rec` running via ONNX Runtime CPU with genuine tensor batching.
-* **Layout Awareness:** Integrated two-line motorcycle / square plate decomposition and reassembly.
-* **Soft Indian Grammar & Normalization:** Position-specific confusion discounting ($O/0, I/1, A/4, B/8, S/5, Z/2, G/6$) without global string corruption.
-* **Multi-Frame Weighted Voter:** Positional character consensus requiring corroborating support count $\ge 2$ for track resolution.
-
-### Priority 5: Target Registration Matching & Watchlists
-
-* **Multi-Tier Indexing:** Suffix-4 prefix trees and fuzzy distance clustering for sub-millisecond retrieval against 100k+ records.
-* **Confusion Cost Matrix:** Position-aware Levenshtein metric accounting for Indian registration plate fonts (e.g. `DL`, `GJ`, `MH`, `BH` series).
-* **Multi-Frame Corroboration:** Corroborated multi-frame observations receive automated alerts; uncorroborated single observations are gated to `REVIEW`.
-* **PostGIS Historical Search:** Stores raw sightings for non-destructive future rescoring and audit trails.
-
-### Priority 6: Vehicle ReID Fallback
-
-* **Fallback appearance signal:** Uses one torchvision MobileNetV3-Small ImageNet baseline with 576-dimensional L2-normalized embeddings.
-* **Plate leakage protection:** Blurs the locally detected plate region before embedding; OCR text is never passed to the appearance model.
-* **Track-level evidence:** Retains the top five quality crops per `(camera_id, stream_epoch, track_id)` and aggregates them into one bounded profile.
-* **Conservative fusion:** Strong ANPR remains authoritative. Partial plates may receive appearance support; no-plate appearance results remain `POSSIBLE/REVIEW` and cannot create automatic HIGH/CRITICAL alerts.
-* **Evidence boundary:** Local data has no verified same-vehicle cross-camera identity ground truth. P6 reports are explicitly `P6_APPEARANCE_PROXY_EVALUATION`; they do not claim cross-camera Rank-1/mAP accuracy.
-* **Bounded search:** Candidate lookup uses camera/epoch/class/time pruning, optional P7 feasibility, and an in-memory normalized matrix; no vector database or 80k-camera capacity claim is made.
-
-### Priority 12: Final Hackathon Submission Package
-
-The evaluator-facing package is in [`12_submission/README.md`](12_submission/README.md). It contains the official requirements matrix, evidence inventory, HLD, architecture diagrams, demo runbooks, model register, 80k rollout projection, HA/DR, security/privacy, department requirements, cost model, presentation outline, and final checklist.
-
-Run the P6 unit tests and bounded evaluation:
-
-```bash
-python -m pytest tests/test_p6_vehicle_reid.py -q
-python -m 06_vehicle_reid.benchmark
-```
-
-See [`reports/p6/P6_REPORT.md`](reports/p6/P6_REPORT.md), [`reports/p6/P6_EVALUATION.json`](reports/p6/P6_EVALUATION.json), and [`reports/p6/P6_BENCHMARK.json`](reports/p6/P6_BENCHMARK.json).
-
-### Priority 7: Cross-Camera Route / GIS & Spatio-Temporal Trajectory Engine
-
-* **Cross-Camera Sighting Graph:** Dynamic programming DAG solver reconstructing the most plausible chronological trajectory across distributed municipal cameras.
-* **Strict Spatio-Temporal Model:** Strictly avoids invalid global PTS comparison by resolving UTC wall-clock time provenance (`SOURCE_WALLCLOCK`, `PTS_ANCHORED_ESTIMATE`, `DB_PERSISTENCE_FALLBACK`).
-* **Lower-Bound Kinematics Feasibility:** Evaluates inter-camera geodesic distance ($R=6371\text{km}$) and required minimum transit speed to flag and penalize physically impossible jumps ($>220\text{ km/h}$).
-* **Same-Camera Dwell Collapse:** Automatically merges stationary dwell observations into single nodes with dwell durations and aggregated support counts.
-* **PostGIS & RFC-7946 GeoJSON:** Native PostgreSQL 16 + PostGIS storage with `ST_DWithin` spatial indexing and standards-compliant GeoJSON FeatureCollection generation for Control Room mapping UIs.
-
----
-
-## Setup & Installation
-
-### 1. Clone Repository & Create Environment
+## Setup with Conda `PY312`
 
 ```bash
 git clone https://github.com/mdshoaibuddinchanda/sentineltrack.git
 cd sentineltrack
-
-# Activate the project Python 3.12 environment
 conda activate PY312
-pip install -r requirements.txt
-```
-
-### 2. Environment Configuration
-
-Copy the sample environment file:
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` with your Sentinel host and database credentials.
-*(Note: `.env.example` contains development-only default credentials for local Docker Postgres).*
-
-### 3. Start Database
-
-```bash
-docker run -d --name sentinel-postgres -p 5432:5432 -e POSTGRES_USER=sentinel -e POSTGRES_PASSWORD=sentinel_dev -e POSTGRES_DB=sentinel postgis/postgis:16-3.4
-```
-
-### 4. Model Setup
-
-Download the base vehicle detector, plate detector, and OCR recognition models:
-
-```bash
-# Vehicle and plate detectors
+python -m pip install -r requirements.txt
+copy .env.example .env       # Windows; use cp on POSIX
 python scripts/setup_models.py
-
-# Priority 4 OCR models (PP-OCRv5 Mobile & Server)
-python -m 04_plate_ocr.scripts.setup_ocr_models
+python tools/preflight.py
 ```
 
----
+`setup_models.py` creates canonical directories, downloads/verifies public models, verifies SHA-256 values, and reports missing project-trained artifacts explicitly. Server OCR and YOLO26 are optional/experimental and are not installed by the production bundle.
 
-## Testing & Validation
-
-Run the automated Python test suite:
+For a no-network verification of an already provisioned machine:
 
 ```bash
-python -m pytest -v
+python scripts/setup_models.py --verify-only
 ```
 
-### OCR Testing & Benchmark Scripts
+Start local PostgreSQL/PostGIS with `docker compose up -d postgres` when using the full stack. The preflight command bounds its database probe and returns a warning if the local database is stopped.
 
-* **Full Quantitative Evaluation (Mobile, Server, Adaptive):**
+## Demo and services
 
-  ```bash
-  python -m 04_plate_ocr.training.evaluate
-  ```
+```bash
+# Native diagnostics and launch instructions
+scripts\run_demo.ps1       # Windows PowerShell
+./scripts/run_demo.sh      # Linux/macOS
 
-* **Latency & Batching Benchmark ($B=1, 2, 4, 8$):**
+# API
+python -m uvicorn 08_backend.app:app --host 0.0.0.0 --port 8000
 
-  ```bash
-  python -m 04_plate_ocr.benchmark
-  ```
+# Frontend
+cd 09_dashboard
+npm ci
+npm run dev
+```
 
-* **Test Single Plate Crop:**
+The evaluator-facing demo runbook is [`12_submission/DEMO_RUNBOOK.md`](12_submission/DEMO_RUNBOOK.md). It describes fixture mode, live prerequisites, and evidence capture without claiming production deployment.
 
-  ```bash
-  python -m 04_plate_ocr.scripts.test_crop <path_to_image>
-  ```
+## Testing and validation
 
-* **Live Multi-Camera Sentinel OCR Validator:**
+```bash
+python -m pytest -q
+python -m pytest tests/test_p6_vehicle_reid.py 08_backend/tests/test_analytics_reid_integration.py -q
+python -m compileall -q 00_foundation 01_vehicle_detection 02_tracking 03_plate_detection 04_plate_ocr 05_target_matching 06_vehicle_reid 07_route_engine 08_backend 10_security 11_scale_deployment scripts tools
+python tools/preflight.py
+```
 
-  ```bash
-  python -m 04_plate_ocr.scripts.validate_live_production
-  ```
+Frontend gates:
 
----
+```bash
+cd 09_dashboard
+npm run typecheck
+npm run lint
+npx vitest run
+npm run build
+```
+
+GitHub Actions runs the backend security/scale contract gate and the frontend typecheck, lint, test, and build gate. See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+
+## Evidence and documentation
+
+- [`docs/README.md`](docs/README.md) — documentation index.
+- [`docs/release/REPOSITORY_AUDIT.md`](docs/release/REPOSITORY_AUDIT.md) — tracked/ignored inventory and cleanup decisions.
+- [`docs/release/MODEL_INVENTORY.md`](docs/release/MODEL_INVENTORY.md) — selected, legacy, and experimental model evidence.
+- [`reports/p6/P6_REPORT.md`](reports/p6/P6_REPORT.md) — P6 proxy evaluation and safety boundary.
+- [`reports/p11_5/FINAL_REPORT.md`](reports/p11_5/FINAL_REPORT.md) — frozen P11.5 evidence.
+- [`12_submission/README.md`](12_submission/README.md) — final submission navigation.
+
+## Security and privacy
+
+Authentication, authorization, CSRF, rate limiting, security headers, audit events, retention, and data-classification decisions are documented under [`docs/security/`](docs/security/) and implemented/tested in `10_security/`. Do not commit credentials, raw watchlists, raw video, or unreviewed personal data.
+
+## Scale and operational honesty
+
+P11 scale documents provide a bounded architecture projection, storage/bandwidth arithmetic, HA/DR design, and a rollout plan. They are not a claim that this checkout has been deployed to 80,000 cameras. P7 provides chronological lower-bound feasibility, not live road routing. P6 provides appearance retrieval evidence only because no true cross-camera vehicle-ID ground truth exists locally.
+
+## Screenshots
+
+The dashboard is implemented under `09_dashboard/` and includes deterministic fixture data for presentation. No generated or potentially sensitive runtime screenshot is committed in this release; capture a fresh redacted screenshot from the demo environment when required by the submission portal.
 
 ## License
 
-Proprietary / Competition Submission.
+Proprietary / competition submission. Third-party model and dataset terms remain applicable; see the model and evidence inventories before redistribution.

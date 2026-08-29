@@ -259,7 +259,7 @@ def evaluate_crops(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--models", default="models/plate/production/best.pt,runs/p11_5/p3-yolo11s-v2-e20-b4-640-r3-clean/weights/best.pt")
+    parser.add_argument("--models", default="models/plate/yolo11s_plate_v2.pt,runs/p11_5/p3-yolo11s-v2-e20-b4-640-r3-clean/weights/best.pt")
     parser.add_argument("--obb-model", default="")
     parser.add_argument("--data", default="datasets/experiments/plate_detection_v2_strict")
     parser.add_argument("--device", default="0")

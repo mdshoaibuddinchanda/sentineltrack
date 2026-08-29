@@ -1,6 +1,8 @@
--r requirements-api.txt
--r requirements-analytics.txt
+# Local development and validation dependencies.
+-r requirements/api.txt
+-r requirements/analytics.txt
 pytest>=8.0.0
 pytest-asyncio>=0.23.0
 pytest-cov>=5.0.0
+pytest-timeout>=2.3.0
 pip-audit>=2.7.0

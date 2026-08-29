@@ -31,7 +31,7 @@ def test_plate_model_contract_accepts_license_plate_model():
         mock_instance.names = {0: 'license_plate'}
         mock_yolo.return_value = mock_instance
 
-        detector = PlateDetector(model_path='models/plate/production/best.pt', enforce_contract=True)
+        detector = PlateDetector(model_path='models/plate/yolo11s_plate_v2.pt', enforce_contract=True)
         assert len(detector.model.names) == 1
         assert detector.model.names[0] == 'license_plate'
 

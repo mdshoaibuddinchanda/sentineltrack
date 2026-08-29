@@ -66,7 +66,7 @@ def verify_file_integrity(file_path: Path, expected_sha256: str) -> bool:
     return True
 
 
-def setup_ocr_models(force: bool = False) -> bool:
+def setup_ocr_models(force: bool = False, include_server: bool = False) -> bool:
     """
     Downloads and verifies all Priority 4 OCR recognition models and dictionaries.
     Fails with ValueError if SHA-256 verification fails.
@@ -75,7 +75,12 @@ def setup_ocr_models(force: bool = False) -> bool:
     print('================ SENTINELTRACK OCR MODEL SETUP ================')
     print(f'Destination Directory: {MODELS_DIR}')
 
-    for item in MODEL_RESOURCES:
+    resources = MODEL_RESOURCES if include_server else [
+        item for item in MODEL_RESOURCES
+        if 'server' not in item['identity'].lower()
+        and 'bluecopa' not in item['url'].lower()
+    ]
+    for item in resources:
         dest_path = item['dest']
         name = item['name']
         url = item['url']
@@ -106,8 +111,9 @@ def setup_ocr_models(force: bool = False) -> bool:
 
 if __name__ == '__main__':
     force_download = '--force' in sys.argv
+    include_server = '--include-server' in sys.argv
     try:
-        setup_ocr_models(force=force_download)
+        setup_ocr_models(force=force_download, include_server=include_server)
     except Exception as e:
         print(f'[ERROR] Model setup failed: {e}', file=sys.stderr)
         sys.exit(1)

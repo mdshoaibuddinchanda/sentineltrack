@@ -5,8 +5,8 @@ reid:
   model_version: torchvision-0.20.1
   checkpoint_url: https://download.pytorch.org/models/mobilenet_v3_small-047dcff4.pth
   checkpoint_sha256: 047dcff4addef86ea5bc2eff13c9614dc11f47ab1160d0a71a25e7db994f4e1f
-  checkpoint_path: null
-  allow_checkpoint_download: true
+  checkpoint_path: models/reid/mobilenet_v3_small-047dcff4.pth
+  allow_checkpoint_download: false
   device: auto
   input_width: 224
   input_height: 224

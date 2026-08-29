@@ -1,3 +1,0 @@
-# Optional experiment-only environment. Never install this into the
-# SentinelTrack production runtime pinned in requirements.txt.
-ultralytics==8.4.132

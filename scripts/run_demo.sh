@@ -9,7 +9,7 @@ echo "       SENTINELTRACK NATIVE DEMO LAUNCHER         "
 echo "=================================================="
 
 echo "[1/4] Running Pre-Flight Environment Checks..."
-python tools/p11/preflight.py
+python tools/preflight.py
 
 echo ""
 echo "[2/4] Executing Subsystem Diagnostics Doctor..."

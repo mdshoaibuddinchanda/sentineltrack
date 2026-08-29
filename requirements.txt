@@ -1,20 +1,5 @@
-# Core SentinelTrack Production Runtime Dependencies
-torch>=2.2.0
-torchvision==0.20.1
-ultralytics==8.3.235
-opencv-python>=4.8.0
-psycopg[binary]>=3.1.0
-requests>=2.31.0
-numpy>=1.26.0
-lapx>=0.9.0
-pytest>=8.0.0
-onnxruntime>=1.18.0
-pillow>=10.0.0
-pyyaml>=6.0
-av>=11.0.0
-psutil>=5.9.0
-fastapi>=0.115.0
-uvicorn[standard]>=0.30.0
-pydantic>=2.8.0
-httpx>=0.27.0
+# SentinelTrack production runtime bundle.
+# Install from the repository root: python -m pip install -r requirements.txt
+-r requirements/api.txt
+-r requirements/analytics.txt
 websockets>=13.0

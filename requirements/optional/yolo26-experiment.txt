@@ -1,0 +1,2 @@
+# Historical/experimental only. Do not install for the frozen production runtime.
+ultralytics==8.4.132

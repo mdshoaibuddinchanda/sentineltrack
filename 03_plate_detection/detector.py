@@ -16,7 +16,7 @@ class PlateDetector:
 
     def __init__(
         self,
-        model_path: str = "models/plate/production/best.pt",
+        model_path: Optional[str] = None,
         confidence: float = 0.20,
         imgsz: int = 960,
         device: Optional[str] = None,
@@ -28,13 +28,14 @@ class PlateDetector:
         else:
             self.device = device
 
-        self.model_path = model_path
+        resolved_model_path = model_path or str(ROOT_DIR / "models" / "plate" / "yolo11s_plate_v2.pt")
+        self.model_path = resolved_model_path
         self.confidence = confidence
         self.imgsz = imgsz
         self.half = half
 
         # Load YOLO model
-        self.model = YOLO(model_path)
+        self.model = YOLO(resolved_model_path)
 
         # Startup Model Contract Assertion
         if enforce_contract:
@@ -42,7 +43,7 @@ class PlateDetector:
             valid_names = {"license_plate", "license-plate", "plate", "license_plates"}
             if len(names) != 1 or 0 not in names or names[0] not in valid_names:
                 raise RuntimeError(
-                    f"Wrong model loaded at '{model_path}'. Expected {{0: 'license_plate'}}, got: {names}"
+                    f"Wrong model loaded at '{resolved_model_path}'. Expected {{0: 'license_plate'}}, got: {names}"
                 )
 
     def detect(self, vehicle_crop: np.ndarray) -> List[Dict[str, float]]:

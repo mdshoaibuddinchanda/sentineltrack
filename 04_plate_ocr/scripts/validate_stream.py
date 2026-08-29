@@ -43,7 +43,7 @@ def test_single_stream_ocr(camera_id: str = '1', max_frames: int = 15):
 
 
     v_detector = VehicleDetector(model_path='models/vehicle/yolo11m.pt', confidence=0.25, imgsz=960)
-    p_detector = PlateDetector(model_path='models/plate/production/best.pt', confidence=0.20, imgsz=960)
+    p_detector = PlateDetector(model_path='models/plate/yolo11s_plate_v2.pt', confidence=0.20, imgsz=960)
     v_pipe = VehicleTrackingPipeline(detector=v_detector, sampling_interval_ms=150.0)
     p_pipe = PlateDetectionPipeline(plate_detector=p_detector, target_crop_width=960)
     ocr_pipe = PlateOCRPipeline(default_variant='gray')

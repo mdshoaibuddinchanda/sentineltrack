@@ -59,7 +59,7 @@ def main():
         ))
 
     # Run plate detection pipeline with dedicated single-class plate detector
-    p_detector = PlateDetector(model_path='models/plate/production/best.pt', confidence=0.20, imgsz=960)
+    p_detector = PlateDetector(model_path='models/plate/yolo11s_plate_v2.pt', confidence=0.20, imgsz=960)
     pipeline = PlateDetectionPipeline(plate_detector=p_detector)
 
 
