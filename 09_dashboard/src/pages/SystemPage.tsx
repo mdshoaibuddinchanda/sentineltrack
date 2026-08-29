@@ -4,6 +4,7 @@ import { TelemetryGrid } from "../components/system/TelemetryGrid";
 import { Card } from "../components/common/Card";
 import { HealthResponse, ReadinessResponse, MetricsSnapshot } from "../types/api";
 import { Server, Activity, ShieldAlert, CheckCircle, RefreshCw } from "lucide-react";
+import { formatDateTime } from "../utils/formatters";
 
 interface SystemPageProps {
   health?: HealthResponse | null;
@@ -20,6 +21,8 @@ export function SystemPage({
   lastUpdated,
   onRefresh,
 }: SystemPageProps) {
+  const serviceHealthy = health?.status !== "unhealthy";
+
   return (
     <div className="space-y-4">
       {/* Service Meta Card */}
@@ -37,6 +40,11 @@ export function SystemPage({
         }
         bodyClassName="p-4"
       >
+        {lastUpdated && (
+          <div className="mb-3 text-right text-[11px] text-slate-500 font-mono">
+            Last probe: {formatDateTime(lastUpdated.toISOString(), false)}
+          </div>
+        )}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 font-mono text-xs">
           <div className="bg-police-900 p-3 rounded border border-police-800">
             <div className="text-slate-400 text-[11px]">SERVICE VERSION</div>
@@ -44,13 +52,16 @@ export function SystemPage({
           </div>
           <div className="bg-police-900 p-3 rounded border border-police-800">
             <div className="text-slate-400 text-[11px]">GIT COMMIT SHA</div>
-            <div className="text-xs font-bold text-cyan-300 truncate" title={health?.git_sha}>
-              {health?.git_sha ? health.git_sha.substring(0, 8) : "21b9a1f0"}
+            <div className="text-xs font-bold text-cyan-300 truncate" title={health?.git_sha || "Unavailable"}>
+              {health?.git_sha ? health.git_sha.substring(0, 8) : "UNAVAILABLE"}
             </div>
           </div>
           <div className="bg-police-900 p-3 rounded border border-police-800">
             <div className="text-slate-400 text-[11px]">SERVICE STATUS</div>
-            <div className="text-sm font-bold text-emerald-400 uppercase">{health?.status || "HEALTHY"}</div>
+            <div className={`text-sm font-bold uppercase flex items-center gap-1.5 ${serviceHealthy ? "text-emerald-400" : "text-rose-400"}`}>
+              {serviceHealthy ? <CheckCircle className="w-3.5 h-3.5" /> : <ShieldAlert className="w-3.5 h-3.5" />}
+              {health?.status || "HEALTHY"}
+            </div>
           </div>
           <div className="bg-police-900 p-3 rounded border border-police-800">
             <div className="text-slate-400 text-[11px]">SECURITY / AUTH</div>

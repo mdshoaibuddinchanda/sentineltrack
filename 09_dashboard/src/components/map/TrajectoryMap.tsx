@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
+import { GeoJSON as LeafletGeoJSON, MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 import { RouteResponse, GeoJSONFeatureCollection } from "../../types/api";
 import { formatDateTime, formatDistance, formatSpeed, maskRegistration } from "../../utils/formatters";
 import { FeasibilityBadge, TimeQualityBadge } from "../common/Badge";
 import { MapLegend } from "./MapLegend";
-import { AlertTriangle, Info } from "lucide-react";
+import { Info } from "lucide-react";
 
 interface TrajectoryMapProps {
   route: RouteResponse | null;
@@ -55,6 +55,7 @@ export function TrajectoryMap({
 
   const sightings = route?.sightings || [];
   const validSightings = sightings.filter((s) => s.latitude && s.longitude);
+  const incomingSegments = new Map((route?.segments || []).map((segment) => [segment.to_sighting_id, segment]));
 
   const polylineCoords: [number, number][] = validSightings.map((s) => [s.latitude!, s.longitude!]);
 
@@ -78,6 +79,21 @@ export function TrajectoryMap({
         />
 
         {validSightings.length > 0 && <TrajectoryBoundsController sightings={validSightings} />}
+
+        {geoJSON && geoJSON.features.length > 0 && (
+          <LeafletGeoJSON
+            data={geoJSON as never}
+            style={{ color: "#22d3ee", weight: 2, opacity: 0.7, dashArray: "5, 7" }}
+            pointToLayer={(_feature, latlng) =>
+              L.circleMarker(latlng, {
+                radius: 5,
+                color: "#67e8f9",
+                fillColor: "#0891b2",
+                fillOpacity: 0.8,
+              })
+            }
+          />
+        )}
 
         {/* Trajectory Polyline */}
         {polylineCoords.length >= 2 && (
@@ -108,12 +124,24 @@ export function TrajectoryMap({
                   <span className="font-bold text-xs text-cyan-300 font-mono">Node #{idx + 1}</span>
                   <span className="text-[10px] text-slate-400 font-mono">{s.camera_id}</span>
                 </div>
+                <div className="text-[11px] text-slate-300 font-mono">
+                  Target: <span className="text-slate-100">{maskRegistration(route?.registration || "", privacyMode)}</span>
+                </div>
                 <div className="text-xs text-slate-200">{formatDateTime(s.event_time_utc)}</div>
                 <div className="flex items-center justify-between text-[11px] font-mono">
                   <span className="text-slate-400">Match Score:</span>
                   <span className="text-slate-100 font-semibold">{s.match_score.toFixed(2)}</span>
                 </div>
                 <TimeQualityBadge quality={s.time_quality} />
+                {incomingSegments.has(s.sighting_id) && (
+                  <div className="pt-1 border-t border-police-700 space-y-1">
+                    <div className="text-[10px] text-slate-400">Incoming transition</div>
+                    <div className="text-[11px] text-slate-300">
+                      {formatDistance(incomingSegments.get(s.sighting_id)?.distance_lower_bound_m)} at {formatSpeed(incomingSegments.get(s.sighting_id)?.minimum_required_speed_kmh)}
+                    </div>
+                    <FeasibilityBadge feasibility={incomingSegments.get(s.sighting_id)?.feasibility || "UNKNOWN"} />
+                  </div>
+                )}
               </div>
             </Popup>
           </Marker>

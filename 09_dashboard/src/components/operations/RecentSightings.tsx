@@ -2,7 +2,7 @@ import React from "react";
 import { Sighting } from "../../types/api";
 import { formatDateTime, formatScore, maskRegistration } from "../../utils/formatters";
 import { MatchClassBadge, TimeQualityBadge } from "../common/Badge";
-import { Eye, Compass } from "lucide-react";
+import { Compass } from "lucide-react";
 
 interface RecentSightingsProps {
   sightings: Sighting[];
@@ -55,8 +55,9 @@ export function RecentSightings({
               <td className="px-3 py-2 text-right">
                 <button
                   onClick={() => onInvestigate(s.registration_candidate)}
-                  className="px-2 py-0.5 bg-police-750 hover:bg-accent-blue/80 text-white rounded text-[11px] font-semibold transition-colors"
+                  className="px-2 py-0.5 bg-police-750 hover:bg-accent-blue/80 text-white rounded text-[11px] font-semibold transition-colors inline-flex items-center gap-1"
                 >
+                  <Compass className="w-3 h-3" />
                   Investigate
                 </button>
               </td>

@@ -23,7 +23,10 @@ export function useAlerts(params?: { unacknowledged?: boolean; limit?: number },
 
     try {
       setLoading(true);
-      const res = await listAlerts(params);
+      const res = await listAlerts({
+        unacknowledged: params?.unacknowledged,
+        limit: params?.limit,
+      });
       setAlerts(res.items);
       setTotal(res.total);
       setUnackCount(res.unacknowledged_count);

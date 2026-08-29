@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import React from "react";
-import { render, screen } from "@testing-library/react";
-import { SeverityBadge, FeasibilityBadge, MatchClassBadge, PriorityBadge } from "../components/common/Badge";
+import { render } from "@testing-library/react";
+import { SeverityBadge, FeasibilityBadge } from "../components/common/Badge";
 import { MetricCards } from "../components/operations/MetricCards";
 import { OfflineBanner } from "../components/common/OfflineBanner";
 

@@ -5,7 +5,7 @@ import { Camera, Sighting } from "../../types/api";
 import { formatDateTime, maskRegistration } from "../../utils/formatters";
 import { CameraStatusBadge, TimeQualityBadge } from "../common/Badge";
 import { MapLegend } from "./MapLegend";
-import { Video, Navigation } from "lucide-react";
+import { Video } from "lucide-react";
 
 interface ControlRoomMapProps {
   cameras: Camera[];
@@ -33,7 +33,7 @@ function createCameraIcon(status: string, isSelected: boolean) {
   });
 }
 
-function createSightingIcon(sighting: Sighting) {
+function createSightingIcon() {
   return L.divIcon({
     className: "custom-sighting-marker",
     html: `
@@ -138,7 +138,7 @@ export function ControlRoomMap({
           const cam = cameras.find((c) => c.camera_id === s.camera_id);
           if (!cam || !cam.latitude || !cam.longitude) return null;
           return (
-            <Marker key={s.sighting_id} position={[cam.latitude, cam.longitude]} icon={createSightingIcon(s)}>
+            <Marker key={s.sighting_id} position={[cam.latitude, cam.longitude]} icon={createSightingIcon()}>
               <Popup>
                 <div className="p-2 space-y-1.5 min-w-[200px]">
                   <div className="text-xs font-bold text-cyan-300 font-mono">TARGET SIGHTING</div>

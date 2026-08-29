@@ -4,7 +4,6 @@ import {
   formatSpeed,
   formatScore,
   formatDuration,
-  formatDateTime,
   formatRelativeTime,
   maskRegistration,
 } from "../utils/formatters";

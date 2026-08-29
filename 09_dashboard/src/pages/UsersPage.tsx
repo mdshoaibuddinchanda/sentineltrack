@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { UserItem, listUsers, createUser, updateUser, resetUserPassword } from "../api/users";
 import { UserRole } from "../types/auth";
-import { Users, UserPlus, Shield, KeyRound, CheckCircle, XCircle, AlertTriangle, RefreshCw } from "lucide-react";
+import { Users, UserPlus, KeyRound, CheckCircle, XCircle, AlertTriangle, RefreshCw } from "lucide-react";
 
 export function UsersPage() {
   const [users, setUsers] = useState<UserItem[]>([]);
@@ -177,16 +177,19 @@ export function UsersPage() {
                   <td className="p-3 font-semibold text-cyan-300">{u.username}</td>
                   <td className="p-3">{u.display_name}</td>
                   <td className="p-3">
-                    <select
-                      value={u.role}
-                      onChange={(e) => handleRoleChange(u, e.target.value as UserRole)}
-                      className="bg-police-800 border border-police-700 rounded px-2 py-1 text-xs text-slate-200 font-mono cursor-pointer"
-                    >
-                      <option value="ADMIN">ADMIN</option>
-                      <option value="SUPERVISOR">SUPERVISOR</option>
-                      <option value="OPERATOR">OPERATOR</option>
-                      <option value="AUDITOR">AUDITOR</option>
-                    </select>
+                    <div className="flex items-center gap-2">
+                      {getRoleBadge(u.role)}
+                      <select
+                        value={u.role}
+                        onChange={(e) => handleRoleChange(u, e.target.value as UserRole)}
+                        className="bg-police-800 border border-police-700 rounded px-2 py-1 text-xs text-slate-200 font-mono cursor-pointer"
+                      >
+                        <option value="ADMIN">ADMIN</option>
+                        <option value="SUPERVISOR">SUPERVISOR</option>
+                        <option value="OPERATOR">OPERATOR</option>
+                        <option value="AUDITOR">AUDITOR</option>
+                      </select>
+                    </div>
                   </td>
                   <td className="p-3">
                     {u.enabled ? (

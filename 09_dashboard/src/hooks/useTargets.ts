@@ -22,7 +22,10 @@ export function useTargets(params?: { enabled?: boolean; priority?: string }, de
 
     try {
       setLoading(true);
-      const res = await listTargets(params);
+      const res = await listTargets({
+        enabled: params?.enabled,
+        priority: params?.priority,
+      });
       setTargets(res.items);
       setTotal(res.total);
       setError(null);

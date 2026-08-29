@@ -39,6 +39,23 @@ describe("P8 REST API Contract Verification", () => {
     expect(res[0].camera_id).toBe("cam_01");
   });
 
+  it("camera-specific nearby lookup encodes the camera ID and radius", async () => {
+    let capturedUrl = "";
+    global.fetch = vi.fn().mockImplementation((url) => {
+      capturedUrl = url.toString();
+      return Promise.resolve({
+        ok: true,
+        headers: new Headers({ "content-type": "application/json" }),
+        json: async () => [],
+      } as any);
+    });
+
+    const res = await getNearbyCamerasForCamera("cam/01", 2500);
+    expect(capturedUrl).toContain("/api/v1/cameras/cam%2F01/nearby");
+    expect(capturedUrl).toContain("radius_m=2500");
+    expect(res).toEqual([]);
+  });
+
   it("listTargets sends 'enabled' parameter, NOT 'enabled_only'", async () => {
     let capturedUrl = "";
     global.fetch = vi.fn().mockImplementation((url) => {

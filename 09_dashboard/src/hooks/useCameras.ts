@@ -22,7 +22,11 @@ export function useCameras(params?: { department?: string; live?: boolean; strea
 
     try {
       setLoading(true);
-      const res = await listCameras(params);
+      const res = await listCameras({
+        department: params?.department,
+        live: params?.live,
+        stream_status: params?.stream_status,
+      });
       setCameras(res.items);
       setTotal(res.total);
       setError(null);
