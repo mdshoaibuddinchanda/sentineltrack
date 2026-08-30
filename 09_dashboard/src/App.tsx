@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { useAuth } from "./context/AuthContext";
 import { LoginPage } from "./pages/LoginPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Header } from "./components/layout/Header";
@@ -30,8 +31,9 @@ import { DEMO_SIGHTINGS } from "./utils/demoData";
 import { maskRegistration } from "./utils/formatters";
 import { AlertOctagon } from "lucide-react";
 
-export function App() {
+function DashboardApp() {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [demoMode] = useState<boolean>(
     import.meta.env.VITE_DEMO_MODE === "true"
   );
@@ -45,11 +47,11 @@ export function App() {
   const [toastMessage, setToastMessage] = useState<{ title: string; desc: string; registration: string } | null>(null);
 
   // Global Subsystem Hooks (stable topic key to eliminate WebSocket churn)
-  const { status: sysStatus, health, readiness, metrics, error: sysError, refresh: refreshSystem } = useSystemStatus(8000);
-  const { status: wsStatus, events: wsEvents } = useWebSocket("*");
-  const { cameras, refresh: refreshCameras } = useCameras(undefined, demoMode);
-  const { targets, create: createTarget, update: updateTarget, disable: disableTarget, refresh: refreshTargets } = useTargets(undefined, demoMode);
-  const { alerts, unackCount, acknowledge: acknowledgeAlert, prependLiveAlert, refresh: refreshAlerts } = useAlerts(undefined, demoMode);
+  const { status: sysStatus, health, readiness, metrics, lastUpdated, error: sysError, refresh: refreshSystem } = useSystemStatus(8000, isAuthenticated);
+  const { status: wsStatus, events: wsEvents } = useWebSocket("*", isAuthenticated);
+  const { cameras, refresh: refreshCameras } = useCameras(undefined, demoMode, isAuthenticated);
+  const { targets, create: createTarget, update: updateTarget, disable: disableTarget, refresh: refreshTargets } = useTargets(undefined, demoMode, isAuthenticated);
+  const { alerts, unackCount, acknowledge: acknowledgeAlert, prependLiveAlert, refresh: refreshAlerts } = useAlerts(undefined, demoMode, isAuthenticated);
 
   useEffect(() => {
     document.documentElement.dataset.theme = darkMode ? "dark" : "light";
@@ -58,6 +60,10 @@ export function App() {
 
   // Initial & periodic sightings fetch
   const fetchSightings = useCallback(async () => {
+    if (!isAuthenticated) {
+      setSightings([]);
+      return;
+    }
     if (demoMode) {
       setSightings(DEMO_SIGHTINGS);
       return;
@@ -68,7 +74,7 @@ export function App() {
     } catch {
       // Offline fallback
     }
-  }, [demoMode]);
+  }, [demoMode, isAuthenticated]);
 
   useEffect(() => {
     fetchSightings();
@@ -130,8 +136,7 @@ export function App() {
   };
 
   return (
-    <AuthProvider>
-      <Routes>
+    <Routes>
         {/* Public route — accessible without authentication */}
         <Route path="/login" element={<LoginPage />} />
 
@@ -287,10 +292,11 @@ export function App() {
                         path="/system"
                         element={
                           <SystemPage
-                            health={health}
-                            readiness={readiness}
-                            metrics={metrics}
-                            onRefresh={refreshSystem}
+                          health={health}
+                          readiness={readiness}
+                          metrics={metrics}
+                          lastUpdated={lastUpdated}
+                          onRefresh={refreshSystem}
                           />
                         }
                       />
@@ -319,7 +325,14 @@ export function App() {
             </ProtectedRoute>
           }
         />
-      </Routes>
+    </Routes>
+  );
+}
+
+export function App() {
+  return (
+    <AuthProvider>
+      <DashboardApp />
     </AuthProvider>
   );
 }

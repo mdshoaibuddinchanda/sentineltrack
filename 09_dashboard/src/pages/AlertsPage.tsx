@@ -161,7 +161,7 @@ export function AlertsPage({ alerts, onAcknowledge, onInvestigate, privacyMode =
       {/* Alerts Table */}
       <Card
         title={`INCIDENT ALERT LOG (${filteredAlerts.length})`}
-        subtitle="Idempotent match detections with explainable OCR evidence"
+        subtitle="Review, acknowledge, and investigate watchlist matches"
         icon={<Bell className="w-4 h-4 text-rose-500" />}
         bodyClassName="p-0 overflow-x-auto"
       >

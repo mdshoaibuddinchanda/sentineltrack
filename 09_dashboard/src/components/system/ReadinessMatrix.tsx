@@ -8,16 +8,16 @@ export function ReadinessMatrix({ readiness }: { readiness?: ReadinessResponse |
   }
 
   const components = [
-    { key: "database", label: "PostgreSQL 17 Database", desc: "Relational persistence layer" },
-    { key: "postgis", label: "PostGIS Spatial Engine", desc: "Geodesic ST_DWithin & GeoJSON" },
-    { key: "camera_registry", label: "CCTV Camera Registry", desc: "Stream endpoints & hardware metadata" },
-    { key: "target_repository", label: "Target Watchlist DB", desc: "Watchlist storage & fast indices" },
-    { key: "route_engine", label: "P7 GIS Trajectory Pipeline", desc: "Kinematic feasibility & route DP" },
-    { key: "vehicle_detector", label: "P1 Vehicle Detector (YOLO11m)", desc: "COCO vehicle detection & FP16 micro-batching" },
-    { key: "tracker", label: "P2 Multi-Camera Tracker (ByteTrack)", desc: "Temporal vehicle association & track registry" },
-    { key: "plate_detector", label: "P3 Plate Detector (YOLO11s)", desc: "License plate bounding box & quality score" },
-    { key: "ocr_pipeline", label: "P4 OCR Recognizer (PP-OCRv5 ONNX)", desc: "Grammar scoring & multi-frame consensus" },
-    { key: "target_pipeline", label: "P5 Target Matcher & Alert Engine", desc: "Position confusion discount & explainable scoring" },
+    { key: "database", label: "Main database", desc: "Stores cameras, sightings, and watchlist data" },
+    { key: "postgis", label: "Map and location service", desc: "Supports camera locations and route checks" },
+    { key: "camera_registry", label: "Camera list", desc: "Camera addresses and connection details" },
+    { key: "target_repository", label: "Watchlist storage", desc: "Vehicles and alert priorities" },
+    { key: "route_engine", label: "Movement and route checks", desc: "Checks whether sightings can follow in time" },
+    { key: "vehicle_detector", label: "Vehicle detection", desc: "Finds vehicles in incoming frames" },
+    { key: "tracker", label: "Vehicle tracking", desc: "Follows vehicles across nearby frames" },
+    { key: "plate_detector", label: "Number plate detection", desc: "Finds the plate area on a vehicle" },
+    { key: "ocr_pipeline", label: "Number plate reading", desc: "Reads and checks plate text" },
+    { key: "target_pipeline", label: "Watchlist matching and alerts", desc: "Compares sightings with the watchlist" },
   ];
 
   return (

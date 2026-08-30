@@ -235,7 +235,7 @@ textarea:focus-visible {
   min-height: 72px;
   padding: 12px 24px;
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr);
+  grid-template-columns: minmax(230px, 1fr) auto auto;
   align-items: center;
   gap: 20px;
   background: var(--surface);
@@ -364,6 +364,7 @@ textarea:focus-visible {
 .header-actions {
   justify-content: flex-end;
   gap: 7px;
+  min-width: 0;
   grid-column: 3;
   grid-row: 1;
 }
@@ -420,6 +421,7 @@ textarea:focus-visible {
   margin-left: 5px;
   padding-left: 12px;
   border-left: 1px solid var(--border);
+  min-width: 0;
 }
 
 .user-details {
@@ -430,7 +432,7 @@ textarea:focus-visible {
 }
 
 .user-details strong {
-  max-width: 125px;
+  max-width: 94px;
   overflow: hidden;
   color: var(--text);
   font-size: 0.77rem;
@@ -446,6 +448,12 @@ textarea:focus-visible {
 .logout-button {
   color: var(--offline);
   border-color: color-mix(in srgb, var(--offline) 35%, var(--border));
+  min-width: 35px;
+  padding-inline: 7px;
+}
+
+.logout-button span {
+  display: none;
 }
 
 /* Five clear choices: four daily actions and one menu for administration. */
@@ -722,6 +730,19 @@ textarea:focus-visible {
 .theme-light [class*="text-slate-300"] { color: var(--text-soft) !important; }
 .theme-light [class*="text-slate-400"],
 .theme-light [class*="text-slate-500"] { color: var(--muted) !important; }
+.theme-light [class*="text-emerald-300"],
+.theme-light [class*="text-emerald-400"] { color: #087443 !important; }
+.theme-light [class*="text-amber-300"],
+.theme-light [class*="text-amber-400"] { color: #915d00 !important; }
+.theme-light [class*="text-cyan-300"],
+.theme-light [class*="text-cyan-400"] { color: #0b6476 !important; }
+.theme-light [class*="text-rose-300"],
+.theme-light [class*="text-rose-400"] { color: #b42318 !important; }
+.theme-light [class*="text-blue-300"],
+.theme-light [class*="text-blue-400"],
+.theme-light [class*="text-accent-blue"] { color: #1559a6 !important; }
+.theme-light [class*="bg-police-"][class~="text-white"] { color: var(--text) !important; }
+.theme-light .font-mono { font-family: inherit !important; letter-spacing: normal !important; }
 .theme-light [class*="shadow-lg"] { box-shadow: 0 2px 7px rgba(26, 43, 64, 0.05) !important; }
 
 /* Leaflet follows the selected theme too. */
@@ -765,16 +786,15 @@ textarea:focus-visible {
 
 @media (min-width: 1050px) {
   .app-header {
-    grid-template-columns: minmax(230px, 1fr) auto minmax(430px, 1fr);
+    grid-template-columns: minmax(230px, 1fr) auto auto;
   }
 
   .header-summary {
-    grid-column: 3;
-    grid-row: 1;
-    justify-content: flex-end;
-    padding-top: 0;
-    border-top: 0;
-    padding-right: 140px;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: flex-start;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
   }
 }
 

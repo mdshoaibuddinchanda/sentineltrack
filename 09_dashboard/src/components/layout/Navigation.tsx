@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Bell, ChevronDown, ClipboardList, Compass, LayoutDashboard, MoreHorizontal, Search, Server, ShieldCheck, Users, Video } from "lucide-react";
+import { Bell, ChevronDown, Compass, LayoutDashboard, MoreHorizontal, Search, Server, ShieldCheck, Users, Video } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
@@ -108,7 +108,7 @@ export function Navigation({ unackAlertsCount }: NavigationProps) {
           </button>
           {moreOpen && (
             <div className="more-menu" role="menu">
-              <div className="more-menu-heading">Additional tools</div>
+              <div className="more-menu-heading">More pages</div>
               {moreItems.filter((item) => item.visible !== false).map((item) => (
                 <button key={item.id} type="button" role="menuitem" onClick={() => goTo(item.path)} className={`more-menu-item ${isActive(item) ? "more-menu-item--active" : ""}`}>
                   {item.icon}
@@ -122,7 +122,6 @@ export function Navigation({ unackAlertsCount }: NavigationProps) {
           )}
         </div>
       </div>
-      <div className="navigation-help"><ClipboardList size={15} /> Select an area to begin</div>
     </nav>
   );
 }

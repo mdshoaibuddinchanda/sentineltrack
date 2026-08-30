@@ -58,6 +58,7 @@ htmlcov/
 
 # Logs & scratch
 *.log
+!logs/.gitkeep
 scratch/
 mlruns/
 .mlflow/
