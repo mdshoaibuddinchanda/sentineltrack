@@ -3,6 +3,7 @@ import React from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { CamerasPage } from "../pages/CamerasPage";
+import { hasValidCameraCoordinates } from "../components/map/ControlRoomMap";
 import { Camera } from "../types/api";
 
 vi.mock("../api/cameras", () => ({
@@ -10,6 +11,12 @@ vi.mock("../api/cameras", () => ({
 }));
 
 describe("Camera Deep Linking & Asynchronous Loading Tests", () => {
+  it("rejects null or non-finite camera coordinates before map rendering", () => {
+    expect(hasValidCameraCoordinates({ latitude: null, longitude: 72.5 })).toBe(false);
+    expect(hasValidCameraCoordinates({ latitude: 23.0, longitude: Number.NaN })).toBe(false);
+    expect(hasValidCameraCoordinates({ latitude: 23.0, longitude: 72.5 })).toBe(true);
+  });
+
   const mockCameras: Camera[] = [
     {
       camera_id: "cam_sg_highway_01",

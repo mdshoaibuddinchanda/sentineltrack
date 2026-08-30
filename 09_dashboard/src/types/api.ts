@@ -11,8 +11,8 @@ export interface Camera {
   camera_id: string;
   name?: string;
   department?: string;
-  latitude?: number;
-  longitude?: number;
+  latitude?: number | null;
+  longitude?: number | null;
   azimuth?: number;
   location_quality: LocationQuality;
   live: boolean;
@@ -157,8 +157,8 @@ export interface RouteSighting {
   event_time_utc: string;
   time_source: string;
   time_quality: TimeQuality;
-  latitude?: number;
-  longitude?: number;
+  latitude?: number | null;
+  longitude?: number | null;
   location_quality: LocationQuality;
   match_score: number;
 }

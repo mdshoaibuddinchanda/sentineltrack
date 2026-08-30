@@ -16,6 +16,17 @@ interface ControlRoomMapProps {
   className?: string;
 }
 
+export function hasValidCameraCoordinates(
+  camera: Pick<Camera, "latitude" | "longitude">
+): camera is Pick<Camera, "latitude" | "longitude"> & { latitude: number; longitude: number } {
+  return (
+    typeof camera.latitude === "number" &&
+    Number.isFinite(camera.latitude) &&
+    typeof camera.longitude === "number" &&
+    Number.isFinite(camera.longitude)
+  );
+}
+
 // Leaflet DivIcon helpers
 function createCameraIcon(status: string, isSelected: boolean) {
   const color = status === "ONLINE" ? "#10b981" : status === "DEGRADED" ? "#f59e0b" : "#ef4444";
@@ -68,9 +79,7 @@ export function ControlRoomMap({
 }: ControlRoomMapProps) {
   const [tileError, setTileError] = useState(false);
 
-  const validCameras = cameras.filter(
-    (c) => c.latitude !== undefined && c.longitude !== undefined && !isNaN(c.latitude!) && !isNaN(c.longitude!)
-  );
+  const validCameras = cameras.filter(hasValidCameraCoordinates);
 
   const positions: [number, number][] = validCameras.map((c) => [c.latitude!, c.longitude!]);
 
@@ -136,7 +145,7 @@ export function ControlRoomMap({
         {/* Sighting Overlay Markers */}
         {sightings.map((s) => {
           const cam = cameras.find((c) => c.camera_id === s.camera_id);
-          if (!cam || !cam.latitude || !cam.longitude) return null;
+          if (!cam || !hasValidCameraCoordinates(cam)) return null;
           return (
             <Marker key={s.sighting_id} position={[cam.latitude, cam.longitude]} icon={createSightingIcon()}>
               <Popup>

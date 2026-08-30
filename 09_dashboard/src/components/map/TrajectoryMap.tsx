@@ -31,10 +31,14 @@ function createSequenceIcon(sequence: number, isSelected: boolean) {
   });
 }
 
-function TrajectoryBoundsController({ sightings }: { sightings: { latitude?: number; longitude?: number }[] }) {
+function TrajectoryBoundsController({ sightings }: { sightings: { latitude?: number | null; longitude?: number | null }[] }) {
   const map = useMap();
   useEffect(() => {
-    const valid = sightings.filter((s) => s.latitude && s.longitude);
+    const valid = sightings.filter(
+      (s): s is typeof s & { latitude: number; longitude: number } =>
+        typeof s.latitude === "number" && Number.isFinite(s.latitude) &&
+        typeof s.longitude === "number" && Number.isFinite(s.longitude)
+    );
     if (valid.length > 0) {
       const bounds = L.latLngBounds(valid.map((s) => [s.latitude!, s.longitude!]));
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
@@ -54,7 +58,11 @@ export function TrajectoryMap({
   const [tileError, setTileError] = useState(false);
 
   const sightings = route?.sightings || [];
-  const validSightings = sightings.filter((s) => s.latitude && s.longitude);
+  const validSightings = sightings.filter(
+    (s): s is typeof s & { latitude: number; longitude: number } =>
+      typeof s.latitude === "number" && Number.isFinite(s.latitude) &&
+      typeof s.longitude === "number" && Number.isFinite(s.longitude)
+  );
   const incomingSegments = new Map((route?.segments || []).map((segment) => [segment.to_sighting_id, segment]));
 
   const polylineCoords: [number, number][] = validSightings.map((s) => [s.latitude!, s.longitude!]);
