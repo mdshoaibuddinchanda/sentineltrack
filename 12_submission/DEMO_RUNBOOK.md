@@ -1,6 +1,9 @@
 # Demonstration Runbook
 
-This runbook is for a real software demonstration. The deterministic dashboard mode is a reproducible fixture for the interface and workflow; it must be labeled as demo data. It is not a substitute for the official government-feed run.
+This runbook is for a real software demonstration using permitted live camera
+sources. The current checkout intentionally has no runtime fixture or sample
+data mode. If official sources are unavailable, record that dependency
+failure rather than presenting invented detections.
 
 ## Preconditions
 
@@ -27,32 +30,22 @@ Use a disposable local password only. The Compose path starts its own
 PostgreSQL/PostGIS service and receives `DATABASE_PASSWORD` from the shell or
 `.env`; it does not require a separate database container.
 
-## Path A: deterministic local dashboard
+## Path A: full local runtime
 
-The repository-root launcher is the preferred Windows visual-review path:
+The repository-root launcher is the preferred Windows live-runtime path:
 
 ```bat
 conda activate PY312
 cd C:\DR2\sentineltrack
-run.bat
+python tools\preflight.py --strict-database
+run.bat --full
 ```
 
-It prints a temporary `demo_admin` password, starts the API and dashboard on
-ports 8000 and 5173, and opens the browser. Use `run.bat --full` only when
-PostgreSQL, the configured models, and permitted camera sources are ready.
-
-```powershell
-conda activate PY312
-cd C:\DR2\sentineltrack\09_dashboard
-$env:VITE_DEMO_MODE = "true"
-npm.cmd run dev
-```
-
-Open `http://localhost:5173`. Keep the visible `Sample data` indicator in the recording. Use the seeded camera, target, alert, sighting, and route fixtures; show a target such as `GJ01AB1234`, but state that the data is deterministic demo data.
-
-The fixture source is `09_dashboard/src/utils/demoData.ts`. Path A requires no
-database seed process; enabling `VITE_DEMO_MODE=true` selects the source-controlled
-fixtures and the dashboard displays the demo indicator.
+The full launcher starts the API and dashboard on ports 8000 and 5173, loads
+the configured model artifacts, and connects the persisted permitted camera
+sources. It prints no temporary credentials; use the configured operator or
+administrator account. A camera is shown as online only after the worker has
+decoded a real frame.
 
 ## Path B: native API plus dashboard
 
@@ -76,15 +69,17 @@ npm.cmd run dev
 
 Use `http://localhost:5173` for the dashboard and `http://localhost:8000/docs` for API inspection. The preflight/doctor output must be shown if a dependency is unavailable; do not hide a degraded path.
 
-## Path C: container control-plane demo
+## Path C: container database dependency
 
 ```powershell
 cd C:\DR2\sentineltrack
-$env:DATABASE_PASSWORD = "sentinel_dev" # disposable local demo value only
-docker compose -f deploy\docker-compose.demo.yml up --build
+$env:DATABASE_PASSWORD = "sentinel_dev" # disposable local value only
+docker compose up -d postgres
 ```
 
-The compose file starts PostgreSQL/PostGIS, the API, and the frontend. Verify the health endpoints and open the published dashboard port shown by Compose. This path demonstrates the packaged control plane. Confirm model files and analytics dependencies separately before claiming a live inference result; the deterministic dashboard remains the safe fallback. Replace the disposable local password with an approved secret before any shared deployment.
+The root Compose file starts PostgreSQL/PostGIS only. Start the native API
+and frontend using Path A after the database is healthy. Model files and
+permitted camera sources remain local provisioning inputs.
 
 ## Six-act walkthrough
 
@@ -103,9 +98,9 @@ Before the official run, obtain the organizer-provided catalogue, credentials, a
 
 | Symptom | Action |
 |---|---|
-| Dashboard has no API data | Check API port, CORS, `.env`, and browser network panel; use demo mode for the UI walkthrough. |
+| Dashboard has no API data | Check API port, CORS, `.env`, and browser network panel; do not replace the live path with invented records. |
 | Feed reconnects | Preserve camera ID, increment stream epoch, and show the reset in diagnostics. |
-| Database unavailable | Do not fabricate results; use the deterministic fixture path and record the dependency failure. |
+| Database unavailable | Do not fabricate results; record the dependency failure and stop the run. |
 | Model/checkpoint unavailable | Keep ANPR/ReID claims disabled and show the graceful-degradation explanation. |
 | Government stream unavailable | Stop and report the external feed issue; do not replace it silently with mockups. |
 
@@ -114,7 +109,7 @@ Before the official run, obtain the organizer-provided catalogue, credentials, a
 For native processes, stop the two terminals. For Compose:
 
 ```powershell
-docker compose -f deploy\docker-compose.demo.yml down
+docker compose down
 ```
 
 Do not add `-v` unless disposable database volumes have been explicitly approved for deletion.

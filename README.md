@@ -237,8 +237,10 @@ python -m uvicorn 08_backend.app:app --host 0.0.0.0 --port 8000
 
 The backend loads live camera URLs from the camera registry, uses RTSP with
 the stored HLS URL as fallback, and reports connection/decoded-frame counts in
-System status. API-only mode remains suitable for CI and dashboard work and
-does not open camera connections.
+System status. OpenCV uses the configured `RTSP_CONNECT_TIMEOUT` and the
+supervisor fails over after `STREAM_FAILOVER_THRESHOLD` failed attempts, so a
+dead source cannot block the live run indefinitely. API-only mode remains
+suitable for CI and dashboard work and does not open camera connections.
 
 ### Reading live status correctly
 

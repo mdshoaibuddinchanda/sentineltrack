@@ -29,7 +29,8 @@ class RTSPReader:
         fallback_url: Optional[str] = None,
         max_backoff: int = 30,
         failover_threshold: int = 3,
-        recovery_interval_s: float = 60.0
+        recovery_interval_s: float = 60.0,
+        connect_timeout_s: Optional[float] = None,
     ):
         self.primary_url = url
         self.fallback_url = fallback_url
@@ -37,6 +38,10 @@ class RTSPReader:
         self.max_backoff = max_backoff
         self.failover_threshold = failover_threshold
         self.recovery_interval_s = recovery_interval_s
+        configured_timeout = connect_timeout_s
+        if configured_timeout is None:
+            configured_timeout = os.getenv("RTSP_CONNECT_TIMEOUT", "10")
+        self.connect_timeout_s = max(1.0, float(configured_timeout))
 
         self.active_url = self.primary_url
         self.is_using_fallback = False
@@ -47,6 +52,27 @@ class RTSPReader:
         self.stream_epoch = 0
         self.last_pts_ms = -1.0
 
+    def _open_capture(self, url: str):
+        """Open a capture with bounded FFmpeg open/read timeouts."""
+        timeout_ms = int(self.connect_timeout_s * 1000)
+        params = [
+            cv2.CAP_PROP_OPEN_TIMEOUT_MSEC,
+            timeout_ms,
+            cv2.CAP_PROP_READ_TIMEOUT_MSEC,
+            timeout_ms,
+        ]
+        try:
+            return cv2.VideoCapture(url, cv2.CAP_FFMPEG, params)
+        except (TypeError, cv2.error):
+            # Keep compatibility with OpenCV builds that do not expose the
+            # parameterized constructor. The configured timeout remains the
+            # source of truth on supported FFmpeg builds.
+            logger.warning(
+                "OpenCV build does not support bounded capture parameters for camera %s",
+                self.camera_id,
+            )
+            return cv2.VideoCapture(url, cv2.CAP_FFMPEG)
+
     def connect(self) -> bool:
         if self.cap is not None:
             try:
@@ -55,10 +81,7 @@ class RTSPReader:
                 pass
             self.cap = None
 
-        self.cap = cv2.VideoCapture(
-            self.active_url,
-            cv2.CAP_FFMPEG,
-        )
+        self.cap = self._open_capture(self.active_url)
         ok = self.cap.isOpened()
         if ok:
             self.consecutive_failures = 0
@@ -71,7 +94,7 @@ class RTSPReader:
                         self.cap.release()
                     except Exception:
                         pass
-                self.cap = cv2.VideoCapture(self.active_url, cv2.CAP_FFMPEG)
+                self.cap = self._open_capture(self.active_url)
                 if self.cap.isOpened():
                     self.consecutive_failures = 0
                     return True
@@ -96,7 +119,7 @@ class RTSPReader:
         """Attempts hysteresis recovery back to primary URL after timeout."""
         if self.is_using_fallback and (time.time() - self.last_failover_time) >= self.recovery_interval_s:
             logger.info("Camera %s attempting recovery to its primary source", self.camera_id)
-            test_cap = cv2.VideoCapture(self.primary_url, cv2.CAP_FFMPEG)
+            test_cap = self._open_capture(self.primary_url)
             if test_cap.isOpened():
                 test_cap.release()
                 logger.info("Camera %s primary stream recovered", self.camera_id)

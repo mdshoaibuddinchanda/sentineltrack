@@ -7,6 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 import json
 import numpy as np
+import cv2
 from unittest.mock import patch, MagicMock
 from streams.probe import probe_rtsp
 from streams.health import StreamHealthTracker
@@ -146,6 +147,28 @@ def test_rtsp_reader_epoch_reset():
         assert reader.stream_epoch == 1
 
 
+def test_rtsp_reader_uses_bounded_capture_timeouts():
+    reader = RTSPReader(
+        url="rtsp://mock.stream/live",
+        camera_id="cam_timeout",
+        connect_timeout_s=4.5,
+    )
+    mock_cap = MagicMock()
+    mock_cap.isOpened.return_value = True
+
+    with patch("cv2.VideoCapture", return_value=mock_cap) as capture:
+        assert reader.connect() is True
+
+    assert capture.call_args.args[0] == "rtsp://mock.stream/live"
+    assert capture.call_args.args[1] == cv2.CAP_FFMPEG
+    assert capture.call_args.args[2] == [
+        cv2.CAP_PROP_OPEN_TIMEOUT_MSEC,
+        4500,
+        cv2.CAP_PROP_READ_TIMEOUT_MSEC,
+        4500,
+    ]
+
+
 def test_rtsp_reader_runtime_failover_to_hls():
     reader = RTSPReader(
         url="rtsp://mock.stream/live",
@@ -249,4 +272,3 @@ def test_bounded_stream_queue_drop_behavior():
     assert bq.get() == "frame_7"
     assert bq.get() == "frame_8"
     assert bq.get() == "frame_9"
-

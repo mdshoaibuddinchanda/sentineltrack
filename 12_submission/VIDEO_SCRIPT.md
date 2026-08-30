@@ -12,7 +12,7 @@ The official material asks for an own-feed screen recording of approximately 2�
 | 1:30–2:00 | Search, timeline, route | “The operator can search, review chronological sightings, and inspect feasibility caveats.” |
 | 2:00–2:30 | Alert/audit/export | “Strong ANPR remains authoritative. ReID is a masked, conservative review signal. The report and audit trail preserve what the system actually observed.” |
 
-Show the real running interface and the source label. If fixtures are used, leave the `Sample data` label visible and say so.
+Show the real running interface, live source status, and decoded-frame evidence. Do not present fixture or invented records as camera observations.
 
 ## Video B — government-feed run
 

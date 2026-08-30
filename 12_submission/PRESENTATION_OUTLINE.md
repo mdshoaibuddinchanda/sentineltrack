@@ -40,7 +40,9 @@ Use `diagrams/E_ha_dr.mmd`; cover role controls, audit, recovery, retention, and
 
 ## Slide 10 — Demo and output
 
-Show actual dashboard, designated target, timeline, alert, audit, and timestamped report. Explain demo fixture labeling and official-feed deliverable.
+Show the actual dashboard, designated target, timeline, alert, audit, and
+timestamped report. Explain live source status and the official-feed
+deliverable; do not present invented records as observations.
 
 ## Slide 11 — Pilot and economics
 

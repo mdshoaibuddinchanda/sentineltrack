@@ -31,7 +31,10 @@ class CameraStreamWorker:
         on_frame_callback: Optional[Callable[[FramePacket], None]] = None,
         base_fps: float = 1.0,
         burst_fps: float = 5.0,
-        burst_duration_s: float = 5.0
+        burst_duration_s: float = 5.0,
+        connect_timeout_s: float = 10.0,
+        max_backoff_s: float = 30.0,
+        failover_threshold: int = 3,
     ):
         self.camera_id = camera_id
         self.rtsp_url = rtsp_url
@@ -40,6 +43,9 @@ class CameraStreamWorker:
         self.base_fps = base_fps
         self.burst_fps = burst_fps
         self.burst_duration_s = burst_duration_s
+        self.connect_timeout_s = max(1.0, float(connect_timeout_s))
+        self.max_backoff_s = max(1.0, float(max_backoff_s))
+        self.failover_threshold = max(1, int(failover_threshold))
 
         self._running = False
         self._thread: Optional[threading.Thread] = None
@@ -108,13 +114,15 @@ class CameraStreamWorker:
 
     def _run_loop(self) -> None:
         backoff_s = 1.0
-        max_backoff_s = 30.0
+        max_backoff_s = self.max_backoff_s
 
         reader = RTSPReader(
             url=self.rtsp_url,
             camera_id=self.camera_id,
             fallback_url=self.fallback_url,
-            max_backoff=int(max_backoff_s)
+            max_backoff=int(max_backoff_s),
+            failover_threshold=self.failover_threshold,
+            connect_timeout_s=self.connect_timeout_s,
         )
 
         try:
@@ -233,7 +241,10 @@ class StreamSupervisor:
                 on_frame_callback=callback,
                 base_fps=self.config.base_sampling_fps,
                 burst_fps=self.config.burst_sampling_fps,
-                burst_duration_s=self.config.burst_duration_s
+                burst_duration_s=self.config.burst_duration_s,
+                connect_timeout_s=float(getattr(self.config, "rtsp_connect_timeout_s", 10.0)),
+                max_backoff_s=float(getattr(self.config, "stream_max_backoff_s", 30.0)),
+                failover_threshold=int(getattr(self.config, "stream_failover_threshold", 1)),
             )
             self._workers[camera_id] = worker
 

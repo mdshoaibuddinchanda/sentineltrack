@@ -79,6 +79,19 @@ class ScaleDeploymentConfig:
         default_factory=lambda: os.getenv("SENTINEL_ENABLE_STREAM_INGESTION", "false").lower() in ("true", "1", "yes")
     )
 
+    # Stream connection controls. These values are consumed by the OpenCV
+    # reader; keeping them here makes the launcher configuration observable
+    # and prevents failed RTSP sources from blocking a worker indefinitely.
+    rtsp_connect_timeout_s: float = field(
+        default_factory=lambda: max(1.0, float(os.getenv("RTSP_CONNECT_TIMEOUT", "10")))
+    )
+    stream_max_backoff_s: float = field(
+        default_factory=lambda: max(1.0, float(os.getenv("STREAM_MAX_BACKOFF", "30")))
+    )
+    stream_failover_threshold: int = field(
+        default_factory=lambda: max(1, int(os.getenv("STREAM_FAILOVER_THRESHOLD", "1")))
+    )
+
     def is_api_enabled(self) -> bool:
         return self.process_role in ("all", "api")
 

@@ -82,7 +82,7 @@ P11 implements bounded queues, stale-frame dropping, fair scheduling, adaptive b
 
 ## 19. Demo Procedure
 
-[`DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md) supplies deterministic fixture, native, container, and official-feed procedures. [`DEMO_SCRIPT_5_MIN.md`](DEMO_SCRIPT_5_MIN.md) gives the timed six-act story: system online, register target, observe, alert, investigate, and explain the ReID fallback. Fixture screens remain visibly labeled `Sample data`.
+[`DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md) supplies native, container-database, and official-feed procedures. [`DEMO_SCRIPT_5_MIN.md`](DEMO_SCRIPT_5_MIN.md) gives the timed six-act story: system online, register target, observe, alert, investigate, and explain the ReID fallback. The current runtime does not synthesize detections or camera records.
 
 ## 20. Limitations
 

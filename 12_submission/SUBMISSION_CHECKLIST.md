@@ -15,11 +15,11 @@
 
 ## Demo and media
 
-- [x] [Demo runbook](DEMO_RUNBOOK.md) has deterministic, native, container, and official-feed paths.
+- [x] [Demo runbook](DEMO_RUNBOOK.md) has native, container-database, and official-feed paths.
 - [x] [Five-minute demo script](DEMO_SCRIPT_5_MIN.md) has timed narration.
 - [x] [Video script](VIDEO_SCRIPT.md) separates own-feed and government-feed deliverables.
 - [x] [Presentation outline](PRESENTATION_OUTLINE.md) has complete slide content.
-- [ ] [Capture own-feed recording](VIDEO_SCRIPT.md) with `Sample data` visible when fixtures are used.
+- [ ] [Capture own-feed recording](VIDEO_SCRIPT.md) showing live source status and decoded-frame evidence.
 - [ ] [Execute permitted government-feed run](OFFICIAL_REQUIREMENTS_MATRIX.md) and preserve timestamped vehicle/plate output report.
 - [ ] [Upload media through the official permitted channel](OFFICIAL_REQUIREMENTS_MATRIX.md) and test viewer access.
 

@@ -62,10 +62,10 @@ recorded in the evidence inventory. Model files are external artifacts whose
 paths and SHA-256 values are recorded in `models/manifest.json` and the
 P11.5/P6 reports. Do not commit credentials or private organizer feeds.
 
-Native demo commands and the Docker demo path are documented in
-[`DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md). The dashboard also has a deterministic
-fixture mode controlled by `VITE_DEMO_MODE=true`; the header labels this as
-`Sample data`. Fixture data is explicitly simulated.
+Native runtime commands and the Docker database path are documented in
+[`DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md). The current checkout does not ship a
+runtime fixture mode, so all camera status, sightings, alerts, and model
+evidence must come from configured services and permitted sources.
 
 ## Truth boundary
 
