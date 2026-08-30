@@ -222,6 +222,7 @@ function DashboardApp() {
                             cameras={cameras}
                             onSelectCamera={handleSelectCamera}
                             selectedCameraId={selectedCameraId}
+                            demoMode={demoMode}
                           />
                         }
                       />
@@ -232,6 +233,7 @@ function DashboardApp() {
                             cameras={cameras}
                             onSelectCamera={handleSelectCamera}
                             selectedCameraId={selectedCameraId}
+                            demoMode={demoMode}
                           />
                         }
                       />

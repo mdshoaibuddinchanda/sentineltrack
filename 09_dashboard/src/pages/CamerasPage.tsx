@@ -10,9 +10,10 @@ interface CamerasPageProps {
   cameras: Camera[];
   onSelectCamera?: (cameraId: string) => void;
   selectedCameraId?: string | null;
+  demoMode?: boolean;
 }
 
-export function CamerasPage({ cameras, onSelectCamera }: CamerasPageProps) {
+export function CamerasPage({ cameras, onSelectCamera, demoMode = false }: CamerasPageProps) {
   const { cameraId: routeCameraId } = useParams<{ cameraId?: string }>();
   const navigate = useNavigate();
 
@@ -84,6 +85,12 @@ export function CamerasPage({ cameras, onSelectCamera }: CamerasPageProps) {
 
   return (
     <div className="space-y-4">
+      {demoMode && (
+        <div className="source-note source-note--sample" role="status">
+          <strong>Sample camera information</strong>
+          <span>These connection labels are presentation fixtures. Use <code>run.bat --full</code> to inspect configured live sources.</span>
+        </div>
+      )}
       {/* Search & Filter Bar */}
       <div className="flex items-center justify-between gap-4 flex-wrap bg-police-850 p-3 rounded-lg border border-police-750 font-mono text-xs">
         <div className="relative flex-1 min-w-[240px]">
@@ -92,22 +99,22 @@ export function CamerasPage({ cameras, onSelectCamera }: CamerasPageProps) {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search cameras by ID, junction name, or department..."
+            placeholder="Search by camera ID, location, or department"
             className="w-full bg-police-900 border border-police-700 rounded pl-9 pr-3 py-1.5 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-accent-blue"
           />
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-slate-400">STATUS:</span>
+          <span className="text-slate-400">Connection status:</span>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="bg-police-900 border border-police-700 rounded px-2.5 py-1 text-slate-200 focus:outline-none"
           >
-            <option value="ALL">ALL ({cameras.length})</option>
-            <option value="ONLINE">ONLINE ({cameras.filter((c) => c.stream_status === "ONLINE").length})</option>
-            <option value="DEGRADED">DEGRADED ({cameras.filter((c) => c.stream_status === "DEGRADED").length})</option>
-            <option value="OFFLINE">OFFLINE ({cameras.filter((c) => c.stream_status === "OFFLINE").length})</option>
+            <option value="ALL">All ({cameras.length})</option>
+            <option value="ONLINE">Online ({cameras.filter((c) => c.stream_status === "ONLINE").length})</option>
+            <option value="DEGRADED">Needs attention ({cameras.filter((c) => c.stream_status === "DEGRADED").length})</option>
+            <option value="OFFLINE">Offline ({cameras.filter((c) => c.stream_status === "OFFLINE").length})</option>
           </select>
         </div>
       </div>
@@ -117,7 +124,7 @@ export function CamerasPage({ cameras, onSelectCamera }: CamerasPageProps) {
         {/* Left Col: Camera Table */}
         <div className="lg:col-span-8">
           <Card
-            title={`REGISTERED CCTV CAMERAS (${filteredCameras.length})`}
+            title={`Registered cameras (${filteredCameras.length})`}
             subtitle="Camera connection status and recent activity"
             icon={<Video className="w-4 h-4 text-cyan-400" />}
             bodyClassName="p-0 overflow-x-auto"
@@ -126,9 +133,9 @@ export function CamerasPage({ cameras, onSelectCamera }: CamerasPageProps) {
               <thead className="bg-police-800/60 text-slate-400 uppercase text-[10px] border-b border-police-750">
                 <tr>
                   <th className="px-3 py-2.5">Camera ID</th>
-                  <th className="px-3 py-2.5">Location / Junction</th>
+                  <th className="px-3 py-2.5">Location</th>
                   <th className="px-3 py-2.5">Department</th>
-                  <th className="px-3 py-2.5">FPS</th>
+                  <th className="px-3 py-2.5">Frame rate</th>
                   <th className="px-3 py-2.5">Status</th>
                   <th className="px-3 py-2.5 text-right">Actions</th>
                 </tr>
@@ -213,7 +220,7 @@ export function CamerasPage({ cameras, onSelectCamera }: CamerasPageProps) {
                 <div className="pt-2 border-t border-police-750 space-y-2">
                   <div className="font-bold text-slate-300 flex items-center justify-between">
                     <span>Nearby Cameras (5 km Radius)</span>
-                    {searchingNearby && <span className="text-[10px] text-cyan-400">Probing PostGIS...</span>}
+                    {searchingNearby && <span className="text-[10px] text-cyan-400">Checking nearby cameras…</span>}
                   </div>
                   {nearbyCams.length > 0 ? (
                     <div className="space-y-1.5 max-h-36 overflow-y-auto">
@@ -229,7 +236,7 @@ export function CamerasPage({ cameras, onSelectCamera }: CamerasPageProps) {
                       ))}
                     </div>
                   ) : (
-                    <div className="text-[11px] text-slate-500 italic">No other cameras within 5 km.</div>
+                    <div className="text-[11px] text-slate-500 italic">No other cameras found within 5 km.</div>
                   )}
                 </div>
               </>

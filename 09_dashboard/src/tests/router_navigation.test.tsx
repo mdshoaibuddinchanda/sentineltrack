@@ -16,6 +16,9 @@ describe("Router & Deep Linking Tests", () => {
     expect(screen.getByText("Dashboard")).toBeDefined();
     expect(screen.getByText("Watchlist")).toBeDefined();
     expect(screen.getByText("Alerts")).toBeDefined();
+    expect(screen.getByText("Find a vehicle")).toBeDefined();
+    expect(screen.getByText("System status")).toBeDefined();
+    expect(screen.queryByText("More")).toBeNull();
     expect(screen.getByText("2")).toBeDefined(); // badge
   });
 

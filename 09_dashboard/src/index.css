@@ -456,7 +456,7 @@ textarea:focus-visible {
   display: none;
 }
 
-/* Five clear choices: four daily actions and one menu for administration. */
+/* Six direct choices keep every operator-facing page visible and clickable. */
 .primary-navigation {
   position: relative;
   display: flex;
@@ -504,11 +504,6 @@ textarea:focus-visible {
   color: var(--brand);
 }
 
-.navigation-item--more {
-  margin-left: 5px;
-  border-left: 1px solid var(--border);
-}
-
 .navigation-badge {
   min-width: 20px;
   padding: 2px 6px;
@@ -517,71 +512,6 @@ textarea:focus-visible {
   color: #fff;
   font-size: 0.7rem;
   text-align: center;
-}
-
-.chevron-up {
-  transform: rotate(180deg);
-}
-
-.more-navigation {
-  position: relative;
-}
-
-.more-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  width: 285px;
-  padding: 8px;
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-  border-radius: 6px;
-  box-shadow: 0 12px 28px rgba(26, 43, 64, 0.16);
-}
-
-.more-menu-heading {
-  padding: 7px 10px 8px;
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.more-menu-item {
-  display: flex;
-  align-items: flex-start;
-  width: 100%;
-  gap: 10px;
-  padding: 10px;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--text-soft);
-  text-align: left;
-  cursor: pointer;
-}
-
-.more-menu-item:hover,
-.more-menu-item--active {
-  background: var(--surface-hover);
-  color: var(--brand);
-}
-
-.more-menu-item span {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.more-menu-item strong {
-  color: currentColor;
-  font-size: 0.84rem;
-}
-
-.more-menu-item small {
-  color: var(--muted);
-  font-size: 0.73rem;
 }
 
 .navigation-help {
@@ -676,6 +606,32 @@ textarea:focus-visible {
 
 .connection-banner__button:hover {
   background: var(--surface-hover);
+}
+
+.source-note {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px 13px;
+  border: 1px solid var(--border-strong);
+  border-left: 4px solid var(--warning);
+  border-radius: 5px;
+  background: var(--warning-bg);
+  color: var(--text-soft);
+  font-size: 0.82rem;
+}
+
+.source-note strong {
+  color: var(--warning);
+  white-space: nowrap;
+}
+
+.source-note code {
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--warning) 12%, var(--surface));
+  color: var(--text);
+  font-size: 0.78rem;
 }
 
 .alert-toast {
@@ -859,6 +815,12 @@ textarea:focus-visible {
     align-items: flex-start;
     flex-direction: column;
     padding-inline: 14px;
+  }
+
+  .source-note {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
   }
 
   .app-main {
