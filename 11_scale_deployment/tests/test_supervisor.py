@@ -70,6 +70,16 @@ class TestStreamSupervisor:
         assert worker.is_in_burst() is False
         assert worker.get_current_target_fps() == 1.0
 
+        # Trigger burst
+        worker.trigger_burst(duration_s=0.2)
+        assert worker.is_in_burst() is True
+        assert worker.get_current_target_fps() == 5.0
+
+        # Wait for burst duration to expire
+        time.sleep(0.25)
+        assert worker.is_in_burst() is False
+        assert worker.get_current_target_fps() == 1.0
+
     def test_supervisor_marks_connected_worker_stale_without_recent_frames(self):
         worker = CameraStreamWorker(
             camera_id="cam_stale_01",
@@ -88,15 +98,27 @@ class TestStreamSupervisor:
         assert status["cameras"][worker.camera_id]["connected"] is False
         assert status["cameras"][worker.camera_id]["degraded"] is True
 
-        # Trigger burst
-        worker.trigger_burst(duration_s=0.2)
-        assert worker.is_in_burst() is True
-        assert worker.get_current_target_fps() == 5.0
+    def test_supervisor_live_snapshot_requires_fresh_connected_frame(self):
+        worker = CameraStreamWorker(
+            camera_id="cam_live_01",
+            rtsp_url="rtsp://dummy",
+            stale_after_s=5.0,
+        )
+        worker.is_connected = True
+        worker.last_frame_time = time.time()
+        worker._latest_frame = np.zeros((8, 8, 3), dtype=np.uint8)
 
-        # Wait for burst duration to expire
-        time.sleep(0.25)
-        assert worker.is_in_burst() is False
-        assert worker.get_current_target_fps() == 1.0
+        supervisor = StreamSupervisor()
+        supervisor._workers[worker.camera_id] = worker
+
+        snapshot = supervisor.get_live_snapshot(worker.camera_id)
+        assert snapshot is not None
+        frame, frame_time = snapshot
+        assert frame.shape == (8, 8, 3)
+        assert frame_time > 0
+
+        worker.last_frame_time = time.time() - 10.0
+        assert supervisor.get_live_snapshot(worker.camera_id) is None
 
     def test_supervisor_shard_filtering(self):
         # Supervisor configured for shard 0 out of 2 shards

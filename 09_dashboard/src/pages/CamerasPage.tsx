@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Camera } from "../types/api";
 import { Card } from "../components/common/Card";
 import { CameraStatusBadge } from "../components/common/Badge";
-import { searchNearbyCameras, fetchCameraPreview } from "../api/cameras";
+import { searchNearbyCameras, getCameraLiveStreamUrl } from "../api/cameras";
 import { Video, Search, MapPin, AlertCircle, RefreshCw } from "lucide-react";
 
 interface CamerasPageProps {
@@ -22,8 +22,10 @@ export function CamerasPage({ cameras, onSelectCamera, liveFramesDecoded }: Came
   const [selectedCam, setSelectedCam] = useState<Camera | null>(null);
   const [nearbyCams, setNearbyCams] = useState<Camera[]>([]);
   const [searchingNearby, setSearchingNearby] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [previewFailed, setPreviewFailed] = useState(false);
+  const [liveStreamUrl, setLiveStreamUrl] = useState<string | null>(null);
+  const [liveStreamFailed, setLiveStreamFailed] = useState(false);
+  const [liveStreamReady, setLiveStreamReady] = useState(false);
+  const [liveStreamSession, setLiveStreamSession] = useState(() => Date.now());
   const selectedCameraId = selectedCam?.camera_id;
   const selectedLatitude = selectedCam?.latitude;
   const selectedLongitude = selectedCam?.longitude;
@@ -74,40 +76,20 @@ export function CamerasPage({ cameras, onSelectCamera, liveFramesDecoded }: Came
   }, [selectedCameraId, selectedLatitude, selectedLongitude]);
 
   useEffect(() => {
-    let cancelled = false;
-    let currentObjectUrl: string | null = null;
-    const streamStatus = selectedCam?.stream_status;
-
-    setPreviewUrl(null);
-    setPreviewFailed(false);
-    if (!selectedCameraId || streamStatus !== "ONLINE") {
-      return () => {
-        cancelled = true;
-      };
+    setLiveStreamReady(false);
+    setLiveStreamFailed(false);
+    if (!selectedCameraId || selectedCam?.stream_status !== "ONLINE") {
+      setLiveStreamUrl(null);
+      return;
     }
+    setLiveStreamUrl(getCameraLiveStreamUrl(selectedCameraId, liveStreamSession));
+  }, [selectedCameraId, selectedCam?.stream_status, liveStreamSession]);
 
-    const loadPreview = async () => {
-      try {
-        const blob = await fetchCameraPreview(selectedCameraId);
-        if (cancelled) return;
-        const nextObjectUrl = URL.createObjectURL(blob);
-        if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
-        currentObjectUrl = nextObjectUrl;
-        setPreviewUrl(nextObjectUrl);
-        setPreviewFailed(false);
-      } catch {
-        if (!cancelled) setPreviewFailed(true);
-      }
-    };
-
-    loadPreview();
-    const interval = window.setInterval(loadPreview, 2000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(interval);
-      if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
-    };
-  }, [selectedCameraId, selectedCam?.stream_status]);
+  const retryLiveStream = () => {
+    setLiveStreamReady(false);
+    setLiveStreamFailed(false);
+    setLiveStreamSession(Date.now());
+  };
 
   const filteredCameras = cameras.filter((cam) => {
     const matchesSearch =
@@ -232,23 +214,48 @@ export function CamerasPage({ cameras, onSelectCamera, liveFramesDecoded }: Came
                     <div className="font-bold text-slate-200">Camera view</div>
                     {selectedCam.stream_status === "ONLINE" && <RefreshCw className="w-3.5 h-3.5 text-emerald-400 animate-spin" />}
                   </div>
-                  {selectedCam.stream_status === "ONLINE" && previewUrl && !previewFailed ? (
-                    <img
-                      src={previewUrl}
-                      alt={`Latest decoded frame from ${selectedCam.name || selectedCam.camera_id}`}
-                      className="w-full aspect-video object-cover rounded border border-police-750 bg-black"
-                      onError={() => setPreviewFailed(true)}
-                    />
+                  {selectedCam.stream_status === "ONLINE" && liveStreamUrl && !liveStreamFailed ? (
+                    <div className="relative">
+                      <img
+                        src={liveStreamUrl}
+                        alt={`Live video from ${selectedCam.name || selectedCam.camera_id}`}
+                        className="w-full aspect-video object-cover rounded border border-police-750 bg-black"
+                        onLoad={() => {
+                          setLiveStreamReady(true);
+                          setLiveStreamFailed(false);
+                        }}
+                        onError={() => {
+                          setLiveStreamReady(false);
+                          setLiveStreamFailed(true);
+                        }}
+                      />
+                      {liveStreamReady && (
+                        <div className="absolute left-2 top-2 inline-flex items-center gap-1.5 rounded bg-red-700 px-2 py-1 text-[10px] font-bold tracking-wide text-white shadow">
+                          <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                          LIVE VIDEO
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <div className="flex aspect-video items-center justify-center rounded border border-police-750 bg-police-900 p-4 text-center text-xs text-slate-400">
                       {selectedCam.stream_status === "ONLINE"
-                        ? previewFailed
-                          ? "The worker is online, but the authenticated snapshot could not be loaded."
-                          : "Loading the latest decoded frame…"
+                        ? liveStreamFailed
+                          ? "The worker is online, but continuous live video could not be opened."
+                          : "Opening continuous live video…"
                         : "No live frame is available because this source is not connected."}
                     </div>
                   )}
-                    <div className="text-[11px] text-slate-500">Authenticated latest-frame preview, refreshed every 2 seconds; this is not a continuous video stream.</div>
+                  {liveStreamFailed && selectedCam.stream_status === "ONLINE" && (
+                    <button
+                      type="button"
+                      onClick={retryLiveStream}
+                      className="inline-flex items-center gap-1.5 rounded border border-slate-500 px-2 py-1 text-[11px] font-semibold text-slate-200 hover:bg-slate-700"
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                      Reconnect live video
+                    </button>
+                  )}
+                  <div className="text-[11px] text-slate-500">Continuous authenticated live video relayed from the current decoded camera stream.</div>
                 </div>
 
                 <div className="space-y-2 border-b border-police-750 pb-3">
@@ -274,7 +281,7 @@ export function CamerasPage({ cameras, onSelectCamera, liveFramesDecoded }: Came
                   <div className="font-bold text-slate-200">Human verification</div>
                   <div className="text-[11px] text-slate-400">
                     {selectedCam.stream_status === "ONLINE"
-                      ? "The source is connected to the analytics worker. The image above is the latest decoded worker snapshot."
+                      ? "The source is connected to the analytics worker. The image above is continuous live video from the latest decoded worker frames."
                       : selectedCam.source_configured
                       ? "The source is configured, but the worker is not receiving frames from it."
                       : "This camera has no active stream source configured."}

@@ -1,11 +1,14 @@
 import pytest
 import importlib
+import asyncio
 from fastapi.testclient import TestClient
 
 backend_app = importlib.import_module("08_backend.app")
 cam_repo_mod = importlib.import_module("07_route_engine.camera_repository")
 models_mod = importlib.import_module("07_route_engine.models")
 camera_service_mod = importlib.import_module("08_backend.services.camera_service")
+camera_router_mod = importlib.import_module("08_backend.routers.cameras")
+lifecycle_mod = importlib.import_module("08_backend.lifecycle")
 
 app = backend_app.app
 CameraGeo = models_mod.CameraGeo
@@ -66,6 +69,32 @@ def test_get_camera_health_endpoint():
     assert data["connected"] is False
     assert data["frames_decoded"] == 0
     assert data["first_frame_latency_ms"] is None
+
+
+def test_live_camera_endpoint_returns_authenticated_mjpeg_response(monkeypatch):
+    class FakeService:
+        def get_camera_by_id(self, camera_id):
+            return type("Camera", (), {"camera_id": camera_id})()
+
+    class FakeMetrics:
+        def inc_requests(self):
+            return None
+
+    class FakeSupervisor:
+        def get_live_snapshot(self, camera_id):
+            return (object(), 1.0)
+
+    monkeypatch.setattr(lifecycle_mod, "get_stream_supervisor", lambda: FakeSupervisor())
+    response = asyncio.run(
+        camera_router_mod.get_camera_live_stream(
+            "test_cam_live_01",
+            service=FakeService(),
+            metrics=FakeMetrics(),
+        )
+    )
+
+    assert response.media_type.startswith("multipart/x-mixed-replace")
+    assert response.headers["cache-control"].startswith("no-store")
 
 
 def test_inactive_registry_row_cannot_look_like_a_live_connection():

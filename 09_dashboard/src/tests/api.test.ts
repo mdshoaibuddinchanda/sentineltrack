@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { searchNearbyCameras, getNearbyCamerasForCamera, fetchCameraPreview } from "../api/cameras";
+import { searchNearbyCameras, getNearbyCamerasForCamera, fetchCameraPreview, getCameraLiveStreamUrl } from "../api/cameras";
 import { listTargets } from "../api/targets";
 import { listAlerts } from "../api/alerts";
 import { getVehicleRoute, getVehicleRouteGeoJSON, getVehicleRouteSummary } from "../api/routes";
@@ -68,6 +68,14 @@ describe("P8 REST API Contract Verification", () => {
     expect(capturedInit?.credentials).toBe("include");
     expect(capturedInit?.cache).toBe("no-store");
     expect(result).toBe(preview);
+  });
+
+  it("builds an authenticated live stream endpoint without exposing upstream URLs", () => {
+    const url = getCameraLiveStreamUrl("cam/01", 12345);
+    expect(url).toContain("/api/v1/cameras/cam%2F01/live");
+    expect(url).toContain("session=12345");
+    expect(url).not.toContain("rtsp");
+    expect(url).not.toContain("m3u8");
   });
 
   it("listTargets sends 'enabled' parameter, NOT 'enabled_only'", async () => {

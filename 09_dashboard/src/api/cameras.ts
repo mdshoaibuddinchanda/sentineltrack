@@ -11,6 +11,10 @@ export function getCameraPreviewUrl(cameraId: string, cacheKey = Date.now()): st
   return `${BASE_URL}/api/v1/cameras/${encodeURIComponent(cameraId)}/preview?ts=${cacheKey}`;
 }
 
+export function getCameraLiveStreamUrl(cameraId: string, cacheKey = Date.now()): string {
+  return `${BASE_URL}/api/v1/cameras/${encodeURIComponent(cameraId)}/live?session=${cacheKey}`;
+}
+
 export async function fetchCameraPreview(cameraId: string, signal?: AbortSignal): Promise<Blob> {
   const response = await fetch(getCameraPreviewUrl(cameraId), {
     credentials: "include",

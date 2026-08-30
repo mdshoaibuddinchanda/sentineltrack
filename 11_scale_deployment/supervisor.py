@@ -63,6 +63,7 @@ class CameraStreamWorker:
         self._connect_started_at = 0.0
         self._health_tracker = StreamHealthTracker(camera_id=camera_id)
         self._latest_jpeg: Optional[bytes] = None
+        self._latest_frame: Optional[Any] = None
         self._last_preview_time = 0.0
         self.total_frames_decoded = 0
         self.total_frames_sampled = 0
@@ -95,6 +96,13 @@ class CameraStreamWorker:
     def get_preview(self) -> Optional[bytes]:
         with self._lock:
             return self._latest_jpeg
+
+    def get_live_snapshot(self) -> Optional[tuple[Any, float]]:
+        """Return the newest decoded frame and its wall-clock timestamp."""
+        with self._lock:
+            if self._latest_frame is None or self.last_frame_time <= 0:
+                return None
+            return self._latest_frame.copy(), self.last_frame_time
 
     def get_current_target_fps(self) -> float:
         return self.burst_fps if self.is_in_burst() else self.base_fps
@@ -185,8 +193,10 @@ class CameraStreamWorker:
                             break
 
                         now_time = time.time()
-                        self.last_frame_time = now_time
-                        self.last_pts_ms = packet.pts_ms
+                        with self._lock:
+                            self.last_frame_time = now_time
+                            self.last_pts_ms = packet.pts_ms
+                            self._latest_frame = packet.frame
                         self.total_frames_decoded += 1
                         if not self.is_connected:
                             self.is_connected = True
@@ -408,3 +418,17 @@ class StreamSupervisor:
         with self._lock:
             worker = self._workers.get(camera_id)
         return worker.get_preview() if worker else None
+
+    def get_live_snapshot(self, camera_id: str) -> Optional[tuple[Any, float]]:
+        """Return the newest decoded frame for a live authenticated relay."""
+        with self._lock:
+            worker = self._workers.get(camera_id)
+        if worker is None or not worker.is_connected:
+            return None
+        snapshot = worker.get_live_snapshot()
+        if snapshot is None:
+            return None
+        frame, frame_time = snapshot
+        if (time.time() - frame_time) > worker.stale_after_s:
+            return None
+        return frame, frame_time
