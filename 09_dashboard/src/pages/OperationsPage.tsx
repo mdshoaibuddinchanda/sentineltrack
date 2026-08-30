@@ -61,12 +61,12 @@ export function OperationsPage({
         {/* Left Col: Live Alert Feed */}
         <div className="lg:col-span-5 flex flex-col space-y-4">
           <Card
-            title="LIVE TARGET INCIDENT ALERTS"
-            subtitle="Real-time multi-frame OCR consensus matches"
+            title="Alerts that need review"
+            subtitle="New watchlist matches from the live system"
             icon={<Radio className="w-4 h-4 text-rose-500 animate-pulse" />}
             actions={
               <span className="text-xs font-mono px-2 py-0.5 rounded bg-police-700 text-slate-300">
-                {unackAlertsCount} PENDING
+                {unackAlertsCount} pending
               </span>
             }
             bodyClassName="p-3"
@@ -83,8 +83,8 @@ export function OperationsPage({
         {/* Right Col: GIS Control Room Map */}
         <div className="lg:col-span-7 flex flex-col">
           <Card
-            title="CCTV GEOSPATIAL SITUATIONAL AWARENESS"
-            subtitle="Camera network status & real-time target observation locations"
+            title="Camera network"
+            subtitle="Current camera locations and vehicle observations"
             icon={<Video className="w-4 h-4 text-cyan-400" />}
             bodyClassName="p-0 overflow-hidden"
           >
@@ -102,8 +102,8 @@ export function OperationsPage({
 
       {/* Bottom Row: Recent Sightings Feed */}
       <Card
-        title="RECENT VEHICLE SIGHTINGS (CHRONOLOGICAL STREAM)"
-        subtitle="Last captured license plate hypotheses across all active cameras"
+        title="Recent vehicle sightings"
+        subtitle="Latest records received from the camera network"
         icon={<Eye className="w-4 h-4 text-accent-blue" />}
         bodyClassName="p-0"
       >

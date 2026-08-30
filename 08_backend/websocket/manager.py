@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import threading
 from typing import Dict, List, Set, Optional, Any
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -28,7 +29,12 @@ class ConnectionManager:
         self.queue_size = queue_size
         self._active_connections: Dict[WebSocket, asyncio.Queue] = {}
         self._client_topics: Dict[WebSocket, Set[str]] = {}
-        self._lock = asyncio.Lock()
+        self._client_loops: Dict[WebSocket, asyncio.AbstractEventLoop] = {}
+        # ConnectionManager is global and can be touched by the ASGI event
+        # loop as well as synchronous test/integration callers that execute
+        # broadcast() through another loop.  The protected sections below do
+        # not await, so a thread lock avoids binding shared state to one loop.
+        self._lock = threading.RLock()
         self.metrics = get_metrics_collector()
 
         # Connect to global event bus
@@ -40,19 +46,22 @@ class ConnectionManager:
         client_queue: asyncio.Queue = asyncio.Queue(maxsize=self.queue_size)
         # Structural Invariant: literal "*" can NEVER enter client subscriptions
         sanitized_topics = {t.upper() for t in (topics or []) if t != "*"}
-        async with self._lock:
+        with self._lock:
             self._active_connections[websocket] = client_queue
             self._client_topics[websocket] = sanitized_topics
+            self._client_loops[websocket] = asyncio.get_running_loop()
             self.metrics.set_ws_clients(len(self._active_connections))
         return client_queue
 
 
     async def disconnect(self, websocket: WebSocket):
-        async with self._lock:
+        with self._lock:
             if websocket in self._active_connections:
                 del self._active_connections[websocket]
             if websocket in self._client_topics:
                 del self._client_topics[websocket]
+            if websocket in self._client_loops:
+                del self._client_loops[websocket]
             self.metrics.set_ws_clients(len(self._active_connections))
 
     async def _on_bus_event(self, event: BaseEvent):
@@ -63,15 +72,35 @@ class ConnectionManager:
             "data": event.payload
         }, topic=event.event_type)
 
+    @staticmethod
+    def _enqueue_message(queue: asyncio.Queue, text_payload: str) -> None:
+        """Put a message into a client queue using only its owning event loop."""
+        try:
+            queue.put_nowait(text_payload)
+        except asyncio.QueueFull:
+            # Slow client backpressure drop policy: retain the newest event.
+            try:
+                queue.get_nowait()
+                queue.put_nowait(text_payload)
+            except Exception:
+                pass
+
     async def broadcast(self, message: Dict[str, Any], topic: str = "*"):
-        """Non-blocking broadcast to all subscribed clients. Drops message if client queue is full."""
-        async with self._lock:
+        """Non-blocking broadcast that is safe across publisher/client event loops."""
+        with self._lock:
             targets = list(self._active_connections.items())
+            client_topics = dict(self._client_topics)
+            client_loops = dict(self._client_loops)
 
         text_payload = json.dumps(message)
 
+        try:
+            current_loop = asyncio.get_running_loop()
+        except RuntimeError:
+            current_loop = None
+
         for ws, q in targets:
-            sub_topics = self._client_topics.get(ws, set())
+            sub_topics = client_topics.get(ws, set())
             matches = "*" in sub_topics
             if not matches:
                 top_up = topic.upper()
@@ -82,15 +111,13 @@ class ConnectionManager:
                         break
 
             if matches:
-                try:
-                    q.put_nowait(text_payload)
-                except asyncio.QueueFull:
-                    # Slow client backpressure drop policy
-                    try:
-                        q.get_nowait()
-                        q.put_nowait(text_payload)
-                    except Exception:
-                        pass
+                owner_loop = client_loops.get(ws)
+                if owner_loop and owner_loop is not current_loop and not owner_loop.is_closed():
+                    # asyncio.Queue becomes loop-affine when a consumer waits.
+                    # Schedule the bounded put on the ASGI/TestClient loop.
+                    owner_loop.call_soon_threadsafe(self._enqueue_message, q, text_payload)
+                else:
+                    self._enqueue_message(q, text_payload)
 
     def get_client_count(self) -> int:
         return len(self._active_connections)

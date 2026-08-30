@@ -3,7 +3,7 @@ import { listAlerts, acknowledgeAlert } from "../api/alerts";
 import { Alert } from "../types/api";
 import { DEMO_ALERTS } from "../utils/demoData";
 
-export function useAlerts(params?: { unacknowledged?: boolean; limit?: number }, demoMode = false) {
+export function useAlerts(params?: { unacknowledged?: boolean; limit?: number }, demoMode = false, enabled = true) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [total, setTotal] = useState(0);
   const [unackCount, setUnackCount] = useState(0);
@@ -11,6 +11,13 @@ export function useAlerts(params?: { unacknowledged?: boolean; limit?: number },
   const [error, setError] = useState<string | null>(null);
 
   const fetchAlerts = useCallback(async () => {
+    if (!enabled) {
+      setAlerts([]);
+      setTotal(0);
+      setUnackCount(0);
+      setLoading(false);
+      return;
+    }
     if (demoMode) {
       let items = [...DEMO_ALERTS];
       if (params?.unacknowledged) items = items.filter((a) => !a.acknowledged);
@@ -36,7 +43,7 @@ export function useAlerts(params?: { unacknowledged?: boolean; limit?: number },
     } finally {
       setLoading(false);
     }
-  }, [params?.unacknowledged, params?.limit, demoMode]);
+  }, [params?.unacknowledged, params?.limit, demoMode, enabled]);
 
   useEffect(() => {
     fetchAlerts();

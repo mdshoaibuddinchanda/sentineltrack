@@ -49,8 +49,8 @@ export function InvestigationPage({
     <div className="space-y-4">
       {/* Top Search Bar */}
       <Card
-        title="CROSS-CAMERA VEHICLE TRAJECTORY INVESTIGATION"
-        subtitle="Query vehicle observation history and reconstruct spatio-temporal route"
+        title="Find a vehicle"
+        subtitle="Search recorded sightings and review movement between cameras"
         icon={<Compass className="w-4 h-4 text-accent-blue" />}
         bodyClassName="p-3"
       >
@@ -92,7 +92,7 @@ export function InvestigationPage({
             {/* Left Col: Trajectory Map */}
             <div className="lg:col-span-8 flex flex-col">
               <Card
-                title="CHRONOLOGICAL GIS TRAJECTORY MAP"
+                title="Movement map"
                 subtitle="Sequential observation nodes connected in time order"
                 icon={<MapPin className="w-4 h-4 text-cyan-400" />}
                 bodyClassName="p-0 overflow-hidden"
@@ -112,7 +112,7 @@ export function InvestigationPage({
             <div className="lg:col-span-4 flex flex-col">
               <Card
                 title={`SIGHTING TIMELINE (${route.sightings.length})`}
-                subtitle="Click node to synchronize map marker"
+                subtitle="Select a point to focus the map"
                 icon={<Eye className="w-4 h-4 text-accent-blue" />}
                 bodyClassName="p-4 overflow-y-auto max-h-[520px]"
               >
@@ -129,8 +129,8 @@ export function InvestigationPage({
           {/* Bottom Table: Kinematic Segment Feasibility */}
           {route.segments && route.segments.length > 0 && (
             <Card
-              title="KINEMATIC SEGMENT TRANSITION ANALYSIS"
-              subtitle="Inter-camera transit duration, lower-bound distance, and minimum required speed"
+              title="Movement checks"
+              subtitle="Time and distance between camera sightings"
               icon={<Compass className="w-4 h-4 text-emerald-400" />}
               bodyClassName="p-0"
             >

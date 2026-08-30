@@ -32,7 +32,7 @@ export function MetricCards({
           <Video className="w-5 h-5" />
         </div>
         <div>
-          <div className="text-[11px] text-slate-400 font-mono uppercase">Cameras Online</div>
+          <div className="text-[11px] text-slate-400 font-mono uppercase">Cameras online</div>
           <div className="text-xl font-bold text-slate-100 font-mono">
             {onlineCameras} <span className="text-xs text-slate-500 font-normal">/ {totalCameras}</span>
           </div>
@@ -47,7 +47,7 @@ export function MetricCards({
           <Video className="w-5 h-5" />
         </div>
         <div>
-          <div className="text-[11px] text-slate-400 font-mono uppercase">Offline / Degraded</div>
+          <div className="text-[11px] text-slate-400 font-mono uppercase">Cameras needing attention</div>
           <div className="text-xl font-bold text-slate-100 font-mono">{offlineCameras}</div>
         </div>
       </div>
@@ -58,7 +58,7 @@ export function MetricCards({
           <Activity className="w-5 h-5" />
         </div>
         <div>
-          <div className="text-[11px] text-slate-400 font-mono uppercase">Active Watchlist</div>
+          <div className="text-[11px] text-slate-400 font-mono uppercase">Vehicles on watchlist</div>
           <div className="text-xl font-bold text-slate-100 font-mono">{activeTargets}</div>
         </div>
       </div>
@@ -73,7 +73,7 @@ export function MetricCards({
           <AlertOctagon className="w-5 h-5" />
         </div>
         <div>
-          <div className="text-[11px] text-slate-400 font-mono uppercase">Active Alerts</div>
+          <div className="text-[11px] text-slate-400 font-mono uppercase">Alerts to review</div>
           <div className="text-xl font-bold text-rose-300 font-mono">{unackAlerts}</div>
         </div>
       </div>
@@ -84,7 +84,7 @@ export function MetricCards({
           <Eye className="w-5 h-5" />
         </div>
         <div>
-          <div className="text-[11px] text-slate-400 font-mono uppercase">Persisted Sightings</div>
+          <div className="text-[11px] text-slate-400 font-mono uppercase">Sightings recorded</div>
           <div className="text-xl font-bold text-slate-100 font-mono">
             {persistedSightingsTotal !== undefined ? persistedSightingsTotal : loadedSightingsCount}{" "}
             <span className="text-[10px] text-slate-500 font-normal">({loadedSightingsCount} loaded)</span>
@@ -102,7 +102,7 @@ export function MetricCards({
           <Cpu className="w-5 h-5" />
         </div>
         <div>
-          <div className="text-[11px] text-slate-400 font-mono uppercase">Analytics Engine</div>
+          <div className="text-[11px] text-slate-400 font-mono uppercase">Processing service</div>
           <div className="text-xs font-bold text-slate-100 font-mono">
             {!analyticsStatus
               ? "STOPPED"

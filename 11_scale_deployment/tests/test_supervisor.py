@@ -1,6 +1,9 @@
 import time
 import pytest
+import threading
+import numpy as np
 from pathlib import Path
+from datetime import datetime, timezone
 import sys
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -9,12 +12,52 @@ if str(REPO_ROOT) not in sys.path:
 
 import importlib
 supervisor_m = importlib.import_module("11_scale_deployment.supervisor")
+FramePacket = importlib.import_module("00_foundation.streams.models").FramePacket
 StreamSupervisor = supervisor_m.StreamSupervisor
 CameraStreamWorker = supervisor_m.CameraStreamWorker
 ScaleDeploymentConfig = importlib.import_module("11_scale_deployment.config").ScaleDeploymentConfig
 
 
 class TestStreamSupervisor:
+    def test_supervisor_dispatches_standardized_reader_packets(self, monkeypatch):
+        """A registered camera must forward RTSPReader packets to analytics."""
+        delivered = []
+        delivered_event = threading.Event()
+
+        class FakeReader:
+            def __init__(self, **kwargs):
+                self.stream_epoch = 0
+                self.released = False
+
+            def connect(self):
+                return True
+
+            def packets(self):
+                yield FramePacket(
+                    camera_id="cam_packet_01",
+                    pts_ms=100.0,
+                    frame=np.zeros((8, 8, 3), dtype=np.uint8),
+                    stream_epoch=1,
+                    ingest_time_utc=datetime.now(timezone.utc),
+                    event_time_utc=datetime.now(timezone.utc),
+                )
+
+            def release(self):
+                self.released = True
+
+        monkeypatch.setattr(supervisor_m, "RTSPReader", FakeReader)
+        supervisor = StreamSupervisor(
+            on_frame_callback=lambda packet: (delivered.append(packet), delivered_event.set())
+        )
+        supervisor.add_camera("cam_packet_01", "rtsp://dummy/packet")
+        supervisor.start()
+
+        assert delivered_event.wait(timeout=1.0)
+        supervisor.stop()
+
+        assert len(delivered) == 1
+        assert delivered[0].camera_id == "cam_packet_01"
+
     def test_camera_worker_burst_mode_transition(self):
         worker = CameraStreamWorker(
             camera_id="cam_burst_01",

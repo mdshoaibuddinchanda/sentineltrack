@@ -1,10 +1,19 @@
-import React, { useState, useEffect } from "react";
-import { Shield, Radio, Activity, AlertOctagon, Video, RefreshCw, Lock, LogOut } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import {
+  Activity,
+  Bell,
+  EyeOff,
+  LogOut,
+  Moon,
+  RefreshCw,
+  Shield,
+  Sun,
+  Video,
+} from "lucide-react";
 
 import { SystemStatusType } from "../../hooks/useSystemStatus";
 import { WebSocketConnectionStatus } from "../../types/websocket";
 import { useAuth } from "../../context/AuthContext";
-
 
 interface HeaderProps {
   systemStatus: SystemStatusType;
@@ -13,10 +22,24 @@ interface HeaderProps {
   activeTargetsCount: number;
   unackAlertsCount: number;
   demoMode: boolean;
-  onToggleDemoMode: () => void;
+  darkMode: boolean;
+  onToggleDarkMode: () => void;
   onRefresh: () => void;
   privacyMode: boolean;
   onTogglePrivacyMode: () => void;
+}
+
+function statusLabel(status: SystemStatusType): string {
+  if (status === "HEALTHY") return "System connected";
+  if (status === "DEGRADED") return "Some services need attention";
+  if (status === "LOADING") return "Checking system";
+  return "System disconnected";
+}
+
+function liveLabel(status: WebSocketConnectionStatus): string {
+  if (status === "LIVE") return "Live updates on";
+  if (status === "RECONNECTING" || status === "CONNECTING") return "Connecting to live updates";
+  return "Live updates offline";
 }
 
 export function Header({
@@ -26,26 +49,23 @@ export function Header({
   activeTargetsCount,
   unackAlertsCount,
   demoMode,
-  onToggleDemoMode,
+  darkMode,
+  onToggleDarkMode,
   onRefresh,
   privacyMode,
   onTogglePrivacyMode,
 }: HeaderProps) {
   const { user, logout } = useAuth();
-  const [timeUtc, setTimeUtc] = useState("");
   const [timeLocal, setTimeLocal] = useState("");
-
 
   useEffect(() => {
     const updateTime = () => {
-      const now = new Date();
-      setTimeUtc(now.toISOString().substring(11, 19) + " UTC");
       setTimeLocal(
-        now.toLocaleTimeString("en-IN", {
-          hour: "2-digit",
+        new Date().toLocaleTimeString("en-IN", {
+          hour: "numeric",
           minute: "2-digit",
           second: "2-digit",
-          hour12: false,
+          hour12: true,
         }) + " IST"
       );
     };
@@ -54,163 +74,98 @@ export function Header({
     return () => clearInterval(interval);
   }, []);
 
-  const getStatusBadge = () => {
-    switch (systemStatus) {
-      case "HEALTHY":
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-600/50">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            ONLINE
-          </span>
-        );
-      case "DEGRADED":
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold bg-amber-950/80 text-amber-300 border border-amber-600/50">
-            <span className="w-2 h-2 rounded-full bg-amber-400" />
-            DEGRADED
-          </span>
-        );
-      case "OFFLINE":
-      default:
-        return (
-          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold bg-rose-950/80 text-rose-300 border border-rose-600/50">
-            <span className="w-2 h-2 rounded-full bg-rose-400" />
-            OFFLINE
-          </span>
-        );
-    }
-  };
+  const statusClass =
+    systemStatus === "HEALTHY"
+      ? "status-pill status-pill--online"
+      : systemStatus === "DEGRADED"
+        ? "status-pill status-pill--warning"
+        : "status-pill status-pill--offline";
 
-  const getWsBadge = () => {
-    switch (wsStatus) {
-      case "LIVE":
-        return (
-          <span className="inline-flex items-center gap-1 text-xs text-cyan-400 font-mono" title="Live WebSocket Event Hub Connected">
-            <Radio className="w-3.5 h-3.5 animate-pulse" /> LIVE WS
-          </span>
-        );
-      case "RECONNECTING":
-        return (
-          <span className="inline-flex items-center gap-1 text-xs text-amber-400 font-mono" title="Reconnecting WebSocket">
-            <Radio className="w-3.5 h-3.5 animate-spin" /> RECONNECTING
-          </span>
-        );
-      case "CONNECTING":
-        return (
-          <span className="inline-flex items-center gap-1 text-xs text-slate-400 font-mono">
-            <Radio className="w-3.5 h-3.5" /> CONNECTING
-          </span>
-        );
-      case "OFFLINE":
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 text-xs text-rose-400 font-mono" title="WebSocket Disconnected">
-            <Radio className="w-3.5 h-3.5" /> WS OFFLINE
-          </span>
-        );
-    }
-  };
+  const liveClass =
+    wsStatus === "LIVE"
+      ? "connection-label connection-label--online"
+      : wsStatus === "RECONNECTING" || wsStatus === "CONNECTING"
+        ? "connection-label connection-label--warning"
+        : "connection-label connection-label--offline";
 
   return (
-    <header className="bg-police-900/95 border-b border-police-750/80 px-4 py-2.5 flex items-center justify-between gap-4 z-40">
-      {/* Brand & Badge */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded bg-accent-blue/20 border border-accent-blue/50 flex items-center justify-center text-accent-blue shadow-lg shadow-accent-blue/10">
-            <Shield className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-base font-bold tracking-wider text-white font-mono">SENTINELTRACK</span>
-              <span className="text-[10px] uppercase px-1.5 py-0.2 bg-police-700 text-slate-300 rounded border border-police-600 font-mono">
-                v1.0.0
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-400 hidden sm:block">Real-Time CCTV Vehicle Intelligence Control Room</p>
-          </div>
+    <header className="app-header">
+      <div className="brand-lockup">
+        <div className="brand-mark" aria-hidden="true">
+          <Shield size={22} strokeWidth={2.2} />
         </div>
-
-        <div className="h-5 w-[1px] bg-police-700 mx-1 hidden sm:block" />
-
-        <div className="flex items-center gap-2">
-          {getStatusBadge()}
-          {getWsBadge()}
+        <div>
+          <div className="brand-name">SentinelTrack</div>
+          <div className="brand-subtitle">Vehicle intelligence control room</div>
         </div>
       </div>
 
-      {/* Real-Time Operational Counters */}
-      <div className="hidden md:flex items-center gap-4 text-xs font-mono">
-        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-police-850 rounded border border-police-750">
-          <Video className="w-3.5 h-3.5 text-cyan-400" />
-          <span className="text-slate-400">CAMERAS:</span>
-          <span className="font-semibold text-slate-100">{activeCamerasCount}</span>
-        </div>
-
-        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-police-850 rounded border border-police-750">
-          <Activity className="w-3.5 h-3.5 text-accent-blue" />
-          <span className="text-slate-400">TARGETS:</span>
-          <span className="font-semibold text-slate-100">{activeTargetsCount}</span>
-        </div>
-
-        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded border ${
-          unackAlertsCount > 0 ? "bg-rose-950/80 border-rose-700 text-rose-200 animate-pulse" : "bg-police-850 border-police-750 text-slate-400"
-        }`}>
-          <AlertOctagon className="w-3.5 h-3.5 text-rose-400" />
-          <span>ALERTS:</span>
-          <span className="font-bold text-slate-100">{unackAlertsCount}</span>
-        </div>
+      <div className="header-status" aria-label="System connection status">
+        <span className={statusClass}>
+          <span className="status-dot" aria-hidden="true" />
+          {statusLabel(systemStatus)}
+        </span>
+        <span className={liveClass}>
+          <span className="status-dot" aria-hidden="true" />
+          {liveLabel(wsStatus)}
+        </span>
+        <span className={`data-mode ${demoMode ? "data-mode--demo" : "data-mode--live"}`}>
+          {demoMode ? "Sample data" : "Live data"}
+        </span>
       </div>
 
-      {/* Clock & Controls */}
-      <div className="flex items-center gap-3">
-        <div className="text-right hidden lg:block font-mono">
-          <div className="text-xs font-semibold text-slate-200">{timeLocal}</div>
-          <div className="text-[11px] text-slate-400">{timeUtc}</div>
-        </div>
+      <div className="header-summary" aria-label="Current counts">
+        <span><Video size={16} aria-hidden="true" /> <strong>{activeCamerasCount}</strong> cameras online</span>
+        <span><Activity size={16} aria-hidden="true" /> <strong>{activeTargetsCount}</strong> watchlist entries</span>
+        <span className={unackAlertsCount > 0 ? "summary-alert summary-alert--active" : "summary-alert"}>
+          <Bell size={16} aria-hidden="true" /> <strong>{unackAlertsCount}</strong> alerts need review
+        </span>
+      </div>
 
+      <div className="header-actions">
+        <span className="header-time" aria-label="Current local time">{timeLocal}</span>
         <button
+          type="button"
           onClick={onTogglePrivacyMode}
-          title={privacyMode ? "Disable plate masking" : "Enable plate masking (Presentation Mode)"}
-          className={`p-1.5 rounded border text-xs flex items-center gap-1 transition-colors ${
-            privacyMode ? "bg-accent-blue/30 border-accent-blue text-accent-blue" : "bg-police-800 border-police-700 text-slate-400 hover:text-white"
-          }`}
+          className={`icon-button ${privacyMode ? "icon-button--selected" : ""}`}
+          title={privacyMode ? "Show full registration numbers" : "Hide registration numbers"}
+          aria-label={privacyMode ? "Show full registration numbers" : "Hide registration numbers"}
         >
-          <Lock className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline text-[11px]">{privacyMode ? "Masked" : "Redact"}</span>
+          <EyeOff size={18} />
         </button>
-
         <button
-          onClick={onToggleDemoMode}
-          title={demoMode ? "Disable simulated demo fixtures" : "Enable simulated Ahmedabad demo fixtures"}
-          className={`px-2 py-1 rounded border text-xs font-mono font-semibold transition-colors ${
-            demoMode ? "bg-cyan-950 border-cyan-600 text-cyan-300" : "bg-police-800 border-police-700 text-slate-400 hover:text-white"
-          }`}
+          type="button"
+          onClick={onToggleDarkMode}
+          className="icon-button"
+          title={darkMode ? "Use light mode" : "Use dark mode"}
+          aria-label={darkMode ? "Use light mode" : "Use dark mode"}
         >
-          {demoMode ? "DEMO: ON" : "DEMO: OFF"}
+          {darkMode ? <Sun size={18} /> : <Moon size={18} />}
         </button>
-
         <button
+          type="button"
           onClick={onRefresh}
-          title="Manual refresh all views"
-          className="p-1.5 bg-police-800 hover:bg-police-700 border border-police-700 rounded text-slate-300 hover:text-white transition-colors"
+          className="icon-button"
+          title="Refresh information"
+          aria-label="Refresh information"
         >
-          <RefreshCw className="w-4 h-4" />
+          <RefreshCw size={18} />
         </button>
-
-        {/* Authenticated User & Logout */}
         {user && (
-          <div className="flex items-center gap-2 pl-2 border-l border-police-700">
-            <div className="hidden sm:flex flex-col text-right font-mono">
-              <span className="text-xs font-bold text-slate-200">{user.username}</span>
-              <span className="text-[10px] text-cyan-400 font-semibold">{user.role}</span>
+          <div className="user-menu">
+            <div className="user-details">
+              <strong>{user.username}</strong>
+              <span>{user.role === "ADMIN" ? "Administrator" : user.role}</span>
             </div>
             <button
+              type="button"
               onClick={() => logout()}
-              title="Sign Out / Terminate Session"
-              className="p-1.5 bg-rose-950/60 hover:bg-rose-900 border border-rose-700/60 rounded text-rose-300 hover:text-white transition-colors flex items-center gap-1 text-xs font-mono"
+              className="logout-button"
+              title="Sign out"
+              aria-label="Sign out"
             >
-              <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden md:inline text-[11px]">Logout</span>
+              <LogOut size={17} />
+              <span>Sign out</span>
             </button>
           </div>
         )}
@@ -218,4 +173,3 @@ export function Header({
     </header>
   );
 }
-

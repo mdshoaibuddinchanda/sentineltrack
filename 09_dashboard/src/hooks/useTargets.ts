@@ -3,13 +3,19 @@ import { listTargets, createTarget, updateTarget, disableTarget } from "../api/t
 import { Target, TargetCreateRequest, TargetUpdateRequest } from "../types/api";
 import { DEMO_TARGETS } from "../utils/demoData";
 
-export function useTargets(params?: { enabled?: boolean; priority?: string }, demoMode = false) {
+export function useTargets(params?: { enabled?: boolean; priority?: string }, demoMode = false, enabled = true) {
   const [targets, setTargets] = useState<Target[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchTargets = useCallback(async () => {
+    if (!enabled) {
+      setTargets([]);
+      setTotal(0);
+      setLoading(false);
+      return;
+    }
     if (demoMode) {
       let items = [...DEMO_TARGETS];
       if (params?.enabled !== undefined) items = items.filter((t) => t.enabled === params.enabled);
@@ -34,7 +40,7 @@ export function useTargets(params?: { enabled?: boolean; priority?: string }, de
     } finally {
       setLoading(false);
     }
-  }, [params?.enabled, params?.priority, demoMode]);
+  }, [params?.enabled, params?.priority, demoMode, enabled]);
 
   useEffect(() => {
     fetchTargets();

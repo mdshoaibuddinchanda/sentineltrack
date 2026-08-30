@@ -118,7 +118,7 @@ export function CamerasPage({ cameras, onSelectCamera }: CamerasPageProps) {
         <div className="lg:col-span-8">
           <Card
             title={`REGISTERED CCTV CAMERAS (${filteredCameras.length})`}
-            subtitle="Camera ingestion network endpoints & stream health"
+            subtitle="Camera connection status and recent activity"
             icon={<Video className="w-4 h-4 text-cyan-400" />}
             bodyClassName="p-0 overflow-x-auto"
           >
@@ -176,7 +176,7 @@ export function CamerasPage({ cameras, onSelectCamera }: CamerasPageProps) {
         {/* Right Col: Camera Details Panel */}
         <div className="lg:col-span-4">
           <Card
-            title="CAMERA NODE TELEMETRY"
+            title="Camera details"
             subtitle={selectedCam ? selectedCam.camera_id : routeCameraId ? `Camera ${routeCameraId}` : "Select a camera"}
             icon={<MapPin className="w-4 h-4 text-accent-blue" />}
             bodyClassName="p-4 space-y-4 font-mono text-xs"

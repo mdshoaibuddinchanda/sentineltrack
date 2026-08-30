@@ -145,15 +145,23 @@ async def run_authorized_websocket(
 
     try:
         async def send_loop():
-            while True:
-                msg = await queue.get()
-                await websocket.send_text(msg)
+            try:
+                while True:
+                    msg = await queue.get()
+                    await websocket.send_text(msg)
+            except WebSocketDisconnect:
+                # A client closing normally is expected lifecycle control.
+                return
 
         async def receive_loop():
-            while True:
-                data = await websocket.receive_text()
-                if data == "ping":
-                    await websocket.send_text('{"type":"pong"}')
+            try:
+                while True:
+                    data = await websocket.receive_text()
+                    if data == "ping":
+                        await websocket.send_text('{"type":"pong"}')
+            except WebSocketDisconnect:
+                # Starlette raises this when the client closes code 1000.
+                return
 
         async def validate_loop():
             # Periodic session & permission revalidation
@@ -216,9 +224,23 @@ async def run_authorized_websocket(
         )
         for task in pending:
             task.cancel()
+        # Cancellation must be awaited so sibling task exceptions (including
+        # a normal WebSocketDisconnect during client teardown) are retrieved.
+        await asyncio.gather(*pending, return_exceptions=True)
+        for task in done:
+            if task.cancelled():
+                continue
+            exc = task.exception()
+            if exc is not None and not isinstance(exc, WebSocketDisconnect):
+                raise exc
 
     except WebSocketDisconnect:
         pass
+    except asyncio.CancelledError:
+        # TestClient and ASGI servers may cancel the route task immediately
+        # after a normal close frame. Treat that as disconnect lifecycle
+        # control, then let the finally block remove the connection cleanly.
+        logger.debug("WS task cancelled during disconnect user=%s", user_id)
     finally:
         await manager.disconnect(websocket)
         logger.info("WS disconnected user=%s", user_id)

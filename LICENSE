@@ -1,0 +1,51 @@
+SentinelTrack Academic and Non-Commercial Evaluation License v1.0
+
+Copyright (c) 2026 Shoaib Chanda
+
+This license applies only to the original SentinelTrack source code and
+documentation authored for this repository. Model weights, datasets, fonts,
+libraries, and other third-party materials are excluded and remain governed by
+their own licenses and terms.
+
+1. Permitted academic use
+
+Permission is granted to academic institutions, students, educators, and
+researchers to use, reproduce, study, modify, and run the covered materials
+solely for non-commercial academic research, teaching, classroom work,
+evaluation, hackathon judging, and related scholarly activities.
+
+Redistribution to academic collaborators is permitted only when the complete
+license notice is retained, the copyright holder is credited, and the
+recipient is bound by this same license.
+
+2. Restricted use
+
+Without prior written permission from the copyright holder, you may not:
+
+- use the covered materials for a commercial product, paid service, or resale;
+- deploy or operate them in production, public safety, law-enforcement, or
+  other operational surveillance systems;
+- use them to provide a service for a fee or for commercial advantage;
+- sublicense, transfer, or redistribute them outside the permitted academic
+  purposes; or
+- remove attribution, this license, or the stated safety limitations.
+
+Any use outside the permitted academic purposes requires prior written
+permission from the copyright holder. Permission requests may be made
+privately through the repository owner on GitHub:
+
+<https://github.com/mdshoaibuddinchanda>
+
+3. No implied rights
+
+This license grants no trademark rights, patent license, ownership interest,
+or permission to use the SentinelTrack name or branding except as necessary
+to identify the original academic work.
+
+4. Disclaimer
+
+THE COVERED MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN
+NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY ARISING FROM OR IN CONNECTION WITH THE MATERIALS OR THEIR USE.

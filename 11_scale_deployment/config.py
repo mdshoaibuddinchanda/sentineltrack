@@ -72,6 +72,13 @@ class ScaleDeploymentConfig:
         default_factory=lambda: os.getenv("SENTINEL_PG_EVENT_BRIDGE", "false").lower() in ("true", "1", "yes")
     )
 
+    # Camera stream ingestion is an explicit opt-in for local/test processes.
+    # Enable it for a real all-in-one or analytics process after the database
+    # contains the camera stream URLs.
+    enable_stream_ingestion: bool = field(
+        default_factory=lambda: os.getenv("SENTINEL_ENABLE_STREAM_INGESTION", "false").lower() in ("true", "1", "yes")
+    )
+
     def is_api_enabled(self) -> bool:
         return self.process_role in ("all", "api")
 

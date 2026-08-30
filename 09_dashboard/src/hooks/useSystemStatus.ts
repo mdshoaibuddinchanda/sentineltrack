@@ -4,7 +4,7 @@ import { HealthResponse, ReadinessResponse, MetricsSnapshot } from "../types/api
 
 export type SystemStatusType = "HEALTHY" | "DEGRADED" | "OFFLINE" | "LOADING";
 
-export function useSystemStatus(pollIntervalMs = 8000) {
+export function useSystemStatus(pollIntervalMs = 8000, enabled = true) {
   const [status, setStatus] = useState<SystemStatusType>("LOADING");
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [readiness, setReadiness] = useState<ReadinessResponse | null>(null);
@@ -13,6 +13,14 @@ export function useSystemStatus(pollIntervalMs = 8000) {
   const [error, setError] = useState<string | null>(null);
 
   const fetchStatus = useCallback(async () => {
+    if (!enabled) {
+      setStatus("LOADING");
+      setHealth(null);
+      setReadiness(null);
+      setMetrics(null);
+      setError(null);
+      return;
+    }
     try {
       const [h, r, m] = await Promise.all([
         getHealth().catch(() => null),
@@ -48,13 +56,14 @@ export function useSystemStatus(pollIntervalMs = 8000) {
       setStatus("OFFLINE");
       setError(e.message || "Failed to poll system status");
     }
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
     fetchStatus();
+    if (!enabled) return;
     const interval = setInterval(fetchStatus, pollIntervalMs);
     return () => clearInterval(interval);
-  }, [fetchStatus, pollIntervalMs]);
+  }, [fetchStatus, pollIntervalMs, enabled]);
 
   return { status, health, readiness, metrics, lastUpdated, error, refresh: fetchStatus };
 }

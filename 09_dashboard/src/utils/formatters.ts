@@ -36,12 +36,12 @@ export function formatDateTime(isoString?: string | null, includeSeconds = true)
       year: "numeric",
       month: "short",
       day: "2-digit",
-      hour: "2-digit",
+      hour: "numeric",
       minute: "2-digit",
       second: includeSeconds ? "2-digit" : undefined,
-      hour12: false,
-      timeZoneName: "short",
-    });
+      hour12: true,
+      timeZone: "Asia/Kolkata",
+    }) + " IST";
   } catch {
     return "--";
   }
