@@ -5,6 +5,7 @@ Use this index to navigate the implementation, operations, evidence, and submiss
 ## Architecture and runtime
 
 - [Root architecture and setup](../README.md)
+- [Testing and workspace guide](TESTING_GUIDE.md)
 - [Reproducibility](reproducibility.md)
 - [Deployment](deployment/retention_and_growth.md)
 - [Performance backlog](performance_backlog.md)
