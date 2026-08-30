@@ -4,6 +4,8 @@ import threading
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any, Callable
 
+import cv2
+
 import importlib
 get_scale_config = importlib.import_module("11_scale_deployment.config").get_scale_config
 FairStreamScheduler = importlib.import_module("11_scale_deployment.scheduler").FairStreamScheduler
@@ -49,6 +51,8 @@ class CameraStreamWorker:
         self.is_degraded = False
         self.last_frame_time = 0.0
         self.last_pts_ms: Optional[float] = None
+        self._latest_jpeg: Optional[bytes] = None
+        self._last_preview_time = 0.0
         self.total_frames_decoded = 0
         self.total_frames_sampled = 0
         self.reconnect_count = 0
@@ -63,6 +67,23 @@ class CameraStreamWorker:
 
     def is_in_burst(self) -> bool:
         return time.time() < self.burst_until
+
+    def _update_preview(self, frame: Any, now_time: float) -> None:
+        """Keep one bounded JPEG snapshot for authenticated human verification."""
+        if now_time - self._last_preview_time < 1.0:
+            return
+        try:
+            ok, encoded = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+            if ok:
+                with self._lock:
+                    self._latest_jpeg = encoded.tobytes()
+                    self._last_preview_time = now_time
+        except Exception:
+            logger.exception("Preview encoding failed for camera %s", self.camera_id)
+
+    def get_preview(self) -> Optional[bytes]:
+        with self._lock:
+            return self._latest_jpeg
 
     def get_current_target_fps(self) -> float:
         return self.burst_fps if self.is_in_burst() else self.base_fps
@@ -104,6 +125,12 @@ class CameraStreamWorker:
                         self.is_connected = False
                         self.is_degraded = True
                         self.reconnect_count += 1
+                        logger.warning(
+                            "Camera %s did not connect; retry %s in %.1fs",
+                            self.camera_id,
+                            self.reconnect_count,
+                            backoff_s,
+                        )
                         time.sleep(backoff_s)
                         backoff_s = min(max_backoff_s, backoff_s * 1.5)
                         continue
@@ -128,6 +155,7 @@ class CameraStreamWorker:
                         self.last_frame_time = now_time
                         self.last_pts_ms = packet.pts_ms
                         self.total_frames_decoded += 1
+                        self._update_preview(packet.frame, now_time)
 
                         # Adaptive Base + Burst Sampling
                         target_fps = self.get_current_target_fps()
@@ -280,7 +308,8 @@ class StreamSupervisor:
                     "frames_sampled": w.total_frames_sampled,
                     "reconnects": w.reconnect_count,
                     "last_frame_s_ago": round(now - w.last_frame_time, 2) if w.last_frame_time > 0 else None,
-                    "last_pts_ms": w.last_pts_ms
+                    "last_pts_ms": w.last_pts_ms,
+                    "preview_available": w.get_preview() is not None,
                 }
 
             return {
@@ -295,3 +324,9 @@ class StreamSupervisor:
                 "shard_count": self.config.shard_count,
                 "cameras": camera_states
             }
+
+    def get_preview(self, camera_id: str) -> Optional[bytes]:
+        """Return the latest bounded camera snapshot, if a frame was decoded."""
+        with self._lock:
+            worker = self._workers.get(camera_id)
+        return worker.get_preview() if worker else None

@@ -26,7 +26,7 @@ describe("Router & Deep Linking Tests", () => {
     render(
       <MemoryRouter initialEntries={["/investigation/GJ18XY5678"]}>
         <Routes>
-          <Route path="/investigation/:registration" element={<InvestigationPage demoMode={true} />} />
+          <Route path="/investigation/:registration" element={<InvestigationPage />} />
         </Routes>
       </MemoryRouter>
     );

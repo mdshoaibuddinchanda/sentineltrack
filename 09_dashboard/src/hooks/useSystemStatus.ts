@@ -37,10 +37,14 @@ export function useSystemStatus(pollIntervalMs = 8000, enabled = true) {
         getMetrics().catch(() => null),
       ]);
 
+      const coreComponents = Object.entries(r?.components || {})
+        .filter(([key]) => key !== "stream_ingestion")
+        .map(([, value]) => value);
+
       if (!h) {
         setStatus("OFFLINE");
         setError("SentinelTrack backend is unreachable.");
-      } else if (r?.status === "degraded" || (r && Object.values(r.components).some((v) => v === false))) {
+      } else if (coreComponents.some((value) => value === false)) {
         setStatus("DEGRADED");
         setError(null);
       } else {

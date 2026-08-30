@@ -1,24 +1,22 @@
 """SentinelTrack root launcher.
 
-Default mode is evaluator-friendly visual review:
-- starts a temporary in-memory authenticated API
-- starts the Vite dashboard with deterministic demo fixtures
-- opens the browser automatically
-- leaves production security/model behavior unchanged
+The default mode is the normal configured SentinelTrack runtime:
+- uses the configured PostgreSQL/PostGIS database and account
+- starts the analytics worker and persisted camera sources
+- starts the Vite dashboard and opens the browser automatically
 
-Use --full for the normal analytics/API process role.
+Use --frontend-only when the API is already running.
 """
 
 from __future__ import annotations
 
 import argparse
 import importlib
+import logging
 import os
 from pathlib import Path
-import secrets
 import shutil
 import socket
-import string
 import subprocess
 import sys
 import time
@@ -61,6 +59,19 @@ def close_logs() -> None:
         except Exception:
             pass
     _LOG_HANDLES.clear()
+
+
+def configure_backend_logging() -> None:
+    """Write backend and model diagnostics to the repository logs directory."""
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    file_handler = logging.FileHandler(LOG_DIR / "sentineltrack.log", encoding="utf-8")
+    stream_handler = logging.StreamHandler(sys.stdout)
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        handlers=[file_handler, stream_handler],
+        force=True,
+    )
 
 
 def command(name: str) -> str:
@@ -115,28 +126,6 @@ def ensure_frontend_dependencies() -> None:
     subprocess.run([command("npm"), "ci"], cwd=DASHBOARD, check=True)
 
 
-def make_demo_password() -> str:
-    alphabet = string.ascii_letters + string.digits + "!@#_-"
-    while True:
-        value = "".join(secrets.choice(alphabet) for _ in range(20))
-        if (
-            any(c.islower() for c in value)
-            and any(c.isupper() for c in value)
-            and any(c.isdigit() for c in value)
-            and any(c in "!@#_-" for c in value)
-        ):
-            return value
-
-
-def bootstrap_demo_user(username: str, password: str) -> None:
-    bootstrap = importlib.import_module("10_security.bootstrap_admin")
-    bootstrap.bootstrap_admin(
-        username=username,
-        display_name="SentinelTrack Demo Administrator",
-        password=password,
-    )
-
-
 def configure_frontend_origin(ui_port: int, *, preserve_existing: bool) -> None:
     """Make the child API accept the exact origin served by Vite."""
     required = [f"http://localhost:{ui_port}", f"http://127.0.0.1:{ui_port}"]
@@ -156,20 +145,12 @@ def configure_frontend_origin(ui_port: int, *, preserve_existing: bool) -> None:
 
 def run_backend_child(args: argparse.Namespace) -> int:
     os.chdir(ROOT)
+    configure_backend_logging()
 
-    if args.demo_backend:
-        os.environ["SENTINEL_ENV"] = "development"
-        os.environ["SENTINEL_PROCESS_ROLE"] = "api"
-        os.environ["SENTINEL_ENABLE_STREAM_INGESTION"] = "false"
-        os.environ["SENTINEL_SECURITY_USE_SQLITE"] = "true"
-        configure_frontend_origin(args.ui_port, preserve_existing=False)
-        bootstrap_demo_user(args.demo_user, args.demo_password)
-    else:
-        os.environ.setdefault("SENTINEL_ENV", "development")
-        os.environ["SENTINEL_PROCESS_ROLE"] = "all"
-        os.environ["SENTINEL_SECURITY_USE_SQLITE"] = "false"
-        os.environ.setdefault("SENTINEL_ENABLE_STREAM_INGESTION", "true")
-        configure_frontend_origin(args.ui_port, preserve_existing=True)
+    os.environ.setdefault("SENTINEL_ENV", "development")
+    os.environ["SENTINEL_PROCESS_ROLE"] = "all"
+    os.environ["SENTINEL_SECURITY_USE_SQLITE"] = "false"
+    configure_frontend_origin(args.ui_port, preserve_existing=True)
 
     import uvicorn
 
@@ -179,18 +160,15 @@ def run_backend_child(args: argparse.Namespace) -> int:
         host=args.host,
         port=args.api_port,
         log_level="info",
+        log_config=None,
         reload=False,
     )
     return 0
 
 
-def start_frontend(*, demo: bool, ui_port: int, api_port: int) -> subprocess.Popen:
+def start_frontend(*, ui_port: int, api_port: int) -> subprocess.Popen:
     ensure_frontend_dependencies()
     env = os.environ.copy()
-    if demo:
-        env["VITE_DEMO_MODE"] = "true"
-    else:
-        env["VITE_DEMO_MODE"] = "false"
     # These must follow the launcher CLI port, otherwise a custom API port
     # silently leaves the browser pointed at a different backend.
     env["VITE_SENTINEL_API_URL"] = f"http://127.0.0.1:{api_port}"
@@ -217,9 +195,6 @@ def start_frontend(*, demo: bool, ui_port: int, api_port: int) -> subprocess.Pop
 
 def start_backend(
     *,
-    demo: bool,
-    username: str,
-    password: str,
     host: str,
     api_port: int,
     ui_port: int,
@@ -235,16 +210,6 @@ def start_backend(
         "--ui-port",
         str(ui_port),
     ]
-    if demo:
-        cmd.extend(
-            [
-                "--demo-backend",
-                "--demo-user",
-                username,
-                "--demo-password",
-                password,
-            ]
-        )
     print(f"[backend] Starting API on http://127.0.0.1:{api_port}")
     return subprocess.Popen(
         cmd,
@@ -286,11 +251,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         description="Launch SentinelTrack backend and dashboard from the repository root."
     )
     mode = parser.add_mutually_exclusive_group()
-    mode.add_argument(
-        "--full",
-        action="store_true",
-        help="Start the normal backend analytics role plus frontend.",
-    )
+    mode.add_argument("--full", action="store_true", help="Start the normal backend analytics role plus frontend (default).")
     mode.add_argument(
         "--frontend-only",
         action="store_true",
@@ -301,11 +262,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--api-port", type=int, default=8000)
     parser.add_argument("--ui-port", type=int, default=5173)
 
-    # Internal child-process flags.
+    # Internal child-process flag retained for supervisor compatibility.
     parser.add_argument("--backend-child", action="store_true", help=argparse.SUPPRESS)
-    parser.add_argument("--demo-backend", action="store_true", help=argparse.SUPPRESS)
-    parser.add_argument("--demo-user", default="demo_admin", help=argparse.SUPPRESS)
-    parser.add_argument("--demo-password", default="", help=argparse.SUPPRESS)
     return parser.parse_args(argv)
 
 
@@ -317,27 +275,21 @@ def main(argv: list[str] | None = None) -> int:
         return run_backend_child(args)
 
     os.chdir(ROOT)
-    demo = not args.full
+    full = not args.frontend_only
     backend: subprocess.Popen | None = None
     frontend: subprocess.Popen | None = None
-
-    username = "demo_admin"
-    password = os.getenv("SENTINEL_DEMO_PASSWORD") or make_demo_password()
 
     try:
         if not args.frontend_only:
             assert_port_available("127.0.0.1", args.api_port, "API")
         assert_port_available("127.0.0.1", args.ui_port, "dashboard")
 
-        if args.full:
+        if full:
             maybe_start_postgres()
-            os.environ.setdefault("SENTINEL_ENABLE_STREAM_INGESTION", "true")
+            os.environ["SENTINEL_ENABLE_STREAM_INGESTION"] = "true"
 
         if not args.frontend_only:
             backend = start_backend(
-                demo=demo,
-                username=username,
-                password=password,
                 host=args.host,
                 api_port=args.api_port,
                 ui_port=args.ui_port,
@@ -348,7 +300,7 @@ def main(argv: list[str] | None = None) -> int:
             ):
                 raise RuntimeError("Backend did not become ready on time.")
 
-        frontend = start_frontend(demo=demo, ui_port=args.ui_port, api_port=args.api_port)
+        frontend = start_frontend(ui_port=args.ui_port, api_port=args.api_port)
         if not wait_for_port("127.0.0.1", args.ui_port, timeout=35.0):
             raise RuntimeError("Frontend did not become ready on time.")
 
@@ -360,14 +312,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f" Dashboard : {ui_url}")
         if not args.frontend_only:
             print(f" API       : http://127.0.0.1:{args.api_port}")
-        if demo and not args.frontend_only:
-            print()
-            print(" Temporary local demo login")
-            print(f" Username  : {username}")
-            print(f" Password  : {password}")
-            print(" Mode      : deterministic dashboard fixtures + API-only backend")
-            print(" Security  : temporary in-memory account; not persisted")
-        elif args.full:
+        if full:
             print(" Mode      : full analytics/backend runtime")
             print(" Login     : use your configured SentinelTrack operator/admin account")
         else:

@@ -16,7 +16,6 @@ interface OperationsPageProps {
   analyticsWorkerStatus: boolean;
   workerCount: number;
   persistedSightingsTotal?: number;
-  demoMode?: boolean;
   liveFramesDecoded?: number;
   onAcknowledgeAlert: (alertId: string) => void;
   onInvestigate: (registration: string) => void;
@@ -34,7 +33,6 @@ export function OperationsPage({
   analyticsWorkerStatus,
   workerCount,
   persistedSightingsTotal,
-  demoMode = false,
   liveFramesDecoded,
   onAcknowledgeAlert,
   onInvestigate,
@@ -44,11 +42,11 @@ export function OperationsPage({
 }: OperationsPageProps) {
   const onlineCams = cameras.filter((c) => c.stream_status === "ONLINE").length;
   const offlineCams = cameras.filter((c) => c.stream_status !== "ONLINE").length;
-  const hasCurrentFrames = !demoMode && (liveFramesDecoded ?? 0) > 0;
+  const hasCurrentFrames = (liveFramesDecoded ?? 0) > 0;
 
   return (
     <div className="space-y-4">
-      {!demoMode && liveFramesDecoded !== undefined && !hasCurrentFrames && (
+      {liveFramesDecoded !== undefined && !hasCurrentFrames && (
         <div className="source-note" role="status">
           <strong>No live camera frames</strong>
           <span>The backend and models are running, but this run has received no camera frames. Alerts and sightings shown below are stored database records, not current detections.</span>

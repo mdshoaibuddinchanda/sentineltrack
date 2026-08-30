@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { listAlerts, acknowledgeAlert } from "../api/alerts";
 import { Alert } from "../types/api";
-import { DEMO_ALERTS } from "../utils/demoData";
 
-export function useAlerts(params?: { unacknowledged?: boolean; limit?: number }, demoMode = false, enabled = true) {
+export function useAlerts(params?: { unacknowledged?: boolean; limit?: number }, enabled = true) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [total, setTotal] = useState(0);
   const [unackCount, setUnackCount] = useState(0);
@@ -18,16 +17,6 @@ export function useAlerts(params?: { unacknowledged?: boolean; limit?: number },
       setLoading(false);
       return;
     }
-    if (demoMode) {
-      let items = [...DEMO_ALERTS];
-      if (params?.unacknowledged) items = items.filter((a) => !a.acknowledged);
-      setAlerts(items);
-      setTotal(items.length);
-      setUnackCount(DEMO_ALERTS.filter((a) => !a.acknowledged).length);
-      setLoading(false);
-      return;
-    }
-
     try {
       setLoading(true);
       const res = await listAlerts({
@@ -43,7 +32,7 @@ export function useAlerts(params?: { unacknowledged?: boolean; limit?: number },
     } finally {
       setLoading(false);
     }
-  }, [params?.unacknowledged, params?.limit, demoMode, enabled]);
+  }, [params?.unacknowledged, params?.limit, enabled]);
 
   useEffect(() => {
     fetchAlerts();
@@ -63,8 +52,6 @@ export function useAlerts(params?: { unacknowledged?: boolean; limit?: number },
       )
     );
     setUnackCount((prev) => Math.max(0, prev - 1));
-
-    if (demoMode) return;
 
     try {
       await acknowledgeAlert(alertId, operator);

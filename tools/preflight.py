@@ -16,10 +16,17 @@ import socket
 import sys
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 MANIFEST_PATH = ROOT_DIR / "models" / "manifest.json"
 REQUIRED_DIRECTORIES = ("configs", "models", "reports", "scripts", "tools")
+
+# Preflight must inspect the same local configuration used by the launcher.
+# Without this, a shell that has not exported DATABASE_PASSWORD would probe
+# with the fallback password and report a misleading authentication warning.
+load_dotenv(ROOT_DIR / ".env")
 
 
 def sha256_file(path: Path) -> str:

@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { listCameras } from "../api/cameras";
 import { Camera } from "../types/api";
-import { DEMO_CAMERAS } from "../utils/demoData";
 
-export function useCameras(params?: { department?: string; live?: boolean; stream_status?: string }, demoMode = false, enabled = true) {
+export function useCameras(params?: { department?: string; live?: boolean; stream_status?: string }, enabled = true) {
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -16,16 +15,6 @@ export function useCameras(params?: { department?: string; live?: boolean; strea
       setLoading(false);
       return;
     }
-    if (demoMode) {
-      let items = [...DEMO_CAMERAS];
-      if (params?.department) items = items.filter((c) => c.department?.toLowerCase().includes(params.department!.toLowerCase()));
-      if (params?.stream_status) items = items.filter((c) => c.stream_status === params.stream_status);
-      setCameras(items);
-      setTotal(items.length);
-      setLoading(false);
-      return;
-    }
-
     try {
       setLoading(true);
       const res = await listCameras({
@@ -41,7 +30,7 @@ export function useCameras(params?: { department?: string; live?: boolean; strea
     } finally {
       setLoading(false);
     }
-  }, [params?.department, params?.live, params?.stream_status, demoMode, enabled]);
+  }, [params?.department, params?.live, params?.stream_status, enabled]);
 
   useEffect(() => {
     fetchCameras();

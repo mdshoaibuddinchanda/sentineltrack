@@ -24,9 +24,8 @@ def test_launcher_frontend_uses_requested_api_and_websocket_ports(monkeypatch, t
     monkeypatch.setattr(launcher.subprocess, "Popen", fake_popen)
 
     try:
-        launcher.start_frontend(demo=False, ui_port=5174, api_port=8011)
+        launcher.start_frontend(ui_port=5174, api_port=8011)
         assert captured["args"][-2:] == ["--port", "5174"]
-        assert captured["env"]["VITE_DEMO_MODE"] == "false"
         assert captured["env"]["VITE_SENTINEL_API_URL"] == "http://127.0.0.1:8011"
         assert captured["env"]["VITE_SENTINEL_WS_URL"] == "ws://127.0.0.1:8011"
     finally:
@@ -50,8 +49,8 @@ def test_launcher_rejects_a_used_port():
             raise AssertionError("A used port was not rejected")
 
 
-def test_demo_backend_allowlist_follows_custom_ui_port(monkeypatch):
-    """The temporary API must allow the exact Vite origin selected by the launcher."""
+def test_backend_allowlist_follows_custom_ui_port(monkeypatch):
+    """The configured API must allow the exact Vite origin selected by the launcher."""
     captured = {}
 
     class DummyUvicorn:
@@ -59,18 +58,11 @@ def test_demo_backend_allowlist_follows_custom_ui_port(monkeypatch):
         def run(*args, **kwargs):
             captured["origins"] = launcher.os.environ["SENTINEL_ALLOWED_ORIGINS"]
 
-    monkeypatch.setattr(launcher.importlib, "import_module", lambda name: (
-        type("Bootstrap", (), {"bootstrap_admin": staticmethod(lambda **kwargs: None)})
-        if name == "10_security.bootstrap_admin"
-        else type("App", (), {"app": object()})
-    ))
+    monkeypatch.setattr(launcher.importlib, "import_module", lambda name: type("App", (), {"app": object()}))
     monkeypatch.setitem(launcher.sys.modules, "uvicorn", DummyUvicorn)
 
     args = launcher.parse_args([
         "--backend-child",
-        "--demo-backend",
-        "--demo-password",
-        "temporary-password",
         "--api-port",
         "8011",
         "--ui-port",

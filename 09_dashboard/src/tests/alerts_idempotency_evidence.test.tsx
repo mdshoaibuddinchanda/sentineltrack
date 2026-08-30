@@ -10,7 +10,7 @@ describe("Alerts Idempotency & Evidence Integrity Tests", () => {
   });
 
   it("prependLiveAlert is strictly idempotent for alert list, total, and unackCount", () => {
-    const { result } = renderHook(() => useAlerts(undefined, true));
+    const { result } = renderHook(() => useAlerts(undefined, false));
 
     const initialTotal = result.current.total;
     const initialUnack = result.current.unackCount;
@@ -52,7 +52,7 @@ describe("Alerts Idempotency & Evidence Integrity Tests", () => {
   });
 
   it("acknowledged live alert does not increment unackCount", () => {
-    const { result } = renderHook(() => useAlerts(undefined, true));
+    const { result } = renderHook(() => useAlerts(undefined, false));
 
     const initialTotal = result.current.total;
     const initialUnack = result.current.unackCount;
@@ -109,7 +109,7 @@ describe("Alerts Idempotency & Evidence Integrity Tests", () => {
     // Mock acknowledgeAlert failing with 503
     vi.spyOn(alertsApi, "acknowledgeAlert").mockRejectedValue(new Error("Database unavailable (503)"));
 
-    const { result } = renderHook(() => useAlerts(undefined, false));
+    const { result } = renderHook(() => useAlerts(undefined, true));
 
     // Wait for initial load
     await act(async () => {

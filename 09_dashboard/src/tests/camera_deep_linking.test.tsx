@@ -8,6 +8,7 @@ import { Camera } from "../types/api";
 
 vi.mock("../api/cameras", () => ({
   searchNearbyCameras: vi.fn().mockResolvedValue([]),
+  getCameraPreviewUrl: vi.fn().mockReturnValue("/preview.jpg"),
 }));
 
 describe("Camera Deep Linking & Asynchronous Loading Tests", () => {

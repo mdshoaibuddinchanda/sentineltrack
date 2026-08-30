@@ -5,6 +5,12 @@ import {
   CameraHealth,
 } from "../types/api";
 
+const BASE_URL = import.meta.env.VITE_SENTINEL_API_URL || import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+
+export function getCameraPreviewUrl(cameraId: string, cacheKey = Date.now()): string {
+  return `${BASE_URL}/api/v1/cameras/${encodeURIComponent(cameraId)}/preview?ts=${cacheKey}`;
+}
+
 export async function listCameras(params?: {
   department?: string;
   live?: boolean;

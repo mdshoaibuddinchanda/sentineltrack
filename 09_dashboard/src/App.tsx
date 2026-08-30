@@ -27,16 +27,12 @@ import { useAlerts } from "./hooks/useAlerts";
 import { listSightings } from "./api/sightings";
 import { getAlert } from "./api/alerts";
 import { Sighting } from "./types/api";
-import { DEMO_SIGHTINGS } from "./utils/demoData";
 import { maskRegistration } from "./utils/formatters";
 import { AlertOctagon } from "lucide-react";
 
 function DashboardApp() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const [demoMode] = useState<boolean>(
-    import.meta.env.VITE_DEMO_MODE === "true"
-  );
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem("sentineltrack-theme") === "dark";
@@ -49,14 +45,14 @@ function DashboardApp() {
   // Global Subsystem Hooks (stable topic key to eliminate WebSocket churn)
   const { status: sysStatus, health, readiness, metrics, lastUpdated, error: sysError, refresh: refreshSystem } = useSystemStatus(8000, isAuthenticated);
   const { status: wsStatus, events: wsEvents } = useWebSocket("*", isAuthenticated);
-  const { cameras, refresh: refreshCameras } = useCameras(undefined, demoMode, isAuthenticated);
-  const { targets, create: createTarget, update: updateTarget, disable: disableTarget, refresh: refreshTargets } = useTargets(undefined, demoMode, isAuthenticated);
-  const { alerts, total: totalAlerts, unackCount, acknowledge: acknowledgeAlert, prependLiveAlert, refresh: refreshAlerts } = useAlerts(undefined, demoMode, isAuthenticated);
+  const { cameras, refresh: refreshCameras } = useCameras(undefined, isAuthenticated);
+  const { targets, create: createTarget, update: updateTarget, disable: disableTarget, refresh: refreshTargets } = useTargets(undefined, isAuthenticated);
+  const { alerts, total: totalAlerts, unackCount, acknowledge: acknowledgeAlert, prependLiveAlert, refresh: refreshAlerts } = useAlerts(undefined, isAuthenticated);
   const streamStatus = readiness?.details?.stream_ingestion as
     | { total_frames_decoded?: number }
     | undefined;
   const liveFramesDecoded = streamStatus?.total_frames_decoded;
-  const noCurrentLiveInput = !demoMode && liveFramesDecoded === 0;
+  const noCurrentLiveInput = liveFramesDecoded === 0;
   const activeAlerts = noCurrentLiveInput ? [] : alerts;
   const activeUnackCount = noCurrentLiveInput ? 0 : unackCount;
 
@@ -71,17 +67,13 @@ function DashboardApp() {
       setSightings([]);
       return;
     }
-    if (demoMode) {
-      setSightings(DEMO_SIGHTINGS);
-      return;
-    }
     try {
       const res = await listSightings({ limit: 50 });
       setSightings(res.items);
     } catch {
       // Offline fallback
     }
-  }, [demoMode, isAuthenticated]);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     fetchSightings();
@@ -108,7 +100,7 @@ function DashboardApp() {
         setTimeout(() => setToastMessage(null), 7000);
 
         // Fetch authoritative database record from backend — never synthesize fake evidence
-        if (alertId && !demoMode) {
+        if (alertId) {
           getAlert(alertId)
             .then((authAlert) => {
               prependLiveAlert(authAlert);
@@ -123,7 +115,7 @@ function DashboardApp() {
         fetchSightings();
       }
     }
-  }, [wsEvents, prependLiveAlert, fetchSightings, refreshAlerts, demoMode, privacyMode]);
+  }, [wsEvents, prependLiveAlert, fetchSightings, refreshAlerts, privacyMode]);
 
   const handleRefreshAll = () => {
     refreshSystem();
@@ -160,7 +152,6 @@ function DashboardApp() {
                   activeCamerasCount={cameras.filter((c) => c.stream_status === "ONLINE").length}
                   activeTargetsCount={targets.filter((t) => t.enabled).length}
                   unackAlertsCount={activeUnackCount}
-                  demoMode={demoMode}
                   liveFramesDecoded={liveFramesDecoded}
                   darkMode={darkMode}
                   onToggleDarkMode={() => setDarkMode((prev) => !prev)}
@@ -175,6 +166,7 @@ function DashboardApp() {
                   error={sysError}
                   onRetry={refreshSystem}
                   degradedDetails={readiness?.components}
+                  liveInputAvailable={liveFramesDecoded === undefined ? undefined : liveFramesDecoded > 0}
                 />
 
                 {/* Primary Navigation */}
@@ -215,7 +207,6 @@ function DashboardApp() {
                             analyticsWorkerStatus={readiness?.components?.analytics_worker === true}
                             workerCount={metrics?.active_camera_workers ?? 0}
                             persistedSightingsTotal={metrics?.total_sightings_persisted}
-                            demoMode={demoMode}
                             liveFramesDecoded={liveFramesDecoded}
                             onAcknowledgeAlert={acknowledgeAlert}
                             onInvestigate={handleInvestigate}
@@ -232,7 +223,6 @@ function DashboardApp() {
                             cameras={cameras}
                             onSelectCamera={handleSelectCamera}
                             selectedCameraId={selectedCameraId}
-                            demoMode={demoMode}
                             liveFramesDecoded={liveFramesDecoded}
                           />
                         }
@@ -244,7 +234,6 @@ function DashboardApp() {
                             cameras={cameras}
                             onSelectCamera={handleSelectCamera}
                             selectedCameraId={selectedCameraId}
-                            demoMode={demoMode}
                             liveFramesDecoded={liveFramesDecoded}
                           />
                         }
@@ -270,7 +259,6 @@ function DashboardApp() {
                             onAcknowledge={acknowledgeAlert}
                             onInvestigate={handleInvestigate}
                             privacyMode={privacyMode}
-                            demoMode={demoMode}
                             liveFramesDecoded={liveFramesDecoded}
                             totalAlerts={totalAlerts}
                             storedUnacknowledgedCount={unackCount}
@@ -285,7 +273,6 @@ function DashboardApp() {
                             onAcknowledge={acknowledgeAlert}
                             onInvestigate={handleInvestigate}
                             privacyMode={privacyMode}
-                            demoMode={demoMode}
                             liveFramesDecoded={liveFramesDecoded}
                             totalAlerts={totalAlerts}
                             storedUnacknowledgedCount={unackCount}
@@ -296,7 +283,6 @@ function DashboardApp() {
                         path="/investigation"
                         element={
                           <InvestigationPage
-                            demoMode={demoMode}
                             privacyMode={privacyMode}
                           />
                         }
@@ -305,7 +291,6 @@ function DashboardApp() {
                         path="/investigation/:registration"
                         element={
                           <InvestigationPage
-                            demoMode={demoMode}
                             privacyMode={privacyMode}
                           />
                         }

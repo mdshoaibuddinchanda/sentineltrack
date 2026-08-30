@@ -12,18 +12,16 @@ import { TableSkeleton } from "../components/common/Skeleton";
 import { Compass, Eye, MapPin, AlertTriangle } from "lucide-react";
 
 interface InvestigationPageProps {
-  demoMode?: boolean;
   privacyMode?: boolean;
 }
 
 export function InvestigationPage({
-  demoMode = false,
   privacyMode = false,
 }: InvestigationPageProps) {
   const { registration: routeReg } = useParams<{ registration?: string }>();
   const navigate = useNavigate();
 
-  const [selectedReg, setSelectedReg] = useState<string>(routeReg || "GJ01AB1234");
+  const [selectedReg, setSelectedReg] = useState<string>(routeReg || "");
   const [selectedSightingId, setSelectedSightingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -33,10 +31,7 @@ export function InvestigationPage({
     }
   }, [routeReg]);
 
-  const { route, summary, geoJSON, loading, error } = useTrajectory(
-    selectedReg,
-    demoMode
-  );
+  const { route, summary, geoJSON, loading, error } = useTrajectory(selectedReg);
 
   const handleSearch = (reg: string) => {
     const clean = reg.trim().toUpperCase();

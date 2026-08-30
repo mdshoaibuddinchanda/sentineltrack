@@ -34,32 +34,26 @@ export function ReadinessMatrix({ readiness }: { readiness?: ReadinessResponse |
         return (
           <div
             key={comp.key}
-            className={`p-3 rounded-lg border flex items-center justify-between gap-3 ${
-              isReady
-                ? "bg-police-850 border-police-750"
-                : isOffline
-                ? "bg-rose-950/30 border-rose-700/80 text-rose-200"
-                : "bg-amber-950/30 border-amber-700/80 text-amber-200"
-            }`}
+            className={`operator-readiness operator-readiness--${isReady ? "ready" : isOffline ? "offline" : "unknown"} p-3 flex items-center justify-between gap-3`}
           >
             <div>
-              <div className="font-semibold text-slate-100">{comp.label}</div>
-              <div className="text-[11px] text-slate-400">{comp.desc}</div>
+              <div className="operator-readiness__title">{comp.label}</div>
+              <div className="operator-readiness__description text-[11px]">{comp.desc}</div>
             </div>
 
             <div className="shrink-0">
               {isReady && (
-                <span className="inline-flex items-center gap-1 text-emerald-400 font-bold text-xs">
+                <span className="operator-status operator-status--ready inline-flex items-center gap-1 text-xs">
                   <CheckCircle2 className="w-4 h-4" /> READY
                 </span>
               )}
               {isOffline && (
-                <span className="inline-flex items-center gap-1 text-rose-400 font-bold text-xs">
+                <span className="operator-status operator-status--offline inline-flex items-center gap-1 text-xs">
                   <XCircle className="w-4 h-4" /> OFFLINE
                 </span>
               )}
               {isUnknown && (
-                <span className="inline-flex items-center gap-1 text-amber-400 font-bold text-xs">
+                <span className="operator-status operator-status--unknown inline-flex items-center gap-1 text-xs">
                   <AlertTriangle className="w-4 h-4" /> UNKNOWN
                 </span>
               )}

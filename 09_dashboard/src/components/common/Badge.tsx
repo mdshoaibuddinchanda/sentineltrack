@@ -16,19 +16,6 @@ export function Badge({ children, variant = "default", size = "md", className = 
     lg: "px-3 py-1 text-sm font-semibold",
   };
 
-  const variantClasses = {
-    default: "bg-police-700/60 text-slate-300 border border-police-600",
-    critical: "bg-rose-950/80 text-rose-300 border border-rose-600/60",
-    high: "bg-amber-950/80 text-amber-300 border border-amber-600/60",
-    normal: "bg-blue-950/80 text-blue-300 border border-blue-600/60",
-    low: "bg-slate-800 text-slate-400 border border-slate-700",
-    success: "bg-emerald-950/80 text-emerald-300 border border-emerald-600/60",
-    warning: "bg-amber-950/80 text-amber-300 border border-amber-600/60",
-    danger: "bg-rose-950/80 text-rose-300 border border-rose-600/60",
-    neutral: "bg-police-800 text-slate-400 border border-police-700",
-    cyan: "bg-cyan-950/80 text-cyan-300 border border-cyan-600/60",
-  };
-
   const dotClasses = {
     default: "bg-slate-400",
     critical: "bg-rose-500 animate-ping-slow",
@@ -43,7 +30,7 @@ export function Badge({ children, variant = "default", size = "md", className = 
   };
 
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded uppercase font-mono ${sizeClasses[size]} ${variantClasses[variant]} ${className}`}>
+    <span className={`operator-badge operator-badge--${variant} inline-flex items-center gap-1.5 rounded uppercase font-mono ${sizeClasses[size]} ${className}`}>
       {dot && <span className={`h-1.5 w-1.5 rounded-full ${dotClasses[variant]}`} />}
       {children}
     </span>

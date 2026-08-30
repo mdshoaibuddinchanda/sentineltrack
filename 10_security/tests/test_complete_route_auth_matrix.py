@@ -50,6 +50,7 @@ ROUTE_POLICY = {
     ("GET", "/api/v1/cameras/nearby"): Permission.CAMERA_READ,
     ("GET", "/api/v1/cameras/{camera_id}"): Permission.CAMERA_READ,
     ("GET", "/api/v1/cameras/{camera_id}/health"): Permission.CAMERA_READ,
+    ("GET", "/api/v1/cameras/{camera_id}/preview"): Permission.CAMERA_READ,
     ("GET", "/api/v1/cameras/{camera_id}/nearby"): Permission.CAMERA_READ,
 
     ("GET", "/api/v1/sightings"): Permission.SIGHTING_READ,

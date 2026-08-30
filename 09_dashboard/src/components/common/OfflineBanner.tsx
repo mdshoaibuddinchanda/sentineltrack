@@ -7,6 +7,7 @@ interface OfflineBannerProps {
   error?: string | null;
   onRetry: () => void;
   degradedDetails?: Record<string, any>;
+  liveInputAvailable?: boolean;
 }
 
 function readableName(name: string): string {
@@ -16,8 +17,9 @@ function readableName(name: string): string {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-export function OfflineBanner({ status, error, onRetry, degradedDetails }: OfflineBannerProps) {
-  if (status === "HEALTHY" || status === "LOADING") return null;
+export function OfflineBanner({ status, error, onRetry, degradedDetails, liveInputAvailable }: OfflineBannerProps) {
+  if (status === "LOADING") return null;
+  if (status === "HEALTHY" && liveInputAvailable !== false) return null;
 
   if (status === "OFFLINE") {
     return (
@@ -38,16 +40,21 @@ export function OfflineBanner({ status, error, onRetry, degradedDetails }: Offli
 
   const failedModules = Object.entries(degradedDetails || {})
     .filter(([, ready]) => ready === false)
+    .filter(([name]) => name !== "stream_ingestion")
     .map(([name]) => readableName(name));
+
+  const cameraInputUnavailable = status === "HEALTHY" && liveInputAvailable === false;
 
   return (
     <div className="connection-banner connection-banner--warning" role="status">
       <div className="connection-banner__message">
         <AlertTriangle size={19} aria-hidden="true" />
-        <div>
-          <strong>Some services need attention</strong>
-          <span>
-            {failedModules.length > 0
+          <div>
+            <strong>{cameraInputUnavailable ? "Camera input not connected" : "Some services need attention"}</strong>
+            <span>
+            {cameraInputUnavailable
+              ? "The application is connected, but no camera source is currently delivering frames."
+              : failedModules.length > 0
               ? `${failedModules.join(", ")} unavailable. Core information remains available where possible.`
               : "The system is available with limited services."}
           </span>

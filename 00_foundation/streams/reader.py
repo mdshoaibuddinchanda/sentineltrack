@@ -1,7 +1,10 @@
 import os
 import time
+import logging
 import cv2
 from typing import Optional, Generator, Tuple
+
+logger = logging.getLogger("sentineltrack.stream_reader")
 
 os.environ[
     "OPENCV_FFMPEG_CAPTURE_OPTIONS"
@@ -77,7 +80,11 @@ class RTSPReader:
     def _evaluate_failover(self) -> bool:
         """Switches to fallback URL if primary fails repeatedly."""
         if not self.is_using_fallback and self.fallback_url and self.consecutive_failures >= self.failover_threshold:
-            print(f"[Stream] Primary URL failed {self.consecutive_failures} times. Failing over to fallback: {self.fallback_url}")
+            logger.warning(
+                "Camera %s primary source failed %s times; switching to configured fallback",
+                self.camera_id,
+                self.consecutive_failures,
+            )
             self.active_url = self.fallback_url
             self.is_using_fallback = True
             self.last_failover_time = time.time()
@@ -88,11 +95,11 @@ class RTSPReader:
     def _check_primary_recovery(self):
         """Attempts hysteresis recovery back to primary URL after timeout."""
         if self.is_using_fallback and (time.time() - self.last_failover_time) >= self.recovery_interval_s:
-            print(f"[Stream] Attempting recovery back to primary stream: {self.primary_url}")
+            logger.info("Camera %s attempting recovery to its primary source", self.camera_id)
             test_cap = cv2.VideoCapture(self.primary_url, cv2.CAP_FFMPEG)
             if test_cap.isOpened():
                 test_cap.release()
-                print("[Stream] Primary stream recovered. Switching back to primary.")
+                logger.info("Camera %s primary stream recovered", self.camera_id)
                 self.active_url = self.primary_url
                 self.is_using_fallback = False
                 self.consecutive_failures = 0

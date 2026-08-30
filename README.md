@@ -127,7 +127,7 @@ experiments/archive/ historical experiment inputs and reproducibility scripts
 docs/                architecture, operations, security, release docs
 models/              operational manifest and local model directories
 reports/             tracked evidence and evaluation artifacts
-scripts/             setup and demo entry points
+scripts/             model setup and verification tools
 tools/               active preflight, benchmark, evaluation, and evidence tools
 tests/               cross-stage contract tests
 LICENSE              academic/non-commercial evaluation license
@@ -185,10 +185,10 @@ python scripts/setup_models.py --verify-only
 
 Start local PostgreSQL/PostGIS with `docker compose up -d postgres` when using the full stack. The preflight command bounds its database probe and returns a warning if the local database is stopped.
 
-## Demo and services
+## Run the application
 
-For the quickest visual review on Windows, activate Conda `PY312`, switch to
-the launcher branch, and run the root launcher:
+On Windows, activate Conda `PY312`, switch to the launcher branch, and run the
+root launcher:
 
 ```bat
 conda activate PY312
@@ -196,16 +196,26 @@ git switch launcher-visual-review
 run.bat
 ```
 
-The default launcher starts a temporary authenticated API and deterministic
-dashboard fixtures, prints a fresh demo username/password, and opens the
-browser. Use `run.bat --full` for the configured database, models, and live
-camera-processing path. The launcher keeps its child-process logs under
-`logs/` and refuses to attach to an already-used API or dashboard port.
+The launcher now starts the configured PostgreSQL/PostGIS database, models,
+camera-processing path, and protected account. `run.bat --full` is retained as
+an explicit equivalent for submission scripts. It never creates a temporary
+demo account or injects dashboard fixtures. Child-process and model diagnostics
+are written under `logs/`, and the launcher refuses to attach to an already-used
+API or dashboard port.
+
+Before a submission capture, clean a local development database with:
+
+```bat
+python tools\clean_submission_database.py --apply --yes --clear-watchlist
+```
+
+This removes local operational history and non-numeric test camera rows while
+preserving numeric catalogue camera definitions, model files, security users,
+and the append-only security audit trail. Add only authorized watchlist entries
+and camera sources after the cleanup.
 
 ```bash
 # Native diagnostics and launch instructions
-scripts\run_demo.ps1       # Windows PowerShell
-./scripts/run_demo.sh      # Linux/macOS
 
 # API
 python -m uvicorn 08_backend.app:app --host 0.0.0.0 --port 8000
@@ -239,31 +249,18 @@ reconnect attempts are exposed separately. A stored `ONLINE` probe on an
 inactive registry row is shown as `NOT CONFIGURED` rather than being presented
 as a live feed.
 
-The Alerts page can contain historical database records, including records
-created by local evaluation tests. If the current run has received zero camera
-frames, the dashboard suppresses those records from the active operations feed
-and labels them as stored history on the Alerts page. It must not be used as
-evidence of a current detection.
+If the current run has received zero camera frames, the dashboard suppresses
+stored records from the active operations feed and labels the Alerts page as
+historical. It must not be used as evidence of a current detection.
 
-This checkout currently provides stream ingestion and camera health telemetry,
-but not a browser video-preview proxy. RTSP sources cannot be rendered directly
-by a browser. Human video verification therefore requires an authorized HLS,
-WebRTC, or MJPEG preview transport to be added for the deployment; the UI will
-show the actual connection and frame counters until that transport exists.
+The Cameras page provides an authenticated latest-frame preview when a worker
+has decoded a frame. RTSP sources cannot be rendered directly by a browser; the
+preview is therefore a bounded JPEG snapshot rather than an unprotected RTSP
+player. No preview is shown until a real source delivers a frame.
 
-The evaluator-facing demo runbook is [`12_submission/DEMO_RUNBOOK.md`](12_submission/DEMO_RUNBOOK.md). It describes fixture mode, live prerequisites, and evidence capture without claiming production deployment.
-
-For a presentation-only dashboard without a live backend, start Vite with the
-deterministic fixture mode enabled:
-
-```powershell
-cd 09_dashboard
-$env:VITE_DEMO_MODE = "true"
-npm run dev -- --host 127.0.0.1 --port 5173
-```
-
-The header visibly shows `Sample data`; simulated sightings and alerts must not
-be presented as live departmental data.
+The submission runbook is [`12_submission/DEMO_RUNBOOK.md`](12_submission/DEMO_RUNBOOK.md).
+It describes live prerequisites and evidence capture without claiming that an
+unconnected camera or stored database row is live.
 
 ## Testing and validation
 
@@ -307,7 +304,10 @@ P11 scale documents provide a bounded architecture projection, storage/bandwidth
 
 ## Screenshots
 
-The dashboard is implemented under `09_dashboard/` and includes deterministic fixture data for presentation. No generated or potentially sensitive runtime screenshot is committed in this release; follow [`docs/assets/README.md`](docs/assets/README.md) to capture a fresh redacted screenshot when required by the submission portal.
+The dashboard is implemented under `09_dashboard/`. No generated or
+potentially sensitive runtime screenshot is committed in this release; follow
+[`docs/assets/README.md`](docs/assets/README.md) to capture a fresh redacted
+screenshot when required by the submission portal.
 
 ## License and responsible use
 

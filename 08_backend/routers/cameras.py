@@ -1,6 +1,6 @@
 from typing import List, Optional
 import importlib
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response, HTTPException
 
 try:
     from ..schemas.cameras import CameraResponse, CameraListResponse, CameraHealthResponse
@@ -84,6 +84,27 @@ async def get_camera_health(
     """Get real-time stream status and connectivity health for a camera."""
     metrics.inc_requests()
     return service.get_camera_health(camera_id)
+
+
+@router.get("/{camera_id}/preview", response_class=Response)
+async def get_camera_preview(
+    camera_id: str,
+    service: CameraService = Depends(get_camera_service),
+    metrics: MetricsCollector = Depends(get_metrics),
+):
+    """Return the latest decoded JPEG snapshot for human camera verification."""
+    service.get_camera_by_id(camera_id)
+    lifecycle = importlib.import_module("08_backend.lifecycle")
+    supervisor = lifecycle.get_stream_supervisor()
+    preview = supervisor.get_preview(camera_id) if supervisor else None
+    metrics.inc_requests()
+    if preview is None:
+        raise HTTPException(status_code=404, detail="No decoded frame is available for this camera yet.")
+    return Response(
+        content=preview,
+        media_type="image/jpeg",
+        headers={"Cache-Control": "no-store, max-age=0"},
+    )
 
 
 @router.get("/{camera_id}/nearby", response_model=List[CameraResponse])

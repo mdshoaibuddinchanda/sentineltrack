@@ -21,9 +21,10 @@ export function SystemPage({
   lastUpdated,
   onRefresh,
 }: SystemPageProps) {
-  const overallStatus = readiness?.status || health?.status;
-  const serviceHealthy = overallStatus === "ready" || (!readiness && health?.status === "healthy");
-  const serviceDegraded = overallStatus === "degraded";
+  const coreServiceUnavailable = Object.entries(readiness?.components || {})
+    .some(([key, value]) => key !== "stream_ingestion" && value === false);
+  const serviceHealthy = health?.status === "healthy" && !coreServiceUnavailable;
+  const serviceDegraded = health?.status === "healthy" && coreServiceUnavailable;
   const streamStatus = readiness?.details?.stream_ingestion as
     | { total_cameras?: number; connected_cameras?: number; total_frames_decoded?: number; total_reconnects?: number }
     | undefined;
@@ -65,7 +66,7 @@ export function SystemPage({
             <div className="text-slate-400 text-[11px]">Service status</div>
             <div className={`text-sm font-bold uppercase flex items-center gap-1.5 ${serviceHealthy ? "text-emerald-400" : serviceDegraded ? "text-amber-400" : "text-rose-400"}`}>
               {serviceHealthy ? <CheckCircle className="w-3.5 h-3.5" /> : <ShieldAlert className="w-3.5 h-3.5" />}
-              {serviceHealthy ? "Ready" : serviceDegraded ? "Needs attention" : "Unavailable"}
+              {serviceHealthy ? "Connected" : serviceDegraded ? "Needs attention" : "Unavailable"}
             </div>
           </div>
           <div className="bg-police-900 p-3 rounded border border-police-800">

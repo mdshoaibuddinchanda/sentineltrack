@@ -3,18 +3,17 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Camera } from "../types/api";
 import { Card } from "../components/common/Card";
 import { CameraStatusBadge } from "../components/common/Badge";
-import { searchNearbyCameras } from "../api/cameras";
-import { Video, Search, MapPin, AlertCircle } from "lucide-react";
+import { searchNearbyCameras, getCameraPreviewUrl } from "../api/cameras";
+import { Video, Search, MapPin, AlertCircle, RefreshCw } from "lucide-react";
 
 interface CamerasPageProps {
   cameras: Camera[];
   onSelectCamera?: (cameraId: string) => void;
   selectedCameraId?: string | null;
-  demoMode?: boolean;
   liveFramesDecoded?: number;
 }
 
-export function CamerasPage({ cameras, onSelectCamera, demoMode = false, liveFramesDecoded }: CamerasPageProps) {
+export function CamerasPage({ cameras, onSelectCamera, liveFramesDecoded }: CamerasPageProps) {
   const { cameraId: routeCameraId } = useParams<{ cameraId?: string }>();
   const navigate = useNavigate();
 
@@ -23,6 +22,9 @@ export function CamerasPage({ cameras, onSelectCamera, demoMode = false, liveFra
   const [selectedCam, setSelectedCam] = useState<Camera | null>(null);
   const [nearbyCams, setNearbyCams] = useState<Camera[]>([]);
   const [searchingNearby, setSearchingNearby] = useState(false);
+  const [previewTick, setPreviewTick] = useState(Date.now());
+  const [previewFailed, setPreviewFailed] = useState(false);
+  const selectedCameraId = selectedCam?.camera_id;
 
   // Synchronize routeCameraId with cameras array (handling async load)
   useEffect(() => {
@@ -68,6 +70,14 @@ export function CamerasPage({ cameras, onSelectCamera, demoMode = false, liveFra
     };
   }, [selectedCam]);
 
+  useEffect(() => {
+    setPreviewTick(Date.now());
+    setPreviewFailed(false);
+    if (!selectedCameraId) return;
+    const interval = window.setInterval(() => setPreviewTick(Date.now()), 2000);
+    return () => window.clearInterval(interval);
+  }, [selectedCameraId]);
+
   const filteredCameras = cameras.filter((cam) => {
     const matchesSearch =
       cam.camera_id.toLowerCase().includes(search.toLowerCase()) ||
@@ -86,12 +96,6 @@ export function CamerasPage({ cameras, onSelectCamera, demoMode = false, liveFra
 
   return (
     <div className="space-y-4">
-      {demoMode && (
-        <div className="source-note source-note--sample" role="status">
-          <strong>Sample camera information</strong>
-          <span>These connection labels are presentation fixtures. Use <code>run.bat --full</code> to inspect configured live sources.</span>
-        </div>
-      )}
       {/* Search & Filter Bar */}
       <div className="flex items-center justify-between gap-4 flex-wrap bg-police-850 p-3 rounded-lg border border-police-750 font-mono text-xs">
         <div className="relative flex-1 min-w-[240px]">
@@ -192,6 +196,28 @@ export function CamerasPage({ cameras, onSelectCamera, demoMode = false, liveFra
           >
             {selectedCam ? (
               <>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="font-bold text-slate-200">Camera view</div>
+                    {selectedCam.stream_status === "ONLINE" && <RefreshCw className="w-3.5 h-3.5 text-emerald-400 animate-spin" />}
+                  </div>
+                  {selectedCam.stream_status === "ONLINE" && !previewFailed ? (
+                    <img
+                      src={getCameraPreviewUrl(selectedCam.camera_id, previewTick)}
+                      alt={`Latest decoded frame from ${selectedCam.name || selectedCam.camera_id}`}
+                      className="w-full aspect-video object-cover rounded border border-police-750 bg-black"
+                      onError={() => setPreviewFailed(true)}
+                    />
+                  ) : (
+                    <div className="flex aspect-video items-center justify-center rounded border border-police-750 bg-police-900 p-4 text-center text-xs text-slate-400">
+                      {selectedCam.stream_status === "ONLINE"
+                        ? "Waiting for the first decoded frame."
+                        : "No live frame is available because this source is not connected."}
+                    </div>
+                  )}
+                    <div className="text-[11px] text-slate-500">This is the latest authenticated worker snapshot, refreshed every 2 seconds.</div>
+                </div>
+
                 <div className="space-y-2 border-b border-police-750 pb-3">
                   <div className="flex items-center justify-between">
                     <span className="text-slate-400">Stream Status:</span>
@@ -215,7 +241,7 @@ export function CamerasPage({ cameras, onSelectCamera, demoMode = false, liveFra
                   <div className="font-bold text-slate-200">Human verification</div>
                   <div className="text-[11px] text-slate-400">
                     {selectedCam.stream_status === "ONLINE"
-                      ? "The source is connected to the analytics worker. This dashboard does not currently expose a browser video preview for the stream."
+                      ? "The source is connected to the analytics worker. The image above is the latest decoded worker snapshot."
                       : selectedCam.source_configured
                       ? "The source is configured, but the worker is not receiving frames from it."
                       : "This camera has no active stream source configured."}

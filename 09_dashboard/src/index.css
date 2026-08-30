@@ -79,6 +79,54 @@ textarea:focus-visible {
   outline-offset: 2px;
 }
 
+/* Operator status labels use dark text on light surfaces in light mode.
+   This avoids the low-contrast green-on-green and red-on-red badges that are
+   difficult to read in a control-room setting. */
+.operator-badge {
+  border-width: 1px;
+  border-style: solid;
+  font-weight: 750;
+}
+
+.operator-badge--default { color: #203349; background: #edf2f7; border-color: #7a8da5; }
+.operator-badge--critical,
+.operator-badge--danger { color: #8c1d18; background: #fff1f0; border-color: #c93c33; }
+.operator-badge--high,
+.operator-badge--warning { color: #6b4700; background: #fff5d9; border-color: #b57a00; }
+.operator-badge--normal { color: #124f89; background: #e8f2ff; border-color: #3c73aa; }
+.operator-badge--low { color: #3f4b5d; background: #f0f3f6; border-color: #8896a7; }
+.operator-badge--success { color: #0d5c35; background: #e7f7ef; border-color: #31875b; }
+.operator-badge--neutral { color: #2a3b50; background: #e9eef4; border-color: #8092a8; }
+.operator-badge--cyan { color: #075b6a; background: #e8f7fa; border-color: #3c94a3; }
+
+.operator-readiness {
+  border: 1px solid var(--border);
+  border-left-width: 4px;
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.operator-readiness--ready { border-left-color: var(--online); }
+.operator-readiness--offline { border-left-color: var(--offline); background: var(--offline-bg); }
+.operator-readiness--unknown { border-left-color: var(--warning); background: var(--warning-bg); }
+.operator-readiness__title { color: var(--text); font-weight: 750; }
+.operator-readiness__description { color: var(--text-soft); }
+.operator-status { font-weight: 800; white-space: nowrap; }
+.operator-status--ready { color: var(--online); }
+.operator-status--offline { color: var(--offline); }
+.operator-status--unknown { color: var(--warning); }
+
+:root[data-theme="dark"] .operator-badge--default { color: #e3edf8; background: #25364b; border-color: #5e7694; }
+:root[data-theme="dark"] .operator-badge--critical,
+:root[data-theme="dark"] .operator-badge--danger { color: #ffd8d4; background: #541d22; border-color: #db6b62; }
+:root[data-theme="dark"] .operator-badge--high,
+:root[data-theme="dark"] .operator-badge--warning { color: #ffe7a8; background: #513c15; border-color: #d7a631; }
+:root[data-theme="dark"] .operator-badge--normal { color: #d7eaff; background: #18385d; border-color: #5b99d3; }
+:root[data-theme="dark"] .operator-badge--low { color: #d6e0eb; background: #2a3748; border-color: #667a91; }
+:root[data-theme="dark"] .operator-badge--success { color: #c7f5dc; background: #174b36; border-color: #58bd88; }
+:root[data-theme="dark"] .operator-badge--neutral { color: #d6e1ee; background: #293b51; border-color: #68809e; }
+:root[data-theme="dark"] .operator-badge--cyan { color: #c7f3f7; background: #17464e; border-color: #5fb7c2; }
+
 .app-shell {
   background: var(--page-bg);
   color: var(--text);
@@ -314,7 +362,6 @@ textarea:focus-visible {
 
 .status-pill--warning,
 .connection-label--warning,
-.data-mode--demo,
 .data-mode--warning {
   color: var(--warning);
   background: var(--warning-bg);
