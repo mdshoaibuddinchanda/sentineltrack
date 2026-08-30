@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import threading
 from typing import Dict, List, Set, Optional, Any
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -28,7 +29,11 @@ class ConnectionManager:
         self.queue_size = queue_size
         self._active_connections: Dict[WebSocket, asyncio.Queue] = {}
         self._client_topics: Dict[WebSocket, Set[str]] = {}
-        self._lock = asyncio.Lock()
+        # ConnectionManager is global and can be touched by the ASGI event
+        # loop as well as synchronous test/integration callers that execute
+        # broadcast() through another loop.  The protected sections below do
+        # not await, so a thread lock avoids binding shared state to one loop.
+        self._lock = threading.RLock()
         self.metrics = get_metrics_collector()
 
         # Connect to global event bus
@@ -40,7 +45,7 @@ class ConnectionManager:
         client_queue: asyncio.Queue = asyncio.Queue(maxsize=self.queue_size)
         # Structural Invariant: literal "*" can NEVER enter client subscriptions
         sanitized_topics = {t.upper() for t in (topics or []) if t != "*"}
-        async with self._lock:
+        with self._lock:
             self._active_connections[websocket] = client_queue
             self._client_topics[websocket] = sanitized_topics
             self.metrics.set_ws_clients(len(self._active_connections))
@@ -48,7 +53,7 @@ class ConnectionManager:
 
 
     async def disconnect(self, websocket: WebSocket):
-        async with self._lock:
+        with self._lock:
             if websocket in self._active_connections:
                 del self._active_connections[websocket]
             if websocket in self._client_topics:
@@ -65,7 +70,7 @@ class ConnectionManager:
 
     async def broadcast(self, message: Dict[str, Any], topic: str = "*"):
         """Non-blocking broadcast to all subscribed clients. Drops message if client queue is full."""
-        async with self._lock:
+        with self._lock:
             targets = list(self._active_connections.items())
 
         text_payload = json.dumps(message)
