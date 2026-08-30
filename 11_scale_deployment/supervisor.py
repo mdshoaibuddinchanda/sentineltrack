@@ -12,6 +12,7 @@ FairStreamScheduler = importlib.import_module("11_scale_deployment.scheduler").F
 is_camera_assigned_to_shard = importlib.import_module("11_scale_deployment.shard").is_camera_assigned_to_shard
 FramePacket = importlib.import_module("00_foundation.streams.models").FramePacket
 RTSPReader = importlib.import_module("00_foundation.streams.reader").RTSPReader
+StreamHealthTracker = importlib.import_module("00_foundation.streams.health").StreamHealthTracker
 
 
 logger = logging.getLogger("sentineltrack.supervisor")
@@ -35,6 +36,7 @@ class CameraStreamWorker:
         connect_timeout_s: float = 10.0,
         max_backoff_s: float = 30.0,
         failover_threshold: int = 3,
+        stale_after_s: float = 20.0,
     ):
         self.camera_id = camera_id
         self.rtsp_url = rtsp_url
@@ -46,6 +48,7 @@ class CameraStreamWorker:
         self.connect_timeout_s = max(1.0, float(connect_timeout_s))
         self.max_backoff_s = max(1.0, float(max_backoff_s))
         self.failover_threshold = max(1, int(failover_threshold))
+        self.stale_after_s = max(5.0, float(stale_after_s))
 
         self._running = False
         self._thread: Optional[threading.Thread] = None
@@ -57,6 +60,8 @@ class CameraStreamWorker:
         self.is_degraded = False
         self.last_frame_time = 0.0
         self.last_pts_ms: Optional[float] = None
+        self._connect_started_at = 0.0
+        self._health_tracker = StreamHealthTracker(camera_id=camera_id)
         self._latest_jpeg: Optional[bytes] = None
         self._last_preview_time = 0.0
         self.total_frames_decoded = 0
@@ -94,6 +99,18 @@ class CameraStreamWorker:
     def get_current_target_fps(self) -> float:
         return self.burst_fps if self.is_in_burst() else self.base_fps
 
+    def _safe_health_call(self, method_name: str, **kwargs: Any) -> None:
+        """Health persistence must never stop analytics ingestion."""
+        try:
+            getattr(self._health_tracker, method_name)(**kwargs)
+        except Exception:
+            logger.warning(
+                "Camera %s health persistence failed during %s",
+                self.camera_id,
+                method_name,
+                exc_info=True,
+            )
+
     def start(self) -> None:
         with self._lock:
             if self._running:
@@ -128,6 +145,7 @@ class CameraStreamWorker:
         try:
             while self._running:
                 try:
+                    self._connect_started_at = time.monotonic()
                     connected = reader.connect()
                     if not connected:
                         self.is_connected = False
@@ -147,10 +165,17 @@ class CameraStreamWorker:
                     with self._lock:
                         self.stream_epoch += 1
                         reader.stream_epoch = self.stream_epoch
-                        self.is_connected = True
+                        # Opening a container is not proof that a decodable
+                        # video frame is arriving. Mark connected after the
+                        # first packet below.
+                        self.is_connected = False
                         self.is_degraded = False
                     backoff_s = 1.0
-                    logger.info(f"Camera [{self.camera_id}] connected on epoch {self.stream_epoch}")
+                    logger.info(
+                        "Camera [%s] source opened on epoch %s; waiting for first decoded frame",
+                        self.camera_id,
+                        self.stream_epoch,
+                    )
 
                     # RTSPReader exposes standardized FramePackets through
                     # packets(). Keeping this at the supervisor boundary
@@ -163,6 +188,22 @@ class CameraStreamWorker:
                         self.last_frame_time = now_time
                         self.last_pts_ms = packet.pts_ms
                         self.total_frames_decoded += 1
+                        if not self.is_connected:
+                            self.is_connected = True
+                            self.is_degraded = False
+                            self._safe_health_call(
+                                "on_connected",
+                                latency_ms=max(
+                                    0.0,
+                                    (time.monotonic() - self._connect_started_at) * 1000.0,
+                                ),
+                            )
+                            logger.info(
+                                "Camera [%s] connected with first decoded frame on epoch %s",
+                                self.camera_id,
+                                self.stream_epoch,
+                            )
+                        self._safe_health_call("on_frame", pts_ms=packet.pts_ms)
                         self._update_preview(packet.frame, now_time)
 
                         # Adaptive Base + Burst Sampling
@@ -187,12 +228,17 @@ class CameraStreamWorker:
 
                 except Exception as e:
                     logger.warning(f"Stream error on camera {self.camera_id}: {e}")
+                    if self.is_connected:
+                        self._safe_health_call("on_disconnected", reason=str(e))
                     self.is_connected = False
                     self.is_degraded = True
                     self.reconnect_count += 1
                     time.sleep(backoff_s)
                     backoff_s = min(max_backoff_s, backoff_s * 1.5)
         finally:
+            if self.is_connected:
+                self._safe_health_call("on_disconnected", reason="worker stopped")
+            self.is_connected = False
             reader.release()
 
 
@@ -245,6 +291,7 @@ class StreamSupervisor:
                 connect_timeout_s=float(getattr(self.config, "rtsp_connect_timeout_s", 10.0)),
                 max_backoff_s=float(getattr(self.config, "stream_max_backoff_s", 30.0)),
                 failover_threshold=int(getattr(self.config, "stream_failover_threshold", 1)),
+                stale_after_s=float(getattr(self.config, "stream_stale_after_s", 20.0)),
             )
             self._workers[camera_id] = worker
 
@@ -301,17 +348,37 @@ class StreamSupervisor:
         now = time.time()
         with self._lock:
             total = len(self._workers)
-            connected = sum(1 for w in self._workers.values() if w.is_connected)
-            degraded = sum(1 for w in self._workers.values() if w.is_degraded)
+            def frame_is_fresh(worker: CameraStreamWorker) -> bool:
+                return (
+                    worker.last_frame_time > 0
+                    and (now - worker.last_frame_time) <= worker.stale_after_s
+                )
+
+            connected = sum(
+                1 for w in self._workers.values()
+                if w.is_connected and frame_is_fresh(w)
+            )
+            degraded = sum(
+                1
+                for w in self._workers.values()
+                if w.is_degraded
+                or (w.is_connected and w.last_frame_time > 0 and not frame_is_fresh(w))
+            )
             total_decoded = sum(w.total_frames_decoded for w in self._workers.values())
             total_sampled = sum(w.total_frames_sampled for w in self._workers.values())
             reconnects = sum(w.reconnect_count for w in self._workers.values())
 
             camera_states = {}
             for cid, w in self._workers.items():
+                fresh = frame_is_fresh(w)
+                runtime_connected = bool(w.is_connected and fresh)
+                runtime_degraded = bool(
+                    w.is_degraded
+                    or (w.is_connected and w.last_frame_time > 0 and not fresh)
+                )
                 camera_states[cid] = {
-                    "connected": w.is_connected,
-                    "degraded": w.is_degraded,
+                    "connected": runtime_connected,
+                    "degraded": runtime_degraded,
                     "epoch": w.stream_epoch,
                     "in_burst": w.is_in_burst(),
                     "target_fps": w.get_current_target_fps(),

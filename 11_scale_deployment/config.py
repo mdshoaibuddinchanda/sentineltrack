@@ -91,6 +91,9 @@ class ScaleDeploymentConfig:
     stream_failover_threshold: int = field(
         default_factory=lambda: max(1, int(os.getenv("STREAM_FAILOVER_THRESHOLD", "1")))
     )
+    stream_stale_after_s: float = field(
+        default_factory=lambda: max(5.0, float(os.getenv("STREAM_STALE_AFTER", "20")))
+    )
 
     def is_api_enabled(self) -> bool:
         return self.process_role in ("all", "api")

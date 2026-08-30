@@ -56,11 +56,11 @@ def _runtime_stream_status(
             return "OFFLINE"
         return "CONNECTING"
 
-    # A persisted probe status is not a current runtime connection. In
-    # particular, test/registry rows often retain ONLINE while live=false.
+    # A persisted probe status is not a current runtime connection. The
+    # current worker state is the only source allowed to claim ONLINE.
     if not live or not source_configured:
         return "NOT_CONFIGURED"
-    return fallback
+    return "UNKNOWN"
 
 
 def _runtime_fields(runtime_state: Optional[Dict[str, Any]]) -> Dict[str, Any]:

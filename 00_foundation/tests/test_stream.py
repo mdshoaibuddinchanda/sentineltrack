@@ -70,6 +70,33 @@ def test_probe_rtsp_failure():
         assert "Connection refused" in res["error"]
 
 
+def test_probe_rtsp_falls_back_to_opencv_when_ffprobe_is_unavailable():
+    frame = np.zeros((360, 640, 3), dtype=np.uint8)
+    capture = MagicMock()
+    capture.isOpened.return_value = True
+    capture.read.return_value = (True, frame)
+
+    def capture_get(prop):
+        if prop == cv2.CAP_PROP_FRAME_WIDTH:
+            return 640.0
+        if prop == cv2.CAP_PROP_FRAME_HEIGHT:
+            return 360.0
+        if prop == cv2.CAP_PROP_FPS:
+            return 25.0
+        return 0.0
+
+    capture.get.side_effect = capture_get
+    with patch("subprocess.run", side_effect=FileNotFoundError), patch(
+        "cv2.VideoCapture", return_value=capture
+    ):
+        res = probe_rtsp("https://mock.stream/live.m3u8", timeout=2)
+
+    assert res["success"] is True
+    assert res["probe_backend"] == "opencv"
+    assert res["width"] == 640
+    assert res["height"] == 360
+
+
 def test_stream_health_tracker():
     with patch("streams.health.record_health_event") as mock_record, \
          patch("streams.health.update_camera_probe_status") as mock_update:

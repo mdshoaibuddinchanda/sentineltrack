@@ -175,6 +175,18 @@ python scripts/setup_models.py
 python tools/preflight.py
 ```
 
+To refresh the local camera registry from the permitted official catalogue API,
+set `SENTINEL_HOST` in `.env` and run:
+
+```bash
+python -m 00_foundation.scripts.fetch_catalogue
+```
+
+The importer records the API response and upserts camera metadata into
+PostgreSQL. It does not print or commit stream credentials. The runtime then
+uses the persisted sources; it does not silently replace them with sample
+records.
+
 `setup_models.py` creates canonical directories, downloads/verifies public models, verifies SHA-256 values, and reports missing project-trained artifacts explicitly. Server OCR and YOLO26 are optional/experimental and are not installed by the production bundle.
 
 For a no-network verification of an already provisioned machine:
@@ -239,7 +251,8 @@ The backend loads live camera URLs from the camera registry, uses RTSP with
 the stored HLS URL as fallback, and reports connection/decoded-frame counts in
 System status. OpenCV uses the configured `RTSP_CONNECT_TIMEOUT` and the
 supervisor fails over after `STREAM_FAILOVER_THRESHOLD` failed attempts, so a
-dead source cannot block the live run indefinitely. API-only mode remains
+dead source cannot block the live run indefinitely and marks a source stale
+after `STREAM_STALE_AFTER` seconds without a decoded frame. API-only mode remains
 suitable for CI and dashboard work and does not open camera connections.
 
 ### Reading live status correctly

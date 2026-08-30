@@ -79,6 +79,17 @@ def test_inactive_registry_row_cannot_look_like_a_live_connection():
     assert status == "NOT_CONFIGURED"
 
 
+def test_persisted_online_probe_cannot_look_live_without_a_worker():
+    status = camera_service_mod._runtime_stream_status(
+        "configured-but-inactive-worker",
+        "ONLINE",
+        live=True,
+        source_configured=True,
+        runtime_state=None,
+    )
+    assert status == "UNKNOWN"
+
+
 def test_search_nearby_cameras_by_coordinates():
     cam_repo = PostgresCameraRepository()
     cam = CameraGeo("test_cam_nearby_01", "Near Point", 23.0200, 72.5700)

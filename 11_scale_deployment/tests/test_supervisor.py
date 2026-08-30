@@ -70,6 +70,24 @@ class TestStreamSupervisor:
         assert worker.is_in_burst() is False
         assert worker.get_current_target_fps() == 1.0
 
+    def test_supervisor_marks_connected_worker_stale_without_recent_frames(self):
+        worker = CameraStreamWorker(
+            camera_id="cam_stale_01",
+            rtsp_url="rtsp://dummy",
+            stale_after_s=5.0,
+        )
+        worker.is_connected = True
+        worker.last_frame_time = time.time() - 10.0
+
+        supervisor = StreamSupervisor()
+        supervisor._workers[worker.camera_id] = worker
+        status = supervisor.get_status()
+
+        assert status["connected_cameras"] == 0
+        assert status["degraded_cameras"] == 1
+        assert status["cameras"][worker.camera_id]["connected"] is False
+        assert status["cameras"][worker.camera_id]["degraded"] is True
+
         # Trigger burst
         worker.trigger_burst(duration_s=0.2)
         assert worker.is_in_burst() is True
