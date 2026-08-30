@@ -11,7 +11,7 @@
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12"></a>
   <a href="09_dashboard/"><img src="https://img.shields.io/badge/UI-React%20%2B%20TypeScript-61DAFB?logo=react&logoColor=111827" alt="React and TypeScript"></a>
   <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-0B1220.svg" alt="MIT license"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Academic%20Evaluation-0B1220.svg" alt="Academic and non-commercial evaluation license"></a>
 </p>
 
 <p>
@@ -128,7 +128,7 @@ reports/             tracked evidence and evaluation artifacts
 scripts/             setup and demo entry points
 tools/               active preflight, benchmark, evaluation, and evidence tools
 tests/               cross-stage contract tests
-LICENSE              MIT license for original project source
+LICENSE              academic/non-commercial evaluation license
 SECURITY.md          vulnerability reporting and security boundaries
 ```
 
@@ -259,11 +259,18 @@ The dashboard is implemented under `09_dashboard/` and includes deterministic fi
 
 ## License and responsible use
 
-The original project source is released under the [MIT License](LICENSE) for
-hackathon review and reuse. Model weights, datasets, fonts, libraries, and
-other third-party materials remain subject to their own licenses and terms;
-the MIT license does not relicense them. Review [`docs/release/MODEL_INVENTORY.md`](docs/release/MODEL_INVENTORY.md)
-and the evidence inventories before redistribution or deployment.
+The original project source is available under the
+[SentinelTrack Academic and Non-Commercial Evaluation License](LICENSE).
+Academic research, teaching, evaluation, and hackathon judging are permitted.
+Commercial use, production deployment, operational surveillance, paid
+services, and other use outside that scope require prior written permission
+from the copyright holder. This is a custom restrictive license, not an
+OSI-approved open-source license.
+
+Model weights, datasets, fonts, libraries, and other third-party materials
+remain subject to their own licenses and terms. Review
+[`docs/release/MODEL_INVENTORY.md`](docs/release/MODEL_INVENTORY.md) and the
+evidence inventories before using or redistributing any component.
 
 SentinelTrack is decision-support software. Operators and deploying
 departments remain responsible for authorization, lawful use, retention,
