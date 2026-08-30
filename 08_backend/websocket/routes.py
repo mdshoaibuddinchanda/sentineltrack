@@ -236,6 +236,11 @@ async def run_authorized_websocket(
 
     except WebSocketDisconnect:
         pass
+    except asyncio.CancelledError:
+        # TestClient and ASGI servers may cancel the route task immediately
+        # after a normal close frame. Treat that as disconnect lifecycle
+        # control, then let the finally block remove the connection cleanly.
+        logger.debug("WS task cancelled during disconnect user=%s", user_id)
     finally:
         await manager.disconnect(websocket)
         logger.info("WS disconnected user=%s", user_id)

@@ -199,6 +199,20 @@ npm ci
 npm run dev -- --host 127.0.0.1 --port 5173
 ```
 
+For a real local run with the persisted camera sources, start PostgreSQL first
+and explicitly enable stream ingestion in the all-in-one backend process:
+
+```powershell
+$env:SENTINEL_PROCESS_ROLE = "all"
+$env:SENTINEL_ENABLE_STREAM_INGESTION = "true"
+python -m uvicorn 08_backend.app:app --host 0.0.0.0 --port 8000
+```
+
+The backend loads live camera URLs from the camera registry, uses RTSP with
+the stored HLS URL as fallback, and reports connection/decoded-frame counts in
+System status. API-only mode remains suitable for CI and dashboard work and
+does not open camera connections.
+
 The evaluator-facing demo runbook is [`12_submission/DEMO_RUNBOOK.md`](12_submission/DEMO_RUNBOOK.md). It describes fixture mode, live prerequisites, and evidence capture without claiming production deployment.
 
 For a presentation-only dashboard without a live backend, start Vite with the

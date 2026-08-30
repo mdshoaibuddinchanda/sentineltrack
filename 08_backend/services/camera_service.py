@@ -26,6 +26,25 @@ def _get_cam_repo():
         return None
 
 
+def _runtime_stream_status(camera_id: str, fallback: str) -> str:
+    """Prefer process-local worker state over stale registry probe state."""
+    try:
+        lifecycle = importlib.import_module("08_backend.lifecycle")
+        supervisor = lifecycle.get_stream_supervisor()
+        if supervisor is None:
+            return fallback
+        camera_state = supervisor.get_status().get("cameras", {}).get(camera_id)
+        if not camera_state:
+            return fallback
+        if camera_state.get("connected"):
+            return "ONLINE"
+        if camera_state.get("degraded"):
+            return "OFFLINE"
+        return "CONNECTING"
+    except Exception:
+        return fallback
+
+
 class CameraService:
     """Service managing camera registry, spatial searches, and camera health metadata."""
 
@@ -80,7 +99,7 @@ class CameraService:
                     azimuth=r[5],
                     location_quality=r[6] or "VERIFIED",
                     live=bool(r[7]),
-                    stream_status=r[8] or "ONLINE",
+                    stream_status=_runtime_stream_status(r[0], r[8] or ("ONLINE" if r[7] else "OFFLINE")),
                     measured_fps=r[9],
                     last_checked=r[10]
                 ))
@@ -114,7 +133,7 @@ class CameraService:
             azimuth=r[5],
             location_quality=r[6] or "VERIFIED",
             live=bool(r[7]),
-            stream_status=r[8] or "ONLINE",
+            stream_status=_runtime_stream_status(r[0], r[8] or ("ONLINE" if r[7] else "OFFLINE")),
             measured_fps=r[9],
             last_checked=r[10]
         )

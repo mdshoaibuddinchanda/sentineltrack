@@ -21,7 +21,11 @@ export function SystemPage({
   lastUpdated,
   onRefresh,
 }: SystemPageProps) {
-  const serviceHealthy = health?.status === "healthy";
+  const overallStatus = readiness?.status || health?.status;
+  const serviceHealthy = overallStatus === "ready" || (!readiness && health?.status === "healthy");
+  const streamStatus = readiness?.details?.stream_ingestion as
+    | { total_cameras?: number; connected_cameras?: number; total_frames_decoded?: number; total_reconnects?: number }
+    | undefined;
 
   return (
     <div className="space-y-4">
@@ -60,12 +64,25 @@ export function SystemPage({
             <div className="text-slate-400 text-[11px]">Service status</div>
             <div className={`text-sm font-bold uppercase flex items-center gap-1.5 ${serviceHealthy ? "text-emerald-400" : "text-rose-400"}`}>
               {serviceHealthy ? <CheckCircle className="w-3.5 h-3.5" /> : <ShieldAlert className="w-3.5 h-3.5" />}
-              {health?.status || "Unavailable"}
+              {overallStatus || "Unavailable"}
             </div>
           </div>
           <div className="bg-police-900 p-3 rounded border border-police-800">
             <div className="text-slate-400 text-[11px]">Account security</div>
             <div className="text-xs font-bold text-emerald-400">Protected access</div>
+          </div>
+          <div className="bg-police-900 p-3 rounded border border-police-800 col-span-2 md:col-span-4">
+            <div className="text-slate-400 text-[11px]">Live camera feeds</div>
+            <div className="text-sm font-bold text-slate-100">
+              {streamStatus
+                ? `${streamStatus.connected_cameras ?? 0} of ${streamStatus.total_cameras ?? 0} connected`
+                : "Not enabled in this process"}
+            </div>
+            {streamStatus && (
+              <div className="mt-1 text-[11px] text-slate-500">
+                {streamStatus.total_frames_decoded ?? 0} frames received · {streamStatus.total_reconnects ?? 0} reconnect attempts
+              </div>
+            )}
           </div>
         </div>
       </Card>

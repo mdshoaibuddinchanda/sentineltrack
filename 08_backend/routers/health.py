@@ -135,6 +135,22 @@ async def get_readiness(
         components["target_pipeline"] = models_loaded.get("target_pipeline", False)
         details["models"] = models_loaded
         details["worker_running"] = worker.is_running()
+
+        scale_config = importlib.import_module("11_scale_deployment.config").get_scale_config()
+        lifecycle = importlib.import_module("08_backend.lifecycle")
+        stream_supervisor = lifecycle.get_stream_supervisor()
+        if scale_config.enable_stream_ingestion:
+            if stream_supervisor is None:
+                components["stream_ingestion"] = False
+                details["stream_ingestion"] = {"running": False, "reason": "NOT_STARTED"}
+            else:
+                stream_status = stream_supervisor.get_status()
+                connected = int(stream_status.get("connected_cameras", 0))
+                total = int(stream_status.get("total_cameras", 0))
+                components["stream_ingestion"] = bool(
+                    stream_status.get("running") and (total == 0 or connected > 0)
+                )
+                details["stream_ingestion"] = stream_status
     except Exception as e:
         components["analytics_worker"] = False
         details["analytics_error"] = str(e)

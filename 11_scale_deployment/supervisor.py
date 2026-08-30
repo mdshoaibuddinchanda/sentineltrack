@@ -95,61 +95,67 @@ class CameraStreamWorker:
             max_backoff=int(max_backoff_s)
         )
 
-        while self._running:
-            try:
-                connected = reader.connect()
-                if not connected:
+        try:
+            while self._running:
+                try:
+                    connected = reader.connect()
+                    if not connected:
+                        self.is_connected = False
+                        self.is_degraded = True
+                        self.reconnect_count += 1
+                        time.sleep(backoff_s)
+                        backoff_s = min(max_backoff_s, backoff_s * 1.5)
+                        continue
+
+                    # Successfully connected: increment stream epoch & reset backoff
+                    with self._lock:
+                        self.stream_epoch += 1
+                        reader.stream_epoch = self.stream_epoch
+                        self.is_connected = True
+                        self.is_degraded = False
+                    backoff_s = 1.0
+                    logger.info(f"Camera [{self.camera_id}] connected on epoch {self.stream_epoch}")
+
+                    # RTSPReader exposes standardized FramePackets through
+                    # packets(). Keeping this at the supervisor boundary
+                    # preserves stream epoch and event-time metadata.
+                    for packet in reader.packets():
+                        if not self._running:
+                            break
+
+                        now_time = time.time()
+                        self.last_frame_time = now_time
+                        self.total_frames_decoded += 1
+
+                        # Adaptive Base + Burst Sampling
+                        target_fps = self.get_current_target_fps()
+                        sample_interval = 1.0 / max(0.1, target_fps)
+
+                        if (now_time - self._last_sample_time) >= sample_interval:
+                            self._last_sample_time = now_time
+                            self.total_frames_sampled += 1
+
+                            # Attach wall-clock event time and ingest timestamp
+                            if packet.event_time_utc is None:
+                                packet.event_time_utc = datetime.now(timezone.utc)
+                                packet.event_time_source = "STREAM_PTS_WALLCLOCK"
+                            packet.ingest_time_utc = datetime.now(timezone.utc)
+
+                            if self.on_frame_callback:
+                                try:
+                                    self.on_frame_callback(packet)
+                                except Exception as e:
+                                    logger.error(f"Error in on_frame_callback for {self.camera_id}: {e}")
+
+                except Exception as e:
+                    logger.warning(f"Stream error on camera {self.camera_id}: {e}")
                     self.is_connected = False
                     self.is_degraded = True
                     self.reconnect_count += 1
                     time.sleep(backoff_s)
                     backoff_s = min(max_backoff_s, backoff_s * 1.5)
-                    continue
-
-                # Successfully connected: increment stream epoch & reset backoff
-                with self._lock:
-                    self.stream_epoch += 1
-                    reader.stream_epoch = self.stream_epoch
-                    self.is_connected = True
-                    self.is_degraded = False
-                backoff_s = 1.0
-                logger.info(f"Camera [{self.camera_id}] connected on epoch {self.stream_epoch}")
-
-                for packet in reader.read_frames():
-                    if not self._running:
-                        break
-
-                    now_time = time.time()
-                    self.last_frame_time = now_time
-                    self.total_frames_decoded += 1
-
-                    # Adaptive Base + Burst Sampling
-                    target_fps = self.get_current_target_fps()
-                    sample_interval = 1.0 / max(0.1, target_fps)
-
-                    if (now_time - self._last_sample_time) >= sample_interval:
-                        self._last_sample_time = now_time
-                        self.total_frames_sampled += 1
-
-                        # Attach wall-clock event time and ingest timestamp
-                        if packet.event_time_utc is None:
-                            packet.event_time_utc = datetime.now(timezone.utc)
-                            packet.event_time_source = "STREAM_PTS_WALLCLOCK"
-                        packet.ingest_time_utc = datetime.now(timezone.utc)
-
-                        if self.on_frame_callback:
-                            try:
-                                self.on_frame_callback(packet)
-                            except Exception as e:
-                                logger.error(f"Error in on_frame_callback for {self.camera_id}: {e}")
-
-            except Exception as e:
-                logger.warning(f"Stream error on camera {self.camera_id}: {e}")
-                self.is_connected = False
-                self.is_degraded = True
-                self.reconnect_count += 1
-                time.sleep(backoff_s)
-                backoff_s = min(max_backoff_s, backoff_s * 1.5)
+        finally:
+            reader.release()
 
 
 class StreamSupervisor:

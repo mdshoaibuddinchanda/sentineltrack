@@ -8,6 +8,9 @@ export function ReadinessMatrix({ readiness }: { readiness?: ReadinessResponse |
   }
 
   const components = [
+    ...(readiness.components?.stream_ingestion !== undefined
+      ? [{ key: "stream_ingestion", label: "Live camera feeds", desc: "Receives frames from the configured camera sources" }]
+      : []),
     { key: "database", label: "Main database", desc: "Stores cameras, sightings, and watchlist data" },
     { key: "postgis", label: "Map and location service", desc: "Supports camera locations and route checks" },
     { key: "camera_registry", label: "Camera list", desc: "Camera addresses and connection details" },
