@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { searchNearbyCameras, getNearbyCamerasForCamera } from "../api/cameras";
+import { searchNearbyCameras, getNearbyCamerasForCamera, fetchCameraPreview } from "../api/cameras";
 import { listTargets } from "../api/targets";
 import { listAlerts } from "../api/alerts";
 import { getVehicleRoute, getVehicleRouteGeoJSON, getVehicleRouteSummary } from "../api/routes";
@@ -54,6 +54,20 @@ describe("P8 REST API Contract Verification", () => {
     expect(capturedUrl).toContain("/api/v1/cameras/cam%2F01/nearby");
     expect(capturedUrl).toContain("radius_m=2500");
     expect(res).toEqual([]);
+  });
+
+  it("loads camera previews with authenticated fetch credentials", async () => {
+    let capturedInit: RequestInit | undefined;
+    const preview = new Blob(["jpeg"], { type: "image/jpeg" });
+    global.fetch = vi.fn().mockImplementation((_url, init) => {
+      capturedInit = init;
+      return Promise.resolve({ ok: true, blob: async () => preview } as any);
+    });
+
+    const result = await fetchCameraPreview("cam/01");
+    expect(capturedInit?.credentials).toBe("include");
+    expect(capturedInit?.cache).toBe("no-store");
+    expect(result).toBe(preview);
   });
 
   it("listTargets sends 'enabled' parameter, NOT 'enabled_only'", async () => {

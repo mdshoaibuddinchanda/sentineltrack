@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Camera } from "../types/api";
 import { Card } from "../components/common/Card";
 import { CameraStatusBadge } from "../components/common/Badge";
-import { searchNearbyCameras, getCameraPreviewUrl } from "../api/cameras";
+import { searchNearbyCameras, fetchCameraPreview } from "../api/cameras";
 import { Video, Search, MapPin, AlertCircle, RefreshCw } from "lucide-react";
 
 interface CamerasPageProps {
@@ -22,7 +22,7 @@ export function CamerasPage({ cameras, onSelectCamera, liveFramesDecoded }: Came
   const [selectedCam, setSelectedCam] = useState<Camera | null>(null);
   const [nearbyCams, setNearbyCams] = useState<Camera[]>([]);
   const [searchingNearby, setSearchingNearby] = useState(false);
-  const [previewTick, setPreviewTick] = useState(Date.now());
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewFailed, setPreviewFailed] = useState(false);
   const selectedCameraId = selectedCam?.camera_id;
   const selectedLatitude = selectedCam?.latitude;
@@ -74,12 +74,40 @@ export function CamerasPage({ cameras, onSelectCamera, liveFramesDecoded }: Came
   }, [selectedCameraId, selectedLatitude, selectedLongitude]);
 
   useEffect(() => {
-    setPreviewTick(Date.now());
+    let cancelled = false;
+    let currentObjectUrl: string | null = null;
+    const streamStatus = selectedCam?.stream_status;
+
+    setPreviewUrl(null);
     setPreviewFailed(false);
-    if (!selectedCameraId) return;
-    const interval = window.setInterval(() => setPreviewTick(Date.now()), 2000);
-    return () => window.clearInterval(interval);
-  }, [selectedCameraId]);
+    if (!selectedCameraId || streamStatus !== "ONLINE") {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const loadPreview = async () => {
+      try {
+        const blob = await fetchCameraPreview(selectedCameraId);
+        if (cancelled) return;
+        const nextObjectUrl = URL.createObjectURL(blob);
+        if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+        currentObjectUrl = nextObjectUrl;
+        setPreviewUrl(nextObjectUrl);
+        setPreviewFailed(false);
+      } catch {
+        if (!cancelled) setPreviewFailed(true);
+      }
+    };
+
+    loadPreview();
+    const interval = window.setInterval(loadPreview, 2000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+    };
+  }, [selectedCameraId, selectedCam?.stream_status]);
 
   const filteredCameras = cameras.filter((cam) => {
     const matchesSearch =
@@ -204,9 +232,9 @@ export function CamerasPage({ cameras, onSelectCamera, liveFramesDecoded }: Came
                     <div className="font-bold text-slate-200">Camera view</div>
                     {selectedCam.stream_status === "ONLINE" && <RefreshCw className="w-3.5 h-3.5 text-emerald-400 animate-spin" />}
                   </div>
-                  {selectedCam.stream_status === "ONLINE" && !previewFailed ? (
+                  {selectedCam.stream_status === "ONLINE" && previewUrl && !previewFailed ? (
                     <img
-                      src={getCameraPreviewUrl(selectedCam.camera_id, previewTick)}
+                      src={previewUrl}
                       alt={`Latest decoded frame from ${selectedCam.name || selectedCam.camera_id}`}
                       className="w-full aspect-video object-cover rounded border border-police-750 bg-black"
                       onError={() => setPreviewFailed(true)}
@@ -214,11 +242,13 @@ export function CamerasPage({ cameras, onSelectCamera, liveFramesDecoded }: Came
                   ) : (
                     <div className="flex aspect-video items-center justify-center rounded border border-police-750 bg-police-900 p-4 text-center text-xs text-slate-400">
                       {selectedCam.stream_status === "ONLINE"
-                        ? "Waiting for the first decoded frame."
+                        ? previewFailed
+                          ? "The worker is online, but the authenticated snapshot could not be loaded."
+                          : "Loading the latest decoded frame…"
                         : "No live frame is available because this source is not connected."}
                     </div>
                   )}
-                    <div className="text-[11px] text-slate-500">This is the latest authenticated worker snapshot, refreshed every 2 seconds.</div>
+                    <div className="text-[11px] text-slate-500">Authenticated latest-frame preview, refreshed every 2 seconds; this is not a continuous video stream.</div>
                 </div>
 
                 <div className="space-y-2 border-b border-police-750 pb-3">

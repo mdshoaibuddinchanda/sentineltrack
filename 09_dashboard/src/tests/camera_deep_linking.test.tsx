@@ -8,7 +8,7 @@ import { Camera } from "../types/api";
 
 vi.mock("../api/cameras", () => ({
   searchNearbyCameras: vi.fn().mockResolvedValue([]),
-  getCameraPreviewUrl: vi.fn().mockReturnValue("/preview.jpg"),
+  fetchCameraPreview: vi.fn().mockRejectedValue(new Error("preview not available in unit test")),
 }));
 
 describe("Camera Deep Linking & Asynchronous Loading Tests", () => {
