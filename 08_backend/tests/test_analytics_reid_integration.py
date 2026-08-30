@@ -142,6 +142,21 @@ def test_no_plate_high_similarity_is_review_only():
     assert result["automated_alert_allowed"] is False
 
 
+def test_partial_plate_without_p5_candidate_is_review_only_and_does_not_crash():
+    fusion = ReIDFusion(ReIDConfig())
+    result = fusion.fuse(
+        None,
+        _reid_candidate(0.98),
+        evidence_level=AppearanceEvidence.PARTIAL_PLATE,
+    )
+
+    assert result.candidate is None
+    assert result.identity_source == "REID_REVIEW"
+    assert result.match_class == MatchClass.POSSIBLE.value
+    assert result.automated_alert_allowed is False
+    assert "PARTIAL_PLATE_NO_ANPR_CANDIDATE" in result.reasons
+
+
 def test_reid_unavailable_leaves_p5_path_untouched():
     worker = AnalyticsWorker()
     worker._reid_service = None

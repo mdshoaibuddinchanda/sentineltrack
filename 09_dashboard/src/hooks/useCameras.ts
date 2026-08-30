@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { listCameras } from "../api/cameras";
 import { Camera } from "../types/api";
 
@@ -7,16 +7,18 @@ export function useCameras(params?: { department?: string; live?: boolean; strea
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasLoadedRef = useRef(false);
 
   const fetchCameras = useCallback(async () => {
     if (!enabled) {
       setCameras([]);
       setTotal(0);
       setLoading(false);
+      hasLoadedRef.current = false;
       return;
     }
     try {
-      setLoading(true);
+      if (!hasLoadedRef.current) setLoading(true);
       const res = await listCameras({
         department: params?.department,
         live: params?.live,
@@ -25,6 +27,7 @@ export function useCameras(params?: { department?: string; live?: boolean; strea
       setCameras(res.items);
       setTotal(res.total);
       setError(null);
+      hasLoadedRef.current = true;
     } catch (e: any) {
       setError(e.message || "Failed to load camera registry");
     } finally {
@@ -34,7 +37,10 @@ export function useCameras(params?: { department?: string; live?: boolean; strea
 
   useEffect(() => {
     fetchCameras();
-  }, [fetchCameras]);
+    if (!enabled) return;
+    const interval = window.setInterval(fetchCameras, 5000);
+    return () => window.clearInterval(interval);
+  }, [fetchCameras, enabled]);
 
   return { cameras, total, loading, error, refresh: fetchCameras };
 }

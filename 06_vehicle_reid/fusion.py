@@ -118,6 +118,36 @@ class ReIDFusion:
                     alert_severity="REVIEW",
                     reasons=["PARTIAL_PLATE_REID_UNAVAILABLE"],
                 )
+            if candidate is None:
+                # A readable/partial plate with no watchlist candidate is not
+                # an object that P6 may mutate. Keep the appearance result as
+                # a conservative review signal instead of dereferencing None
+                # or creating an identity that P5 did not produce.
+                if reid_candidate.decision == ReIDDecision.REJECTED:
+                    return ReIDFusionResult(
+                        candidate=None,
+                        evidence_level=level,
+                        decision=ReIDDecision.REJECTED,
+                        identity_source="REID_REVIEW",
+                        reid_score=score,
+                        reid_can_override=False,
+                        automated_alert_allowed=False,
+                        match_class=MatchClass.REJECTED.value,
+                        alert_severity="REVIEW",
+                        reasons=["PARTIAL_PLATE_NO_ANPR_CANDIDATE", reid_candidate.reason],
+                    )
+                return ReIDFusionResult(
+                    candidate=None,
+                    evidence_level=level,
+                    decision=ReIDDecision.REVIEW,
+                    identity_source="REID_REVIEW",
+                    reid_score=score,
+                    reid_can_override=False,
+                    automated_alert_allowed=False,
+                    match_class=MatchClass.POSSIBLE.value,
+                    alert_severity="REVIEW",
+                    reasons=["PARTIAL_PLATE_NO_ANPR_CANDIDATE", reid_candidate.reason],
+                )
             setattr(candidate, "reid_score", score)
             if reid_candidate.decision == ReIDDecision.REJECTED:
                 return ReIDFusionResult(

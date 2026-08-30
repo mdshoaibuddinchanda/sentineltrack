@@ -25,21 +25,24 @@ export function CamerasPage({ cameras, onSelectCamera, liveFramesDecoded }: Came
   const [previewTick, setPreviewTick] = useState(Date.now());
   const [previewFailed, setPreviewFailed] = useState(false);
   const selectedCameraId = selectedCam?.camera_id;
+  const selectedLatitude = selectedCam?.latitude;
+  const selectedLongitude = selectedCam?.longitude;
 
   // Synchronize routeCameraId with cameras array (handling async load)
   useEffect(() => {
-    if (routeCameraId) {
-      setSelectedCam(cameras.find((c) => c.camera_id === routeCameraId) ?? null);
-    } else {
-      setSelectedCam((current) => current ?? cameras[0] ?? null);
-    }
+    setSelectedCam((current) => {
+      const selectedId = routeCameraId ?? current?.camera_id;
+      if (selectedId) {
+        return cameras.find((c) => c.camera_id === selectedId) ?? (routeCameraId ? null : cameras[0] ?? null);
+      }
+      return cameras[0] ?? null;
+    });
   }, [routeCameraId, cameras]);
 
   useEffect(() => {
     let cancelled = false;
-    const camera = selectedCam;
 
-    if (!camera?.latitude || !camera?.longitude) {
+    if (selectedLatitude === undefined || selectedLatitude === null || selectedLongitude === undefined || selectedLongitude === null) {
       setNearbyCams([]);
       setSearchingNearby(false);
       return () => {
@@ -48,10 +51,10 @@ export function CamerasPage({ cameras, onSelectCamera, liveFramesDecoded }: Came
     }
 
     setSearchingNearby(true);
-    searchNearbyCameras(camera.latitude, camera.longitude, 5000)
+    searchNearbyCameras(selectedLatitude, selectedLongitude, 5000)
       .then((res) => {
         if (!cancelled) {
-          setNearbyCams(res.filter((c) => c.camera_id !== camera.camera_id));
+          setNearbyCams(res.filter((c) => c.camera_id !== selectedCameraId));
         }
       })
       .catch(() => {
@@ -68,7 +71,7 @@ export function CamerasPage({ cameras, onSelectCamera, liveFramesDecoded }: Came
     return () => {
       cancelled = true;
     };
-  }, [selectedCam]);
+  }, [selectedCameraId, selectedLatitude, selectedLongitude]);
 
   useEffect(() => {
     setPreviewTick(Date.now());

@@ -4,6 +4,7 @@ import {
   formatSpeed,
   formatScore,
   formatDuration,
+  formatNumber,
   formatRelativeTime,
   maskRegistration,
 } from "../utils/formatters";
@@ -34,6 +35,13 @@ describe("Frontend Formatters", () => {
     expect(formatDuration(45)).toBe("45s");
     expect(formatDuration(150)).toBe("2m 30s");
     expect(formatDuration(3660)).toBe("1h 1m");
+  });
+
+  it("keeps incomplete telemetry safe to render", () => {
+    expect(formatNumber(1234567)).toBe("12,34,567");
+    expect(formatNumber(null)).toBe("--");
+    expect(formatNumber(undefined)).toBe("--");
+    expect(formatNumber(Number.NaN)).toBe("--");
   });
 
   it("masks vehicle license registration strings for privacy mode", () => {

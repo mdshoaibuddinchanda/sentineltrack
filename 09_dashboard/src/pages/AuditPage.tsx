@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { AuditEventItem, listAuditEvents } from "../api/audit";
 import { ShieldCheck, Filter, RefreshCw, AlertTriangle, CheckCircle, XCircle, FileText } from "lucide-react";
+import { formatUtcTime } from "../utils/formatters";
 
 export function AuditPage() {
   const [events, setEvents] = useState<AuditEventItem[]>([]);
@@ -170,7 +171,7 @@ export function AuditPage() {
               {events.map((ev) => (
                 <tr key={ev.audit_id} className="hover:bg-police-800/30 transition-colors">
                   <td className="p-3 text-slate-400 text-[11px]">
-                    {new Date(ev.event_time_utc).toISOString().replace("T", " ").substring(0, 19)}
+                    {formatUtcTime(ev.event_time_utc)}
                   </td>
                   <td className="p-3 font-semibold text-cyan-300">{ev.action}</td>
                   <td className="p-3">{getOutcomeBadge(ev.outcome)}</td>

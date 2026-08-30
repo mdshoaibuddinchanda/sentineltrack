@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { UserItem, listUsers, createUser, updateUser, resetUserPassword } from "../api/users";
 import { UserRole } from "../types/auth";
 import { Users, UserPlus, KeyRound, CheckCircle, XCircle, AlertTriangle, RefreshCw } from "lucide-react";
+import { formatDateTime } from "../utils/formatters";
 
 export function UsersPage() {
   const [users, setUsers] = useState<UserItem[]>([]);
@@ -203,7 +204,7 @@ export function UsersPage() {
                     )}
                   </td>
                   <td className="p-3 text-slate-400 text-[11px]">
-                    {u.last_login_at ? new Date(u.last_login_at).toLocaleString() : "Never"}
+                    {u.last_login_at ? formatDateTime(u.last_login_at) : "Never"}
                   </td>
                   <td className="p-3 text-right space-x-2">
                     <button
