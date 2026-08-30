@@ -1,25 +1,53 @@
-# SentinelTrack
+<div align="center">
 
-[![CI](https://github.com/mdshoaibuddinchanda/sentineltrack/actions/workflows/ci.yml/badge.svg?branch=final-repository-polish)](https://github.com/mdshoaibuddinchanda/sentineltrack/actions/workflows/ci.yml)
-[![Python](https://img.shields.io/badge/Python-3.12-blue)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/API-FastAPI-009688)](https://fastapi.tiangolo.com/)
-[![Frontend](https://img.shields.io/badge/UI-React%20%2B%20TypeScript-61dafb)](09_dashboard/)
-[![Database](https://img.shields.io/badge/Database-PostgreSQL%20%2B%20PostGIS-336791)](https://www.postgresql.org/)
+# SENTINELTRACK
 
-SentinelTrack is a production-oriented, multi-camera vehicle intelligence and ANPR platform prepared for the Sentinel Gujarat CCTV integration challenge. It combines plate-first identity evidence with conservative tracking, route feasibility, auditability, and a review-safe vehicle appearance fallback.
+### Evidence-first vehicle intelligence for Gujarat’s multi-camera future
 
-This repository contains the implementation, reproducible evidence, and final hackathon submission package. It does not claim that appearance-only matching establishes a police identity.
+**Observe. Correlate. Explain.**
+
+<p>
+  <a href="https://github.com/mdshoaibuddinchanda/sentineltrack/actions/workflows/ci.yml"><img src="https://github.com/mdshoaibuddinchanda/sentineltrack/actions/workflows/ci.yml/badge.svg?branch=final-repository-polish" alt="CI status"></a>
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12"></a>
+  <a href="09_dashboard/"><img src="https://img.shields.io/badge/UI-React%20%2B%20TypeScript-61DAFB?logo=react&logoColor=111827" alt="React and TypeScript"></a>
+  <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-0B1220.svg" alt="MIT license"></a>
+</p>
+
+<p>
+  <a href="12_submission/README.md">Hackathon package</a> ·
+  <a href="12_submission/DEMO_RUNBOOK.md">Demo runbook</a> ·
+  <a href="docs/TESTING_GUIDE.md">Testing guide</a> ·
+  <a href="SECURITY.md">Security policy</a>
+</p>
+
+</div>
+
+SentinelTrack is a production-oriented, multi-camera vehicle intelligence and ANPR platform prepared for the Sentinel Gujarat CCTV integration challenge. It turns heterogeneous camera observations into traceable evidence: plate-first identity, per-camera tracking, chronological feasibility, auditable decisions, and a conservative vehicle-appearance fallback.
+
+> **The promise:** help an operator find and explain a vehicle movement across cameras.
+> **The boundary:** appearance-only evidence never becomes an automatic police identity claim.
+
+## Why this submission stands out
+
+| Signal | What SentinelTrack delivers | Why it matters |
+| --- | --- | --- |
+| **Evidence before confidence** | Every sighting preserves camera, time, quality, source, and explanation metadata. | Operators can inspect why a result was suggested. |
+| **Plate-first identity** | Strong ANPR remains authoritative; ReID supports only partial or missing plates. | A visual similarity cannot silently override a known plate. |
+| **Operational realism** | Bounded queues, stale-frame handling, fair scheduling, health signals, audit, RBAC, and CSRF protection. | The design addresses the control-room environment, not only a notebook demo. |
+| **Honest scale story** | Regional inference, sharding, capacity arithmetic, HA/DR, and rollout gates are documented as measured or projected. | The submission separates evidence from assumptions. |
 
 ## Quick navigation
 
-- [Architecture and setup](#architecture)
-- [Runtime models](#canonical-runtime-models)
-- [Demo and services](#demo-and-services)
-- [Testing and validation](#testing-and-validation)
-- [Evidence and documentation](#evidence-and-documentation)
-- [Security and privacy](#security-and-privacy)
-- [Final submission package](12_submission/README.md)
-- [Documentation index](docs/README.md)
+| I want to… | Start here |
+| --- | --- |
+| See the evaluator story | [`12_submission/FINAL_SUBMISSION_REPORT.md`](12_submission/FINAL_SUBMISSION_REPORT.md) |
+| Run the five-minute demo | [`12_submission/DEMO_RUNBOOK.md`](12_submission/DEMO_RUNBOOK.md) |
+| Understand the architecture | [`12_submission/HLD.md`](12_submission/HLD.md) and [`12_submission/ARCHITECTURE.md`](12_submission/ARCHITECTURE.md) |
+| Inspect measured evidence | [`12_submission/EVIDENCE_INVENTORY.md`](12_submission/EVIDENCE_INVENTORY.md) and [`reports/`](reports/) |
+| Understand tests and caches | [`docs/TESTING_GUIDE.md`](docs/TESTING_GUIDE.md) |
+| Review security/privacy | [`SECURITY.md`](SECURITY.md), [`12_submission/SECURITY_PRIVACY.md`](12_submission/SECURITY_PRIVACY.md), and [`docs/security/`](docs/security/) |
+| Browse the documentation map | [`docs/README.md`](docs/README.md) |
 
 ## At a glance
 
@@ -100,6 +128,8 @@ reports/             tracked evidence and evaluation artifacts
 scripts/             setup and demo entry points
 tools/               active preflight, benchmark, evaluation, and evidence tools
 tests/               cross-stage contract tests
+LICENSE              MIT license for original project source
+SECURITY.md          vulnerability reporting and security boundaries
 ```
 
 Large datasets, generated caches, and model binaries are local/ignored artifacts. They are inventoried in [`docs/release/REPOSITORY_AUDIT.md`](docs/release/REPOSITORY_AUDIT.md); runtime code never depends on local training output directories.
@@ -166,10 +196,22 @@ python -m uvicorn 08_backend.app:app --host 0.0.0.0 --port 8000
 # Frontend
 cd 09_dashboard
 npm ci
-npm run dev
+npm run dev -- --host 127.0.0.1 --port 5173
 ```
 
 The evaluator-facing demo runbook is [`12_submission/DEMO_RUNBOOK.md`](12_submission/DEMO_RUNBOOK.md). It describes fixture mode, live prerequisites, and evidence capture without claiming production deployment.
+
+For a presentation-only dashboard without a live backend, start Vite with the
+deterministic fixture mode enabled:
+
+```powershell
+cd 09_dashboard
+$env:VITE_DEMO_MODE = "true"
+npm run dev -- --host 127.0.0.1 --port 5173
+```
+
+The header visibly shows `DEMO: ON`; simulated sightings and alerts must not be
+presented as live departmental data.
 
 ## Testing and validation
 
@@ -215,6 +257,14 @@ P11 scale documents provide a bounded architecture projection, storage/bandwidth
 
 The dashboard is implemented under `09_dashboard/` and includes deterministic fixture data for presentation. No generated or potentially sensitive runtime screenshot is committed in this release; follow [`docs/assets/README.md`](docs/assets/README.md) to capture a fresh redacted screenshot when required by the submission portal.
 
-## License
+## License and responsible use
 
-Proprietary / competition submission. Third-party model and dataset terms remain applicable; see the model and evidence inventories before redistribution.
+The original project source is released under the [MIT License](LICENSE) for
+hackathon review and reuse. Model weights, datasets, fonts, libraries, and
+other third-party materials remain subject to their own licenses and terms;
+the MIT license does not relicense them. Review [`docs/release/MODEL_INVENTORY.md`](docs/release/MODEL_INVENTORY.md)
+and the evidence inventories before redistribution or deployment.
+
+SentinelTrack is decision-support software. Operators and deploying
+departments remain responsible for authorization, lawful use, retention,
+security, and human review of any identity-related result.
