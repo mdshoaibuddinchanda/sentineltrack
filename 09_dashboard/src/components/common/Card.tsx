@@ -22,14 +22,14 @@ export function Card({
   headerClassName = "",
 }: CardProps) {
   return (
-    <div className={`bg-police-850 border border-police-750/80 rounded-lg shadow-lg overflow-hidden flex flex-col ${className}`}>
+    <div className={`surface-card overflow-hidden flex flex-col ${className}`}>
       {(title || icon || actions) && (
-        <div className={`px-4 py-3 border-b border-police-750/60 flex items-center justify-between gap-3 bg-police-800/40 ${headerClassName}`}>
+        <div className={`surface-card__header px-4 py-3 flex items-center justify-between gap-3 ${headerClassName}`}>
           <div className="flex items-center gap-2.5 min-w-0">
-            {icon && <span className="text-accent-blue shrink-0">{icon}</span>}
+            {icon && <span className="surface-card__icon shrink-0">{icon}</span>}
             <div className="min-w-0">
-              {title && <h3 className="text-sm font-semibold text-slate-100 tracking-wide truncate">{title}</h3>}
-              {subtitle && <p className="text-xs text-slate-400 truncate">{subtitle}</p>}
+              {title && <h3 className="surface-card__title text-sm font-semibold tracking-wide truncate">{title}</h3>}
+              {subtitle && <p className="surface-card__subtitle text-xs truncate">{subtitle}</p>}
             </div>
           </div>
           {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}

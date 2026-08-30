@@ -32,9 +32,13 @@ import { AlertOctagon } from "lucide-react";
 
 export function App() {
   const navigate = useNavigate();
-  const [demoMode, setDemoMode] = useState<boolean>(
+  const [demoMode] = useState<boolean>(
     import.meta.env.VITE_DEMO_MODE === "true"
   );
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("sentineltrack-theme") === "dark";
+  });
   const [privacyMode, setPrivacyMode] = useState<boolean>(false);
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
   const [sightings, setSightings] = useState<Sighting[]>([]);
@@ -46,6 +50,11 @@ export function App() {
   const { cameras, refresh: refreshCameras } = useCameras(undefined, demoMode);
   const { targets, create: createTarget, update: updateTarget, disable: disableTarget, refresh: refreshTargets } = useTargets(undefined, demoMode);
   const { alerts, unackCount, acknowledge: acknowledgeAlert, prependLiveAlert, refresh: refreshAlerts } = useAlerts(undefined, demoMode);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = darkMode ? "dark" : "light";
+    window.localStorage.setItem("sentineltrack-theme", darkMode ? "dark" : "light");
+  }, [darkMode]);
 
   // Initial & periodic sightings fetch
   const fetchSightings = useCallback(async () => {
@@ -131,7 +140,7 @@ export function App() {
           path="/*"
           element={
             <ProtectedRoute>
-              <div className="h-screen w-screen flex flex-col bg-police-900 text-slate-100 overflow-hidden font-sans">
+              <div className={`app-shell ${darkMode ? "theme-dark" : "theme-light"} h-screen w-screen flex flex-col overflow-hidden font-sans`}>
                 {/* Top Header */}
                 <Header
                   systemStatus={sysStatus}
@@ -140,7 +149,8 @@ export function App() {
                   activeTargetsCount={targets.filter((t) => t.enabled).length}
                   unackAlertsCount={unackCount}
                   demoMode={demoMode}
-                  onToggleDemoMode={() => setDemoMode((prev) => !prev)}
+                  darkMode={darkMode}
+                  onToggleDarkMode={() => setDarkMode((prev) => !prev)}
                   onRefresh={handleRefreshAll}
                   privacyMode={privacyMode}
                   onTogglePrivacyMode={() => setPrivacyMode((prev) => !prev)}
@@ -164,19 +174,19 @@ export function App() {
                       handleInvestigate(toastMessage.registration);
                       setToastMessage(null);
                     }}
-                    className="fixed top-20 right-4 z-50 p-3 bg-rose-950 border-2 border-rose-600 rounded-lg shadow-2xl text-white cursor-pointer hover:bg-rose-900 transition-all animate-bounce max-w-sm"
+                    className="alert-toast"
                   >
-                    <div className="flex items-center gap-2 font-mono font-bold text-xs text-rose-300">
-                      <AlertOctagon className="w-4 h-4 text-rose-400 animate-pulse" />
+                    <div className="alert-toast__title">
+                      <AlertOctagon className="w-4 h-4" />
                       <span>{toastMessage.title}</span>
                     </div>
-                    <div className="text-[11px] text-slate-200 mt-1 font-mono">{toastMessage.desc}</div>
-                    <div className="text-[10px] text-cyan-300 font-semibold mt-1 font-mono">Click to open GIS trajectory &rarr;</div>
+                    <div className="alert-toast__description">{toastMessage.desc}</div>
+                    <div className="alert-toast__action">Select to view the vehicle record →</div>
                   </div>
                 )}
 
                 {/* Main Content View Container with Router */}
-                <main className="flex-1 p-4 overflow-y-auto bg-police-900/60">
+                <main className="app-main flex-1 p-4 overflow-y-auto">
                   <ErrorBoundary fallbackTitle="Page Display Error">
                     <Routes>
                       <Route path="/" element={<Navigate to="/operations" replace />} />

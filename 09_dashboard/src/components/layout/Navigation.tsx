@@ -1,76 +1,128 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { Bell, ChevronDown, ClipboardList, Compass, LayoutDashboard, MoreHorizontal, Search, Server, ShieldCheck, Users, Video } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Video, Target, Bell, Compass, Server, Users, ShieldCheck } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
-export type NavTab = "operations" | "cameras" | "targets" | "alerts" | "investigation" | "system" | "users" | "audit";
+export type NavTab = "dashboard" | "cameras" | "watchlist" | "alerts" | "investigation" | "system" | "users" | "audit";
 
 interface NavigationProps {
   unackAlertsCount: number;
+}
+
+interface NavItem {
+  id: NavTab;
+  path: string;
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+  badge?: number;
+  visible?: boolean;
 }
 
 export function Navigation({ unackAlertsCount }: NavigationProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, hasPermission } = useAuth();
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
 
-  const tabs: { id: NavTab; path: string; label: string; icon: React.ReactNode; badge?: number; visible?: boolean }[] = [
-    { id: "operations", path: "/operations", label: "OPERATIONS", icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: "cameras", path: "/cameras", label: "CAMERAS", icon: <Video className="w-4 h-4" /> },
-    { id: "targets", path: "/targets", label: "TARGETS", icon: <Target className="w-4 h-4" /> },
-    { id: "alerts", path: "/alerts", label: "ALERTS", icon: <Bell className="w-4 h-4" />, badge: unackAlertsCount },
-    { id: "investigation", path: "/investigation", label: "INVESTIGATION", icon: <Compass className="w-4 h-4" /> },
-    { id: "system", path: "/system", label: "SYSTEM", icon: <Server className="w-4 h-4" /> },
+  useEffect(() => {
+    const closeMenu = (event: MouseEvent) => {
+      if (moreRef.current && !moreRef.current.contains(event.target as Node)) {
+        setMoreOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", closeMenu);
+    return () => document.removeEventListener("mousedown", closeMenu);
+  }, []);
+
+  const primaryItems: NavItem[] = [
+    { id: "dashboard", path: "/operations", label: "Dashboard", description: "What needs attention now", icon: <LayoutDashboard size={19} /> },
+    { id: "cameras", path: "/cameras", label: "Cameras", description: "View the camera network", icon: <Video size={19} /> },
+    { id: "watchlist", path: "/targets", label: "Watchlist", description: "Manage vehicles of interest", icon: <Search size={19} /> },
+    { id: "alerts", path: "/alerts", label: "Alerts", description: "Review and acknowledge alerts", icon: <Bell size={19} />, badge: unackAlertsCount },
+  ];
+
+  const moreItems: NavItem[] = [
+    { id: "investigation", path: "/investigation", label: "Find a vehicle", description: "Search sightings and movement", icon: <Compass size={18} /> },
+    { id: "system", path: "/system", label: "System status", description: "Connectivity and service health", icon: <Server size={18} /> },
     {
       id: "users",
       path: "/admin/users",
-      label: "USERS",
-      icon: <Users className="w-4 h-4" />,
+      label: "Users and access",
+      description: "Manage operator accounts",
+      icon: <Users size={18} />,
       visible: user?.role === "ADMIN" || hasPermission("user:read"),
     },
     {
       id: "audit",
       path: "/audit",
-      label: "AUDIT",
-      icon: <ShieldCheck className="w-4 h-4" />,
+      label: "Security log",
+      description: "Review recorded actions",
+      icon: <ShieldCheck size={18} />,
       visible: user?.role === "ADMIN" || user?.role === "AUDITOR" || hasPermission("audit:read"),
     },
   ];
 
-  const visibleTabs = tabs.filter((t) => t.visible !== false);
+  const isActive = (item: NavItem) =>
+    location.pathname === item.path ||
+    (item.id === "dashboard" && location.pathname === "/") ||
+    (item.id !== "dashboard" && location.pathname.startsWith(item.path));
 
+  const goTo = (path: string) => {
+    setMoreOpen(false);
+    navigate(path);
+  };
 
-  const currentPath = location.pathname;
+  const moreActive = moreItems.some((item) => item.visible !== false && isActive(item));
 
   return (
-    <nav className="bg-police-850/90 border-b border-police-750 px-4 flex items-center gap-1 overflow-x-auto select-none">
-      {visibleTabs.map((tab) => {
-
-        const active =
-          currentPath === tab.path ||
-          (tab.id === "operations" && currentPath === "/") ||
-          (tab.id !== "operations" && currentPath.startsWith(tab.path));
-
-        return (
+    <nav className="primary-navigation" aria-label="Main navigation">
+      <div className="navigation-inner">
+        {primaryItems.map((item) => (
           <button
-            key={tab.id}
-            onClick={() => navigate(tab.path)}
-            className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold tracking-wider font-mono uppercase transition-colors relative ${
-              active
-                ? "text-accent-blue bg-police-800/80 border-b-2 border-accent-blue"
-                : "text-slate-400 hover:text-slate-200 hover:bg-police-800/40"
-            }`}
+            key={item.id}
+            type="button"
+            onClick={() => goTo(item.path)}
+            className={`navigation-item ${isActive(item) ? "navigation-item--active" : ""}`}
+            title={item.description}
+            aria-current={isActive(item) ? "page" : undefined}
           >
-            {tab.icon}
-            <span>{tab.label}</span>
-            {tab.badge !== undefined && tab.badge > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-600 text-white font-sans animate-pulse">
-                {tab.badge}
-              </span>
-            )}
+            {item.icon}
+            <span>{item.label}</span>
+            {item.badge !== undefined && item.badge > 0 && <span className="navigation-badge">{item.badge}</span>}
           </button>
-        );
-      })}
+        ))}
+
+        <div className="more-navigation" ref={moreRef}>
+          <button
+            type="button"
+            onClick={() => setMoreOpen((open) => !open)}
+            className={`navigation-item navigation-item--more ${moreActive ? "navigation-item--active" : ""}`}
+            aria-expanded={moreOpen}
+            aria-haspopup="menu"
+          >
+            <MoreHorizontal size={19} />
+            <span>More</span>
+            <ChevronDown size={16} className={moreOpen ? "chevron-up" : ""} />
+          </button>
+          {moreOpen && (
+            <div className="more-menu" role="menu">
+              <div className="more-menu-heading">Additional tools</div>
+              {moreItems.filter((item) => item.visible !== false).map((item) => (
+                <button key={item.id} type="button" role="menuitem" onClick={() => goTo(item.path)} className={`more-menu-item ${isActive(item) ? "more-menu-item--active" : ""}`}>
+                  {item.icon}
+                  <span>
+                    <strong>{item.label}</strong>
+                    <small>{item.description}</small>
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="navigation-help"><ClipboardList size={15} /> Select an area to begin</div>
     </nav>
   );
 }

@@ -63,7 +63,7 @@ describe("UI Badges & Component Tests", () => {
         onRetry={() => {}}
       />
     );
-    expect(container.textContent).toContain("SentinelTrack Backend Disconnected");
+    expect(container.textContent).toContain("Connection lost");
     expect(container.textContent).toContain("Connection refused on port 8000");
   });
 });
