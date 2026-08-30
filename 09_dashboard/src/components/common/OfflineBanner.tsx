@@ -10,6 +10,7 @@ interface OfflineBannerProps {
 }
 
 function readableName(name: string): string {
+  if (name === "stream_ingestion") return "Live camera input";
   return name
     .replace(/_/g, " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());

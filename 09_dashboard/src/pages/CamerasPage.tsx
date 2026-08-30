@@ -11,9 +11,10 @@ interface CamerasPageProps {
   onSelectCamera?: (cameraId: string) => void;
   selectedCameraId?: string | null;
   demoMode?: boolean;
+  liveFramesDecoded?: number;
 }
 
-export function CamerasPage({ cameras, onSelectCamera, demoMode = false }: CamerasPageProps) {
+export function CamerasPage({ cameras, onSelectCamera, demoMode = false, liveFramesDecoded }: CamerasPageProps) {
   const { cameraId: routeCameraId } = useParams<{ cameraId?: string }>();
   const navigate = useNavigate();
 
@@ -115,6 +116,7 @@ export function CamerasPage({ cameras, onSelectCamera, demoMode = false }: Camer
             <option value="ONLINE">Online ({cameras.filter((c) => c.stream_status === "ONLINE").length})</option>
             <option value="DEGRADED">Needs attention ({cameras.filter((c) => c.stream_status === "DEGRADED").length})</option>
             <option value="OFFLINE">Offline ({cameras.filter((c) => c.stream_status === "OFFLINE").length})</option>
+            <option value="NOT_CONFIGURED">Not configured ({cameras.filter((c) => c.stream_status === "NOT_CONFIGURED").length})</option>
           </select>
         </div>
       </div>
@@ -207,6 +209,26 @@ export function CamerasPage({ cameras, onSelectCamera, demoMode = false }: Camer
                     <span className="text-slate-400">Location Quality:</span>
                     <span className="text-emerald-400">{selectedCam.location_quality}</span>
                   </div>
+                </div>
+
+                <div className="rounded border border-police-750 bg-police-900 p-3 space-y-2">
+                  <div className="font-bold text-slate-200">Human verification</div>
+                  <div className="text-[11px] text-slate-400">
+                    {selectedCam.stream_status === "ONLINE"
+                      ? "The source is connected to the analytics worker. This dashboard does not currently expose a browser video preview for the stream."
+                      : selectedCam.source_configured
+                      ? "The source is configured, but the worker is not receiving frames from it."
+                      : "This camera has no active stream source configured."}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div><span className="text-slate-500">Source:</span> <span className="font-semibold text-slate-200">{selectedCam.source_configured ? "Configured" : "Not configured"}</span></div>
+                    <div><span className="text-slate-500">Frames:</span> <span className="font-semibold text-slate-200">{selectedCam.frames_decoded ?? 0}</span></div>
+                    <div><span className="text-slate-500">Sampled:</span> <span className="font-semibold text-slate-200">{selectedCam.frames_sampled ?? 0}</span></div>
+                    <div><span className="text-slate-500">Reconnects:</span> <span className="font-semibold text-slate-200">{selectedCam.reconnects ?? 0}</span></div>
+                  </div>
+                  {liveFramesDecoded === 0 && (
+                    <div className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">No live frames have entered this run.</div>
+                  )}
                 </div>
 
                 <div className="space-y-1 text-slate-300">

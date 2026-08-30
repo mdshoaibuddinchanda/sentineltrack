@@ -16,6 +16,8 @@ interface OperationsPageProps {
   analyticsWorkerStatus: boolean;
   workerCount: number;
   persistedSightingsTotal?: number;
+  demoMode?: boolean;
+  liveFramesDecoded?: number;
   onAcknowledgeAlert: (alertId: string) => void;
   onInvestigate: (registration: string) => void;
   onSelectCamera: (cameraId: string) => void;
@@ -32,6 +34,8 @@ export function OperationsPage({
   analyticsWorkerStatus,
   workerCount,
   persistedSightingsTotal,
+  demoMode = false,
+  liveFramesDecoded,
   onAcknowledgeAlert,
   onInvestigate,
   onSelectCamera,
@@ -40,9 +44,16 @@ export function OperationsPage({
 }: OperationsPageProps) {
   const onlineCams = cameras.filter((c) => c.stream_status === "ONLINE").length;
   const offlineCams = cameras.filter((c) => c.stream_status !== "ONLINE").length;
+  const hasCurrentFrames = !demoMode && (liveFramesDecoded ?? 0) > 0;
 
   return (
     <div className="space-y-4">
+      {!demoMode && liveFramesDecoded !== undefined && !hasCurrentFrames && (
+        <div className="source-note" role="status">
+          <strong>No live camera frames</strong>
+          <span>The backend and models are running, but this run has received no camera frames. Alerts and sightings shown below are stored database records, not current detections.</span>
+        </div>
+      )}
       {/* Top Operations KPI Metrics */}
       <MetricCards
         onlineCameras={onlineCams}
@@ -54,6 +65,7 @@ export function OperationsPage({
         persistedSightingsTotal={persistedSightingsTotal}
         analyticsStatus={analyticsWorkerStatus}
         workerCount={workerCount}
+        liveFramesDecoded={liveFramesDecoded}
       />
 
       {/* Main Grid: Live Alerts & Map */}
@@ -62,7 +74,7 @@ export function OperationsPage({
         <div className="lg:col-span-5 flex flex-col space-y-4">
           <Card
             title="Alerts that need review"
-            subtitle="New watchlist matches from the live system"
+            subtitle={hasCurrentFrames ? "New watchlist matches from connected cameras" : "Stored watchlist records; live camera input is not currently producing alerts"}
             icon={<Radio className="w-4 h-4 text-rose-500 animate-pulse" />}
             actions={
               <span className="text-xs font-mono px-2 py-0.5 rounded bg-police-700 text-slate-300">
@@ -103,7 +115,7 @@ export function OperationsPage({
       {/* Bottom Row: Recent Sightings Feed */}
       <Card
         title="Recent vehicle sightings"
-        subtitle="Latest records received from the camera network"
+        subtitle={hasCurrentFrames ? "Latest records received from the camera network" : "Stored records from the database; no current camera frames received"}
         icon={<Eye className="w-4 h-4 text-accent-blue" />}
         bodyClassName="p-0"
       >

@@ -11,6 +11,7 @@ interface MetricCardsProps {
   persistedSightingsTotal?: number;
   analyticsStatus: boolean;
   workerCount: number;
+  liveFramesDecoded?: number;
 }
 
 export function MetricCards({
@@ -23,6 +24,7 @@ export function MetricCards({
   persistedSightingsTotal,
   analyticsStatus,
   workerCount,
+  liveFramesDecoded,
 }: MetricCardsProps) {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 select-none">
@@ -84,7 +86,7 @@ export function MetricCards({
           <Eye className="w-5 h-5" />
         </div>
         <div>
-          <div className="text-[11px] text-slate-400 font-mono uppercase">Sightings recorded</div>
+          <div className="text-[11px] text-slate-400 font-mono uppercase">{liveFramesDecoded === 0 ? "Stored sightings" : "Sightings recorded"}</div>
           <div className="text-xl font-bold text-slate-100 font-mono">
             {persistedSightingsTotal !== undefined ? persistedSightingsTotal : loadedSightingsCount}{" "}
             <span className="text-[10px] text-slate-500 font-normal">({loadedSightingsCount} loaded)</span>

@@ -116,6 +116,7 @@ export function CameraStatusBadge({ status }: { status: CameraStreamStatus }) {
     DEGRADED: { variant: "warning", label: "DEGRADED" },
     OFFLINE: { variant: "danger", label: "OFFLINE" },
     UNKNOWN: { variant: "neutral", label: "UNKNOWN" },
+    NOT_CONFIGURED: { variant: "neutral", label: "NOT CONFIGURED" },
   };
   const conf = map[status] || { variant: "neutral", label: status };
   return <Badge variant={conf.variant} dot={status === "ONLINE"}>{conf.label}</Badge>;

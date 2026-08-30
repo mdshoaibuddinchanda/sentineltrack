@@ -5,7 +5,7 @@ export type FeasibilityClass = "FEASIBLE" | "QUESTIONABLE" | "IMPOSSIBLE" | "UNK
 export type TrajectoryStatus = "PLAUSIBLE_SEQUENCE" | "AMBIGUOUS" | "CONFLICTING_SIGHTINGS" | "SINGLE_SIGHTING" | "NO_ROUTE";
 export type TimeQuality = "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
 export type LocationQuality = "VERIFIED" | "APPROXIMATE" | "UNKNOWN";
-export type CameraStreamStatus = "ONLINE" | "DEGRADED" | "OFFLINE" | "UNKNOWN";
+export type CameraStreamStatus = "ONLINE" | "DEGRADED" | "OFFLINE" | "UNKNOWN" | "NOT_CONFIGURED";
 
 export interface Camera {
   camera_id: string;
@@ -19,6 +19,11 @@ export interface Camera {
   stream_status: CameraStreamStatus;
   measured_fps?: number;
   last_checked?: string;
+  source_configured?: boolean;
+  frames_decoded?: number;
+  frames_sampled?: number;
+  reconnects?: number;
+  last_frame_s_ago?: number | null;
   metadata?: Record<string, any>;
 }
 
@@ -33,6 +38,12 @@ export interface CameraHealth {
   first_frame_latency_ms?: number;
   last_pts_ms?: number;
   last_checked?: string;
+  source_configured?: boolean;
+  connected?: boolean;
+  frames_decoded?: number;
+  frames_sampled?: number;
+  reconnects?: number;
+  last_frame_s_ago?: number | null;
 }
 
 export interface Target {

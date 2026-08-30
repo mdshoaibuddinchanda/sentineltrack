@@ -22,6 +22,7 @@ interface HeaderProps {
   activeTargetsCount: number;
   unackAlertsCount: number;
   demoMode: boolean;
+  liveFramesDecoded?: number;
   darkMode: boolean;
   onToggleDarkMode: () => void;
   onRefresh: () => void;
@@ -49,6 +50,7 @@ export function Header({
   activeTargetsCount,
   unackAlertsCount,
   demoMode,
+  liveFramesDecoded,
   darkMode,
   onToggleDarkMode,
   onRefresh,
@@ -109,8 +111,8 @@ export function Header({
           <span className="status-dot" aria-hidden="true" />
           {liveLabel(wsStatus)}
         </span>
-        <span className={`data-mode ${demoMode ? "data-mode--demo" : "data-mode--live"}`}>
-          {demoMode ? "Sample data" : "Live data"}
+        <span className={`data-mode ${demoMode ? "data-mode--demo" : liveFramesDecoded === 0 ? "data-mode--warning" : "data-mode--live"}`}>
+          {demoMode ? "Sample data" : liveFramesDecoded === 0 ? "Live backend · no frames" : "Live data"}
         </span>
       </div>
 

@@ -15,6 +15,11 @@ class CameraResponse(BaseModel):
     stream_status: str = "ONLINE"
     measured_fps: Optional[float] = None
     last_checked: Optional[datetime] = None
+    source_configured: bool = False
+    frames_decoded: int = 0
+    frames_sampled: int = 0
+    reconnects: int = 0
+    last_frame_s_ago: Optional[float] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -29,6 +34,12 @@ class CameraHealthResponse(BaseModel):
     first_frame_latency_ms: Optional[float] = None
     last_pts_ms: Optional[float] = None
     last_checked: Optional[datetime] = None
+    source_configured: bool = False
+    connected: bool = False
+    frames_decoded: int = 0
+    frames_sampled: int = 0
+    reconnects: int = 0
+    last_frame_s_ago: Optional[float] = None
 
 
 class CameraNearbyQuery(BaseModel):

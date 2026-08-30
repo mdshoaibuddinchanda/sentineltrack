@@ -230,6 +230,27 @@ the stored HLS URL as fallback, and reports connection/decoded-frame counts in
 System status. API-only mode remains suitable for CI and dashboard work and
 does not open camera connections.
 
+### Reading live status correctly
+
+The camera registry is metadata, not proof of a current connection. In full
+mode, a camera is `ONLINE` only when the current process has connected to its
+source. `source_configured`, decoded-frame counts, sampled-frame counts, and
+reconnect attempts are exposed separately. A stored `ONLINE` probe on an
+inactive registry row is shown as `NOT CONFIGURED` rather than being presented
+as a live feed.
+
+The Alerts page can contain historical database records, including records
+created by local evaluation tests. If the current run has received zero camera
+frames, the dashboard suppresses those records from the active operations feed
+and labels them as stored history on the Alerts page. It must not be used as
+evidence of a current detection.
+
+This checkout currently provides stream ingestion and camera health telemetry,
+but not a browser video-preview proxy. RTSP sources cannot be rendered directly
+by a browser. Human video verification therefore requires an authorized HLS,
+WebRTC, or MJPEG preview transport to be added for the deployment; the UI will
+show the actual connection and frame counters until that transport exists.
+
 The evaluator-facing demo runbook is [`12_submission/DEMO_RUNBOOK.md`](12_submission/DEMO_RUNBOOK.md). It describes fixture mode, live prerequisites, and evidence capture without claiming production deployment.
 
 For a presentation-only dashboard without a live backend, start Vite with the

@@ -48,8 +48,12 @@ async def list_alerts(
         limit=limit,
         offset=offset
     )
-    unack_count = sum(1 for a in alerts if not a.acknowledged)
-    return AlertListResponse(items=alerts, total=len(alerts), unacknowledged_count=unack_count)
+    # Counts describe the complete filtered database result, not just the
+    # current page. This prevents a page of 50 historical rows from being
+    # presented as the system-wide alert count.
+    total = service.count_alerts(camera_id=camera_id)
+    unack_count = service.count_alerts(unacknowledged_only=True, camera_id=camera_id)
+    return AlertListResponse(items=alerts, total=total, unacknowledged_count=unack_count)
 
 
 @router.get("/{alert_id}", response_model=AlertResponse)

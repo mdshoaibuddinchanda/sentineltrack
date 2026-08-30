@@ -64,6 +64,17 @@ class AlertService:
             raise AlertNotFoundError(f"Alert '{alert_id}' not found.")
         return matching[0]
 
+    def count_alerts(
+        self,
+        unacknowledged_only: bool = False,
+        camera_id: Optional[str] = None,
+    ) -> int:
+        """Count the full filtered result set, independent of page size."""
+        return self.repository.count_alerts(
+            unacknowledged_only=unacknowledged_only,
+            camera_id=camera_id,
+        )
+
     def acknowledge_alert(self, alert_id: str, acknowledged_by: str = "operator") -> AlertAckResponse:
         conn = self.repository._get_connection()
         now = datetime.now(timezone.utc)

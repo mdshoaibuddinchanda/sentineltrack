@@ -51,7 +51,14 @@ function DashboardApp() {
   const { status: wsStatus, events: wsEvents } = useWebSocket("*", isAuthenticated);
   const { cameras, refresh: refreshCameras } = useCameras(undefined, demoMode, isAuthenticated);
   const { targets, create: createTarget, update: updateTarget, disable: disableTarget, refresh: refreshTargets } = useTargets(undefined, demoMode, isAuthenticated);
-  const { alerts, unackCount, acknowledge: acknowledgeAlert, prependLiveAlert, refresh: refreshAlerts } = useAlerts(undefined, demoMode, isAuthenticated);
+  const { alerts, total: totalAlerts, unackCount, acknowledge: acknowledgeAlert, prependLiveAlert, refresh: refreshAlerts } = useAlerts(undefined, demoMode, isAuthenticated);
+  const streamStatus = readiness?.details?.stream_ingestion as
+    | { total_frames_decoded?: number }
+    | undefined;
+  const liveFramesDecoded = streamStatus?.total_frames_decoded;
+  const noCurrentLiveInput = !demoMode && liveFramesDecoded === 0;
+  const activeAlerts = noCurrentLiveInput ? [] : alerts;
+  const activeUnackCount = noCurrentLiveInput ? 0 : unackCount;
 
   useEffect(() => {
     document.documentElement.dataset.theme = darkMode ? "dark" : "light";
@@ -152,8 +159,9 @@ function DashboardApp() {
                   wsStatus={wsStatus}
                   activeCamerasCount={cameras.filter((c) => c.stream_status === "ONLINE").length}
                   activeTargetsCount={targets.filter((t) => t.enabled).length}
-                  unackAlertsCount={unackCount}
+                  unackAlertsCount={activeUnackCount}
                   demoMode={demoMode}
+                  liveFramesDecoded={liveFramesDecoded}
                   darkMode={darkMode}
                   onToggleDarkMode={() => setDarkMode((prev) => !prev)}
                   onRefresh={handleRefreshAll}
@@ -170,7 +178,7 @@ function DashboardApp() {
                 />
 
                 {/* Primary Navigation */}
-                <Navigation unackAlertsCount={unackCount} />
+                <Navigation unackAlertsCount={activeUnackCount} />
 
                 {/* Toast Notification */}
                 {toastMessage && (
@@ -200,13 +208,15 @@ function DashboardApp() {
                         element={
                           <OperationsPage
                             cameras={cameras}
-                            alerts={alerts}
+                            alerts={activeAlerts}
                             sightings={sightings}
-                            unackAlertsCount={unackCount}
+                            unackAlertsCount={activeUnackCount}
                             activeTargetsCount={targets.filter((t) => t.enabled).length}
                             analyticsWorkerStatus={readiness?.components?.analytics_worker === true}
                             workerCount={metrics?.active_camera_workers ?? 0}
                             persistedSightingsTotal={metrics?.total_sightings_persisted}
+                            demoMode={demoMode}
+                            liveFramesDecoded={liveFramesDecoded}
                             onAcknowledgeAlert={acknowledgeAlert}
                             onInvestigate={handleInvestigate}
                             onSelectCamera={handleSelectCamera}
@@ -223,6 +233,7 @@ function DashboardApp() {
                             onSelectCamera={handleSelectCamera}
                             selectedCameraId={selectedCameraId}
                             demoMode={demoMode}
+                            liveFramesDecoded={liveFramesDecoded}
                           />
                         }
                       />
@@ -234,6 +245,7 @@ function DashboardApp() {
                             onSelectCamera={handleSelectCamera}
                             selectedCameraId={selectedCameraId}
                             demoMode={demoMode}
+                            liveFramesDecoded={liveFramesDecoded}
                           />
                         }
                       />
@@ -258,6 +270,10 @@ function DashboardApp() {
                             onAcknowledge={acknowledgeAlert}
                             onInvestigate={handleInvestigate}
                             privacyMode={privacyMode}
+                            demoMode={demoMode}
+                            liveFramesDecoded={liveFramesDecoded}
+                            totalAlerts={totalAlerts}
+                            storedUnacknowledgedCount={unackCount}
                           />
                         }
                       />
@@ -269,6 +285,10 @@ function DashboardApp() {
                             onAcknowledge={acknowledgeAlert}
                             onInvestigate={handleInvestigate}
                             privacyMode={privacyMode}
+                            demoMode={demoMode}
+                            liveFramesDecoded={liveFramesDecoded}
+                            totalAlerts={totalAlerts}
+                            storedUnacknowledgedCount={unackCount}
                           />
                         }
                       />

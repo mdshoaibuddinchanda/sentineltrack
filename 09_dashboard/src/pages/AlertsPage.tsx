@@ -13,9 +13,22 @@ interface AlertsPageProps {
   onAcknowledge: (alertId: string) => void;
   onInvestigate: (registration: string) => void;
   privacyMode?: boolean;
+  demoMode?: boolean;
+  liveFramesDecoded?: number;
+  totalAlerts?: number;
+  storedUnacknowledgedCount?: number;
 }
 
-export function AlertsPage({ alerts, onAcknowledge, onInvestigate, privacyMode = false }: AlertsPageProps) {
+export function AlertsPage({
+  alerts,
+  onAcknowledge,
+  onInvestigate,
+  privacyMode = false,
+  demoMode = false,
+  liveFramesDecoded,
+  totalAlerts,
+  storedUnacknowledgedCount,
+}: AlertsPageProps) {
   const { hasPermission, user } = useAuth();
   const canAck = hasPermission("alert:ack") || user?.role === "ADMIN" || user?.role === "SUPERVISOR" || user?.role === "OPERATOR";
   const { alertId: routeAlertId } = useParams<{ alertId?: string }>();
@@ -97,6 +110,18 @@ export function AlertsPage({ alerts, onAcknowledge, onInvestigate, privacyMode =
 
   return (
     <div className="space-y-4">
+      {demoMode && (
+        <div className="source-note" role="status">
+          <strong>Sample alert data</strong>
+          <span>This page is using presentation fixtures. Start with <code>run.bat --full</code> for the configured backend database.</span>
+        </div>
+      )}
+      {!demoMode && liveFramesDecoded !== undefined && liveFramesDecoded === 0 && (
+        <div className="source-note" role="status">
+          <strong>No live alert input</strong>
+          <span>No camera frames have reached the analytics worker in this run. The records below are historical database records{totalAlerts !== undefined ? ` (${totalAlerts} stored, ${storedUnacknowledgedCount ?? 0} not acknowledged)` : ""} and must not be treated as a current detection.</span>
+        </div>
+      )}
       {/* Route Filter Focus Banner */}
       {routeAlertId && (
         <div className="bg-police-800 border border-cyan-500/60 p-3 rounded-lg flex items-center justify-between font-mono text-xs text-slate-200">
@@ -161,7 +186,9 @@ export function AlertsPage({ alerts, onAcknowledge, onInvestigate, privacyMode =
       {/* Alerts Table */}
       <Card
         title={`INCIDENT ALERT LOG (${filteredAlerts.length})`}
-        subtitle="Review, acknowledge, and investigate watchlist matches"
+        subtitle={liveFramesDecoded !== undefined && liveFramesDecoded === 0 && !demoMode
+          ? "Stored alert records — current camera input is not producing detections"
+          : "Review, acknowledge, and investigate watchlist matches"}
         icon={<Bell className="w-4 h-4 text-rose-500" />}
         bodyClassName="p-0 overflow-x-auto"
       >

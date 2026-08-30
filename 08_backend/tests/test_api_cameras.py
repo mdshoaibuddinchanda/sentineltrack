@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 backend_app = importlib.import_module("08_backend.app")
 cam_repo_mod = importlib.import_module("07_route_engine.camera_repository")
 models_mod = importlib.import_module("07_route_engine.models")
+camera_service_mod = importlib.import_module("08_backend.services.camera_service")
 
 app = backend_app.app
 CameraGeo = models_mod.CameraGeo
@@ -62,6 +63,20 @@ def test_get_camera_health_endpoint():
     data = response.json()
     assert data["camera_id"] == "test_cam_health_01"
     assert "stream_status" in data
+    assert data["connected"] is False
+    assert data["frames_decoded"] == 0
+    assert data["first_frame_latency_ms"] is None
+
+
+def test_inactive_registry_row_cannot_look_like_a_live_connection():
+    status = camera_service_mod._runtime_stream_status(
+        "inactive-test-camera",
+        "ONLINE",
+        live=False,
+        source_configured=False,
+        runtime_state=None,
+    )
+    assert status == "NOT_CONFIGURED"
 
 
 def test_search_nearby_cameras_by_coordinates():

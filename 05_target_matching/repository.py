@@ -83,6 +83,14 @@ class BaseTargetMatchingRepository(ABC):
     ) -> list[dict[str, Any]]:
         pass
 
+    @abstractmethod
+    def count_alerts(
+        self,
+        unacknowledged_only: bool = False,
+        camera_id: Optional[str] = None,
+    ) -> int:
+        pass
+
 
 class SQLiteTargetMatchingRepository(BaseTargetMatchingRepository):
     """SQLite / in-memory resilient implementation for isolated testing."""
@@ -403,6 +411,24 @@ class SQLiteTargetMatchingRepository(BaseTargetMatchingRepository):
             cur.execute(' '.join(query), params)
             rows = cur.fetchall()
             return [dict(r) for r in rows]
+
+    def count_alerts(
+        self,
+        unacknowledged_only: bool = False,
+        camera_id: Optional[str] = None,
+    ) -> int:
+        with self._lock:
+            cur = self._conn.cursor()
+            query = ['SELECT COUNT(*) FROM alerts WHERE 1=1']
+            params = []
+            if unacknowledged_only:
+                query.append('AND acknowledged = 0')
+            if camera_id:
+                query.append('AND camera_id = ?')
+                params.append(camera_id)
+            cur.execute(' '.join(query), params)
+            row = cur.fetchone()
+            return int(row[0] if row else 0)
 
 
 # Backwards compatibility alias
@@ -759,6 +785,25 @@ class PostgresTargetMatchingRepository(BaseTargetMatchingRepository):
                 })
         conn.close()
         return results
+
+    def count_alerts(
+        self,
+        unacknowledged_only: bool = False,
+        camera_id: Optional[str] = None,
+    ) -> int:
+        conn = self._get_connection()
+        query = ['SELECT COUNT(*) FROM alerts WHERE 1=1']
+        params = []
+        if unacknowledged_only:
+            query.append('AND acknowledged = FALSE')
+        if camera_id:
+            query.append('AND camera_id = %s')
+            params.append(camera_id)
+        with conn.cursor() as cur:
+            cur.execute(' '.join(query), params)
+            row = cur.fetchone()
+        conn.close()
+        return int(row[0] if row else 0)
 
 
 def get_repository(config: Optional[TargetMatchingConfig] = None) -> BaseTargetMatchingRepository:

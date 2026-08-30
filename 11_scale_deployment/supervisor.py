@@ -48,6 +48,7 @@ class CameraStreamWorker:
         self.is_connected = False
         self.is_degraded = False
         self.last_frame_time = 0.0
+        self.last_pts_ms: Optional[float] = None
         self.total_frames_decoded = 0
         self.total_frames_sampled = 0
         self.reconnect_count = 0
@@ -125,6 +126,7 @@ class CameraStreamWorker:
 
                         now_time = time.time()
                         self.last_frame_time = now_time
+                        self.last_pts_ms = packet.pts_ms
                         self.total_frames_decoded += 1
 
                         # Adaptive Base + Burst Sampling
@@ -277,7 +279,8 @@ class StreamSupervisor:
                     "frames_decoded": w.total_frames_decoded,
                     "frames_sampled": w.total_frames_sampled,
                     "reconnects": w.reconnect_count,
-                    "last_frame_s_ago": round(now - w.last_frame_time, 2) if w.last_frame_time > 0 else None
+                    "last_frame_s_ago": round(now - w.last_frame_time, 2) if w.last_frame_time > 0 else None,
+                    "last_pts_ms": w.last_pts_ms
                 }
 
             return {

@@ -314,7 +314,8 @@ textarea:focus-visible {
 
 .status-pill--warning,
 .connection-label--warning,
-.data-mode--demo {
+.data-mode--demo,
+.data-mode--warning {
   color: var(--warning);
   background: var(--warning-bg);
   border-color: color-mix(in srgb, var(--warning) 30%, var(--border));
