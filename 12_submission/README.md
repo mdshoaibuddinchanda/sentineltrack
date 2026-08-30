@@ -64,8 +64,8 @@ P11.5/P6 reports. Do not commit credentials or private organizer feeds.
 
 Native demo commands and the Docker demo path are documented in
 [`DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md). The dashboard also has a deterministic
-fixture mode controlled by the existing `DEMO: ON` toggle or
-`VITE_DEMO_MODE=true`; fixture data is explicitly simulated.
+fixture mode controlled by `VITE_DEMO_MODE=true`; the header labels this as
+`Sample data`. Fixture data is explicitly simulated.
 
 ## Truth boundary
 

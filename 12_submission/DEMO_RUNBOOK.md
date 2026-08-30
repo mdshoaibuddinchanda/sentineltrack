@@ -6,7 +6,8 @@ This runbook is for a real software demonstration. The deterministic dashboard m
 
 - Windows workstation with Conda environment `PY312`.
 - Docker Desktop if using the container path.
-- Repository checked out at the final submission commit.
+- Repository checked out on the reviewed `launcher-visual-review` branch (or
+  the exact commit being demonstrated).
 - No production credentials in the repository or recording.
 - Confirm the official resource contract and feed permissions before connecting any government stream.
 
@@ -28,6 +29,18 @@ PostgreSQL/PostGIS service and receives `DATABASE_PASSWORD` from the shell or
 
 ## Path A: deterministic local dashboard
 
+The repository-root launcher is the preferred Windows visual-review path:
+
+```bat
+conda activate PY312
+cd C:\DR2\sentineltrack
+run.bat
+```
+
+It prints a temporary `demo_admin` password, starts the API and dashboard on
+ports 8000 and 5173, and opens the browser. Use `run.bat --full` only when
+PostgreSQL, the configured models, and permitted camera sources are ready.
+
 ```powershell
 conda activate PY312
 cd C:\DR2\sentineltrack\09_dashboard
@@ -35,7 +48,7 @@ $env:VITE_DEMO_MODE = "true"
 npm.cmd run dev
 ```
 
-Open `http://localhost:5173`. Keep the visible `DEMO: ON` indicator in the recording. Use the seeded camera, target, alert, sighting, and route fixtures; show a target such as `GJ01AB1234`, but state that the data is deterministic demo data.
+Open `http://localhost:5173`. Keep the visible `Sample data` indicator in the recording. Use the seeded camera, target, alert, sighting, and route fixtures; show a target such as `GJ01AB1234`, but state that the data is deterministic demo data.
 
 The fixture source is `09_dashboard/src/utils/demoData.ts`. Path A requires no
 database seed process; enabling `VITE_DEMO_MODE=true` selects the source-controlled

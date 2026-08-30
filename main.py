@@ -24,12 +24,43 @@ import sys
 import time
 import urllib.request
 import webbrowser
+from typing import TextIO
 
 
 ROOT = Path(__file__).resolve().parent
 DASHBOARD = ROOT / "09_dashboard"
 DEFAULT_API_URL = "http://127.0.0.1:8000"
 DEFAULT_UI_URL = "http://127.0.0.1:5173"
+LOG_DIR = ROOT / "logs"
+_LOG_HANDLES: list[TextIO] = []
+
+
+def load_project_environment() -> None:
+    """Load the repository .env before child processes are created."""
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(ROOT / ".env")
+    except Exception:
+        # The backend also loads dotenv when available; the launcher should
+        # remain usable for frontend-only review if the optional helper is absent.
+        pass
+
+
+def open_log(name: str) -> TextIO:
+    """Open an append-only launcher log under the repository logs directory."""
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    handle = open(LOG_DIR / name, "a", encoding="utf-8", buffering=1)
+    _LOG_HANDLES.append(handle)
+    return handle
+
+
+def close_logs() -> None:
+    for handle in _LOG_HANDLES:
+        try:
+            handle.close()
+        except Exception:
+            pass
+    _LOG_HANDLES.clear()
 
 
 def command(name: str) -> str:
@@ -48,6 +79,19 @@ def wait_for_port(host: str, port: int, timeout: float = 30.0) -> bool:
         except OSError:
             time.sleep(0.25)
     return False
+
+
+def assert_port_available(host: str, port: int, label: str) -> None:
+    """Fail early instead of accidentally attaching the UI to a stale service."""
+    try:
+        with socket.create_connection((host, port), timeout=0.25):
+            raise RuntimeError(
+                f"{label} port {port} is already in use. Stop the existing service or choose another port."
+            )
+    except RuntimeError:
+        raise
+    except OSError:
+        return
 
 
 def wait_for_http(url: str, timeout: float = 30.0) -> bool:
@@ -93,20 +137,39 @@ def bootstrap_demo_user(username: str, password: str) -> None:
     )
 
 
+def configure_frontend_origin(ui_port: int, *, preserve_existing: bool) -> None:
+    """Make the child API accept the exact origin served by Vite."""
+    required = [f"http://localhost:{ui_port}", f"http://127.0.0.1:{ui_port}"]
+    if preserve_existing:
+        origins = [
+            origin.strip()
+            for origin in os.getenv("SENTINEL_ALLOWED_ORIGINS", "").split(",")
+            if origin.strip()
+        ]
+        for origin in required:
+            if origin not in origins:
+                origins.append(origin)
+    else:
+        origins = required
+    os.environ["SENTINEL_ALLOWED_ORIGINS"] = ",".join(origins)
+
+
 def run_backend_child(args: argparse.Namespace) -> int:
     os.chdir(ROOT)
 
     if args.demo_backend:
         os.environ["SENTINEL_ENV"] = "development"
         os.environ["SENTINEL_PROCESS_ROLE"] = "api"
+        os.environ["SENTINEL_ENABLE_STREAM_INGESTION"] = "false"
         os.environ["SENTINEL_SECURITY_USE_SQLITE"] = "true"
-        os.environ["SENTINEL_ALLOWED_ORIGINS"] = (
-            "http://localhost:5173,http://127.0.0.1:5173"
-        )
+        configure_frontend_origin(args.ui_port, preserve_existing=False)
         bootstrap_demo_user(args.demo_user, args.demo_password)
     else:
         os.environ.setdefault("SENTINEL_ENV", "development")
-        os.environ.setdefault("SENTINEL_PROCESS_ROLE", "all")
+        os.environ["SENTINEL_PROCESS_ROLE"] = "all"
+        os.environ["SENTINEL_SECURITY_USE_SQLITE"] = "false"
+        os.environ.setdefault("SENTINEL_ENABLE_STREAM_INGESTION", "true")
+        configure_frontend_origin(args.ui_port, preserve_existing=True)
 
     import uvicorn
 
@@ -121,14 +184,17 @@ def run_backend_child(args: argparse.Namespace) -> int:
     return 0
 
 
-def start_frontend(*, demo: bool, ui_port: int) -> subprocess.Popen:
+def start_frontend(*, demo: bool, ui_port: int, api_port: int) -> subprocess.Popen:
     ensure_frontend_dependencies()
     env = os.environ.copy()
     if demo:
         env["VITE_DEMO_MODE"] = "true"
     else:
-        env.pop("VITE_DEMO_MODE", None)
-    env.setdefault("VITE_SENTINEL_API_URL", DEFAULT_API_URL)
+        env["VITE_DEMO_MODE"] = "false"
+    # These must follow the launcher CLI port, otherwise a custom API port
+    # silently leaves the browser pointed at a different backend.
+    env["VITE_SENTINEL_API_URL"] = f"http://127.0.0.1:{api_port}"
+    env["VITE_SENTINEL_WS_URL"] = f"ws://127.0.0.1:{api_port}"
 
     print(f"[frontend] Starting Vite on http://127.0.0.1:{ui_port}")
     return subprocess.Popen(
@@ -144,6 +210,8 @@ def start_frontend(*, demo: bool, ui_port: int) -> subprocess.Popen:
         ],
         cwd=DASHBOARD,
         env=env,
+        stdout=open_log("launcher.frontend.stdout.log"),
+        stderr=open_log("launcher.frontend.stderr.log"),
     )
 
 
@@ -154,6 +222,7 @@ def start_backend(
     password: str,
     host: str,
     api_port: int,
+    ui_port: int,
 ) -> subprocess.Popen:
     cmd = [
         sys.executable,
@@ -163,6 +232,8 @@ def start_backend(
         host,
         "--api-port",
         str(api_port),
+        "--ui-port",
+        str(ui_port),
     ]
     if demo:
         cmd.extend(
@@ -175,7 +246,13 @@ def start_backend(
             ]
         )
     print(f"[backend] Starting API on http://127.0.0.1:{api_port}")
-    return subprocess.Popen(cmd, cwd=ROOT, env=os.environ.copy())
+    return subprocess.Popen(
+        cmd,
+        cwd=ROOT,
+        env=os.environ.copy(),
+        stdout=open_log("launcher.backend.stdout.log"),
+        stderr=open_log("launcher.backend.stderr.log"),
+    )
 
 
 def maybe_start_postgres() -> None:
@@ -233,6 +310,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: list[str] | None = None) -> int:
+    load_project_environment()
     args = parse_args(argv)
 
     if args.backend_child:
@@ -247,8 +325,13 @@ def main(argv: list[str] | None = None) -> int:
     password = os.getenv("SENTINEL_DEMO_PASSWORD") or make_demo_password()
 
     try:
+        if not args.frontend_only:
+            assert_port_available("127.0.0.1", args.api_port, "API")
+        assert_port_available("127.0.0.1", args.ui_port, "dashboard")
+
         if args.full:
             maybe_start_postgres()
+            os.environ.setdefault("SENTINEL_ENABLE_STREAM_INGESTION", "true")
 
         if not args.frontend_only:
             backend = start_backend(
@@ -257,6 +340,7 @@ def main(argv: list[str] | None = None) -> int:
                 password=password,
                 host=args.host,
                 api_port=args.api_port,
+                ui_port=args.ui_port,
             )
             if not wait_for_http(
                 f"http://127.0.0.1:{args.api_port}/health",
@@ -264,7 +348,7 @@ def main(argv: list[str] | None = None) -> int:
             ):
                 raise RuntimeError("Backend did not become ready on time.")
 
-        frontend = start_frontend(demo=demo, ui_port=args.ui_port)
+        frontend = start_frontend(demo=demo, ui_port=args.ui_port, api_port=args.api_port)
         if not wait_for_port("127.0.0.1", args.ui_port, timeout=35.0):
             raise RuntimeError("Frontend did not become ready on time.")
 
@@ -311,6 +395,7 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         terminate(frontend)
         terminate(backend)
+        close_logs()
 
 
 if __name__ == "__main__":

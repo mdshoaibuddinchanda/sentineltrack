@@ -7,7 +7,7 @@
 **Observe. Correlate. Explain.**
 
 <p>
-  <a href="https://github.com/mdshoaibuddinchanda/sentineltrack/actions/workflows/ci.yml"><img src="https://github.com/mdshoaibuddinchanda/sentineltrack/actions/workflows/ci.yml/badge.svg?branch=final-repository-polish" alt="CI status"></a>
+  <a href="https://github.com/mdshoaibuddinchanda/sentineltrack/actions/workflows/ci.yml"><img src="https://github.com/mdshoaibuddinchanda/sentineltrack/actions/workflows/ci.yml/badge.svg?branch=launcher-visual-review" alt="CI status"></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12"></a>
   <a href="09_dashboard/"><img src="https://img.shields.io/badge/UI-React%20%2B%20TypeScript-61DAFB?logo=react&logoColor=111827" alt="React and TypeScript"></a>
   <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI"></a>
@@ -120,6 +120,8 @@ The identity hierarchy is deliberate: strong ANPR wins; partial plates may recei
 10_security/         auth, authorization, audit, CSRF
 11_scale_deployment/ scheduler, capacity, health, deployment
 12_submission/       evaluator-facing package and diagrams
+main.py              one-command Windows visual-review/full launcher
+run.bat              Conda-aware Windows launcher wrapper
 configs/             live runtime configuration
 experiments/archive/ historical experiment inputs and reproducibility scripts
 docs/                architecture, operations, security, release docs
@@ -185,6 +187,21 @@ Start local PostgreSQL/PostGIS with `docker compose up -d postgres` when using t
 
 ## Demo and services
 
+For the quickest visual review on Windows, activate Conda `PY312`, switch to
+the launcher branch, and run the root launcher:
+
+```bat
+conda activate PY312
+git switch launcher-visual-review
+run.bat
+```
+
+The default launcher starts a temporary authenticated API and deterministic
+dashboard fixtures, prints a fresh demo username/password, and opens the
+browser. Use `run.bat --full` for the configured database, models, and live
+camera-processing path. The launcher keeps its child-process logs under
+`logs/` and refuses to attach to an already-used API or dashboard port.
+
 ```bash
 # Native diagnostics and launch instructions
 scripts\run_demo.ps1       # Windows PowerShell
@@ -224,8 +241,8 @@ $env:VITE_DEMO_MODE = "true"
 npm run dev -- --host 127.0.0.1 --port 5173
 ```
 
-The header visibly shows `DEMO: ON`; simulated sightings and alerts must not be
-presented as live departmental data.
+The header visibly shows `Sample data`; simulated sightings and alerts must not
+be presented as live departmental data.
 
 ## Testing and validation
 

@@ -11,6 +11,10 @@ echo.
 where conda >nul 2>&1
 if %ERRORLEVEL%==0 (
     call conda activate PY312 >nul 2>&1
+) else if exist "%USERPROFILE%\miniconda3\condabin\conda.bat" (
+    call "%USERPROFILE%\miniconda3\condabin\conda.bat" activate PY312 >nul 2>&1
+) else if exist "%USERPROFILE%\anaconda3\condabin\conda.bat" (
+    call "%USERPROFILE%\anaconda3\condabin\conda.bat" activate PY312 >nul 2>&1
 )
 
 where python >nul 2>&1
@@ -20,6 +24,10 @@ if not %ERRORLEVEL%==0 (
     pause
     exit /b 1
 )
+
+echo Using Python:
+python -c "import sys; print(sys.executable)"
+echo.
 
 python main.py %*
 set EXIT_CODE=%ERRORLEVEL%

@@ -82,7 +82,7 @@ P11 implements bounded queues, stale-frame dropping, fair scheduling, adaptive b
 
 ## 19. Demo Procedure
 
-[`DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md) supplies deterministic fixture, native, container, and official-feed procedures. [`DEMO_SCRIPT_5_MIN.md`](DEMO_SCRIPT_5_MIN.md) gives the timed six-act story: system online, register target, observe, alert, investigate, and explain the ReID fallback. Fixture screens remain visibly labeled `DEMO: ON`.
+[`DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md) supplies deterministic fixture, native, container, and official-feed procedures. [`DEMO_SCRIPT_5_MIN.md`](DEMO_SCRIPT_5_MIN.md) gives the timed six-act story: system online, register target, observe, alert, investigate, and explain the ReID fallback. Fixture screens remain visibly labeled `Sample data`.
 
 ## 20. Limitations
 
@@ -95,4 +95,3 @@ Future enhancements are deliberately outside P12: domain-specific OCR fine-tunin
 ## 22. Reproducibility / Evidence Index
 
 The exact frozen engineering commit is `1f48aad81a35553ff1e80866a17b1784313efa1b`; the final P12 commit and CI run are recorded in the release handoff. The Conda environment is `PY312` with Python 3.12.12. Model paths and hashes are in [`MODEL_EVIDENCE.md`](MODEL_EVIDENCE.md), the claim classifications and source files are in [`EVIDENCE_INVENTORY.md`](EVIDENCE_INVENTORY.md), and startup/validation commands are in [`DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md) and [`SUBMISSION_CHECKLIST.md`](SUBMISSION_CHECKLIST.md).
-

@@ -1,6 +1,6 @@
 # Five-Minute Demonstration Script
 
-Keep the `DEMO: ON` label visible when using deterministic fixtures. Replace the fixture narration with live-feed facts for the official run.
+Keep the `Sample data` label visible when using deterministic fixtures. Replace the fixture narration with live-feed facts for the official run.
 
 | Time | Screen action | Narration |
 |---|---|---|
@@ -15,4 +15,3 @@ Keep the `DEMO: ON` label visible when using deterministic fixtures. Replace the
 ## Claims to avoid
 
 Do not say “100% accuracy,” “appearance proves identity,” “80,000 cameras are already running,” “road routing,” “government feed” when showing fixtures, or “production HA tested” unless the corresponding evidence is actually on screen.
-
