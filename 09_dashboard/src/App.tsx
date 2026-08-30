@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { useAuth } from "./context/AuthContext";
 import { LoginPage } from "./pages/LoginPage";
@@ -32,6 +32,7 @@ import { AlertOctagon } from "lucide-react";
 
 function DashboardApp() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated } = useAuth();
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -192,7 +193,7 @@ function DashboardApp() {
 
                 {/* Main Content View Container with Router */}
                 <main className="app-main flex-1 p-4 overflow-y-auto">
-                  <ErrorBoundary fallbackTitle="Page Display Error">
+                  <ErrorBoundary key={`${location.pathname}${location.search}`} fallbackTitle="Page Display Error">
                     <Routes>
                       <Route path="/" element={<Navigate to="/operations" replace />} />
                       <Route

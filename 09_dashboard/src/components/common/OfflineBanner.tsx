@@ -53,16 +53,18 @@ export function OfflineBanner({ status, error, onRetry, degradedDetails, liveInp
             <strong>{cameraInputUnavailable ? "Camera input not connected" : "Some services need attention"}</strong>
             <span>
             {cameraInputUnavailable
-              ? "The application is connected, but no camera source is currently delivering frames."
+              ? "The application is connected, but no camera source is currently delivering frames. This page checks again automatically."
               : failedModules.length > 0
               ? `${failedModules.join(", ")} unavailable. Core information remains available where possible.`
               : "The system is available with limited services."}
           </span>
         </div>
       </div>
-      <button type="button" onClick={onRetry} className="connection-banner__button">
-        <RefreshCw size={16} /> Check again
-      </button>
+      {!cameraInputUnavailable && (
+        <button type="button" onClick={onRetry} className="connection-banner__button">
+          <RefreshCw size={16} /> Check again
+        </button>
+      )}
     </div>
   );
 }
