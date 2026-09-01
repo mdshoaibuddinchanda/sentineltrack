@@ -201,6 +201,21 @@ running: decoded frames, sampled frames, active tracks, model readiness,
 inference counters, reconnects, and the latest error. If decoded frames are
 zero, the model cannot be processing that source.
 
+### Camera overview and continuous video
+
+Open **Cameras** after login. The default **Overview** shows every registered
+camera in one screen with its latest authenticated worker snapshot, online
+state, measured FPS, decoded-frame count, freshness, and connection error. The
+overview refreshes snapshots every five seconds and deliberately does not open
+30 simultaneous video relays. Select any tile to switch automatically to the
+camera detail view, where the authenticated continuous MJPEG relay, worker
+telemetry, coordinates, and nearby-camera information are available. The
+**List** button returns to the table view.
+
+The overview is a health-and-operations screen, not fabricated playback. A
+source marked `ONLINE` means the worker has decoded a current frame; a missing
+snapshot or stale counter is shown as a real dependency state.
+
 ### Add the authorized target
 
 An empty watchlist is intentional after the local demo-data cleanup. Add only

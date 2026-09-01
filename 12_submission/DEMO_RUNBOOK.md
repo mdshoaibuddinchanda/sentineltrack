@@ -102,7 +102,7 @@ permitted camera sources remain local provisioning inputs.
 
 ## Six-act walkthrough
 
-1. **Catalogue** — show cameras, department/location metadata, and stream health.
+1. **Catalogue** — open **Cameras → Overview** to show every permitted camera in one screen; point out the latest authenticated snapshot, online state, FPS, decoded-frame count, freshness, and any real connection error. Select one tile to open its continuous live relay and full telemetry.
 2. **Observe** — show a sighting with camera, timestamp, stream epoch, vehicle/plate evidence, and model provenance.
 3. **Identify** — search the target/watchlist and show normalized plate matching.
 4. **Corroborate** — show chronological sightings and the P7 lower-bound feasibility explanation.

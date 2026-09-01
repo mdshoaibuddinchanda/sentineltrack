@@ -9,6 +9,7 @@ import { Camera } from "../types/api";
 vi.mock("../api/cameras", () => ({
   searchNearbyCameras: vi.fn().mockResolvedValue([]),
   getCameraLiveStreamUrl: vi.fn((cameraId: string) => `/live/${cameraId}`),
+  getCameraPreviewUrl: vi.fn((cameraId: string) => `/preview/${cameraId}`),
 }));
 
 describe("Camera Deep Linking & Asynchronous Loading Tests", () => {
@@ -45,6 +46,21 @@ describe("Camera Deep Linking & Asynchronous Loading Tests", () => {
     },
   ];
 
+  it("shows every camera in the default overview", async () => {
+    render(
+      <MemoryRouter initialEntries={["/cameras"]}>
+        <Routes>
+          <Route path="/cameras" element={<CamerasPage cameras={mockCameras} />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("All cameras (2)")).toBeDefined();
+      expect(screen.getAllByRole("button", { name: /Open camera/ })).toHaveLength(2);
+    });
+  });
+
   it("selects requested camera from route URL parameter", async () => {
     render(
       <MemoryRouter initialEntries={["/cameras/cam_vastrapur_01"]}>
@@ -58,7 +74,7 @@ describe("Camera Deep Linking & Asynchronous Loading Tests", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Vastrapur Lake East")).toBeDefined();
+      expect(screen.getAllByText("Vastrapur Lake East").length).toBeGreaterThan(0);
       expect(screen.getAllByText("Urban Security").length).toBeGreaterThan(0);
     });
   });
@@ -91,7 +107,7 @@ describe("Camera Deep Linking & Asynchronous Loading Tests", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Vastrapur Lake East")).toBeDefined();
+      expect(screen.getAllByText("Vastrapur Lake East").length).toBeGreaterThan(0);
       expect(screen.getAllByText("Urban Security").length).toBeGreaterThan(0);
     });
   });
