@@ -1,6 +1,8 @@
 import time
 import importlib
-from datetime import datetime
+import csv
+import io
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 try:
@@ -74,6 +76,7 @@ class RouteService:
             RouteSightingResponse(
                 sighting_id=s.sighting_id,
                 camera_id=s.camera_id,
+                location_label=s.location_label,
                 event_time_utc=s.event_time_utc,
                 time_source=s.time_source.value if hasattr(s.time_source, "value") else str(s.time_source),
                 time_quality=s.time_quality.value if hasattr(s.time_quality, "value") else str(s.time_quality),
@@ -165,3 +168,102 @@ class RouteService:
             reasons=traj.reasons,
             warnings=traj.warnings
         )
+
+    @staticmethod
+    def _csv_cell(value: Any) -> Any:
+        """Prevent spreadsheet formula execution in operator exports."""
+        if isinstance(value, str) and value.lstrip(" \t\r\n").startswith(("=", "+", "-", "@")):
+            return "'" + value
+        return value
+
+    def build_route_csv_report(
+        self,
+        registration: str,
+        start_time_utc: Optional[datetime] = None,
+        end_time_utc: Optional[datetime] = None,
+        min_match_score: float = 0.60,
+    ) -> str:
+        """Build a timestamped, provenance-preserving route report as CSV."""
+        route = self.build_target_trajectory(
+            registration=registration,
+            start_time_utc=start_time_utc,
+            end_time_utc=end_time_utc,
+            min_match_score=min_match_score,
+            persist=False,
+        )
+        output = io.StringIO(newline="")
+        writer = csv.writer(output, lineterminator="\n")
+
+        metadata = (
+            ("report_type", "SentinelTrack vehicle movement report"),
+            ("generated_at_utc", datetime.now(timezone.utc).isoformat()),
+            ("registration", route.registration),
+            ("trajectory_status", route.status),
+            ("trajectory_confidence", route.trajectory_confidence),
+            ("first_seen_utc", route.start_time_utc.isoformat() if route.start_time_utc else ""),
+            ("last_seen_utc", route.end_time_utc.isoformat() if route.end_time_utc else ""),
+            ("sighting_count", route.sighting_count),
+            ("camera_count", route.camera_count),
+            ("lower_bound_distance_m", route.total_lower_bound_distance_m),
+            ("minimum_average_speed_kmh", route.minimum_average_speed_kmh),
+            ("reasons", " | ".join(route.reasons)),
+            ("warnings", " | ".join(route.warnings)),
+            ("disclaimer", route.disclaimer),
+        )
+        for key, value in metadata:
+            writer.writerow((key, self._csv_cell(value)))
+
+        writer.writerow(())
+        writer.writerow((
+            "sighting_sequence",
+            "sighting_id",
+            "camera_id",
+            "location_label",
+            "event_time_utc",
+            "time_source",
+            "time_quality",
+            "latitude",
+            "longitude",
+            "location_quality",
+            "match_score",
+        ))
+        for index, sighting in enumerate(route.sightings, start=1):
+            writer.writerow(tuple(self._csv_cell(value) for value in (
+                index,
+                sighting.sighting_id,
+                sighting.camera_id,
+                sighting.location_label or "",
+                sighting.event_time_utc.isoformat(),
+                sighting.time_source,
+                sighting.time_quality,
+                sighting.latitude if sighting.latitude is not None else "",
+                sighting.longitude if sighting.longitude is not None else "",
+                sighting.location_quality,
+                sighting.match_score,
+            )))
+
+        writer.writerow(())
+        writer.writerow((
+            "segment_sequence",
+            "from_camera_id",
+            "to_camera_id",
+            "distance_lower_bound_m",
+            "delta_seconds",
+            "minimum_required_speed_kmh",
+            "feasibility",
+            "segment_score",
+            "warnings",
+        ))
+        for segment in route.segments:
+            writer.writerow(tuple(self._csv_cell(value) for value in (
+                segment.sequence_index,
+                segment.from_camera_id,
+                segment.to_camera_id,
+                segment.distance_lower_bound_m,
+                segment.delta_seconds,
+                segment.minimum_required_speed_kmh,
+                segment.feasibility,
+                segment.segment_score,
+                " | ".join(segment.warnings),
+            )))
+        return output.getvalue()

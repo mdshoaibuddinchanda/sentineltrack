@@ -120,7 +120,7 @@ export function AlertsPage({
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-cyan-400" />
             <span>
-              Filtering by Alert ID: <strong className="text-white">{routeAlertId}</strong>
+              Filtering by Alert ID: <strong className="text-slate-100">{routeAlertId}</strong>
             </span>
             {loadingDirectAlert && (
               <span className="flex items-center gap-1 text-cyan-300 text-[11px] ml-2">

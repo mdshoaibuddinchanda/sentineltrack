@@ -55,7 +55,7 @@ describe("AuditPage Frontend Tests", () => {
     render(<AuditPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("SECURITY AUDIT TRAIL")).toBeDefined();
+      expect(screen.getByText(/security audit trail/i)).toBeDefined();
       expect(screen.getByText("admin_chief")).toBeDefined();
       expect(screen.getByText("operator_ahmedabad")).toBeDefined();
       expect(screen.getAllByText("SUCCESS").length).toBeGreaterThan(0);

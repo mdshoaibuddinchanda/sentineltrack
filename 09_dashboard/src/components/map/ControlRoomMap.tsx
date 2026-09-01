@@ -151,7 +151,7 @@ export function ControlRoomMap({
               <Popup>
                 <div className="p-2 space-y-1.5 min-w-[200px]">
                   <div className="text-xs font-bold text-cyan-300 font-mono">TARGET SIGHTING</div>
-                  <div className="text-sm font-bold text-white font-mono">
+                  <div className="text-sm font-bold text-slate-100 font-mono">
                     {maskRegistration(s.registration_candidate, privacyMode)}
                   </div>
                   <div className="text-[11px] text-slate-300">Camera: {s.camera_id}</div>

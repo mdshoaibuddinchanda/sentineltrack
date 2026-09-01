@@ -120,6 +120,32 @@ class TestStreamSupervisor:
         worker.last_frame_time = time.time() - 10.0
         assert supervisor.get_live_snapshot(worker.camera_id) is None
 
+    def test_dispatch_uses_callback_or_scheduler_exactly_once(self):
+        class Scheduler:
+            def __init__(self):
+                self.received = []
+
+            def enqueue_frame(self, packet):
+                self.received.append(packet)
+
+        scheduler = Scheduler()
+        callback_packets = []
+        supervisor = StreamSupervisor(
+            scheduler=scheduler,
+            on_frame_callback=callback_packets.append,
+        )
+        packet = FramePacket(
+            camera_id="cam_once",
+            pts_ms=1.0,
+            frame=np.zeros((4, 4, 3), dtype=np.uint8),
+            stream_epoch=1,
+        )
+
+        supervisor._dispatch_frame(packet)
+
+        assert callback_packets == [packet]
+        assert scheduler.received == []
+
     def test_supervisor_shard_filtering(self):
         # Supervisor configured for shard 0 out of 2 shards
         cfg = ScaleDeploymentConfig(shard_count=2, shard_index=0)

@@ -28,6 +28,11 @@
 |---|---|---|---|---|
 | GET | /api/v1/cameras | camera:read | No | No |
 | GET | /api/v1/cameras/{id} | camera:read | No | No |
+| GET | /api/v1/cameras/nearby | camera:read | No | No |
+| GET | /api/v1/cameras/{id}/health | camera:read | No | No |
+| GET | /api/v1/cameras/{id}/nearby | camera:read | No | No |
+| GET | /api/v1/cameras/{id}/preview | camera:read | No | No |
+| GET | /api/v1/cameras/{id}/live | camera:read | No | Continuous MJPEG relay; upstream URL/session never exposed |
 | GET | /api/v1/targets | target:read | No | No |
 | POST | /api/v1/targets | target:create | Yes | Yes (fail_closed) |
 | GET | /api/v1/targets/{id} | target:read | No | No |
@@ -39,6 +44,7 @@
 | GET | /api/v1/routes/{reg} | route:read | No | Yes |
 | GET | /api/v1/routes/{reg}/geojson | route:read | No | Yes |
 | GET | /api/v1/routes/{reg}/summary | route:read | No | Yes |
+| GET | /api/v1/routes/{reg}/report.csv | route:read | No | Yes (`EXPORT_ROUTE_REPORT`) |
 
 ## WebSocket Endpoints
 | Path | Auth | Permission Required |
@@ -47,7 +53,11 @@
 | /ws/alerts | Session cookie | alert:read |
 | /ws/sightings | Session cookie | sighting:read |
 
-## Health Endpoint (Unauthenticated)
-| Method | Path | Auth | Notes |
+## Health and telemetry endpoints
+
+| Method | Path | Permission | Notes |
 |---|---|---|---|
-| GET | /api/v1/health | No | Liveness check only; no sensitive data |
+| GET | /health | Public | Liveness and build reference only |
+| GET | /ready | system:read | Database, models, and secret-free feed diagnostics |
+| GET | /metrics | metrics:read | Operational counters |
+| GET | /metrics/prometheus | metrics:read | Prometheus text exposition |

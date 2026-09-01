@@ -6,6 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 import json
+import os
 import numpy as np
 import cv2
 from unittest.mock import patch, MagicMock
@@ -194,6 +195,28 @@ def test_rtsp_reader_uses_bounded_capture_timeouts():
         cv2.CAP_PROP_READ_TIMEOUT_MSEC,
         4500,
     ]
+
+
+def test_hls_reader_passes_authorized_cookie_only_during_capture_open():
+    reader = RTSPReader(
+        url="https://cctv.corp8.cloud/live/stream/1/index.m3u8",
+        camera_id="cam_cookie",
+        http_cookie_provider=lambda _url: "feed_session=opaque; path=/; domain=cctv.corp8.cloud;",
+    )
+    capture = MagicMock()
+    capture.isOpened.return_value = True
+    seen_options = []
+
+    def open_capture(*_args, **_kwargs):
+        seen_options.append(os.environ.get("OPENCV_FFMPEG_CAPTURE_OPTIONS", ""))
+        return capture
+
+    previous = os.environ.get("OPENCV_FFMPEG_CAPTURE_OPTIONS")
+    with patch("cv2.VideoCapture", side_effect=open_capture):
+        assert reader.connect() is True
+
+    assert "cookies;feed_session=opaque" in seen_options[0]
+    assert os.environ.get("OPENCV_FFMPEG_CAPTURE_OPTIONS") == previous
 
 
 def test_rtsp_reader_runtime_failover_to_hls():

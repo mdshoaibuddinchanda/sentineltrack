@@ -51,6 +51,7 @@ ROUTE_POLICY = {
     ("GET", "/api/v1/cameras/{camera_id}"): Permission.CAMERA_READ,
     ("GET", "/api/v1/cameras/{camera_id}/health"): Permission.CAMERA_READ,
     ("GET", "/api/v1/cameras/{camera_id}/preview"): Permission.CAMERA_READ,
+    ("GET", "/api/v1/cameras/{camera_id}/live"): Permission.CAMERA_READ,
     ("GET", "/api/v1/cameras/{camera_id}/nearby"): Permission.CAMERA_READ,
 
     ("GET", "/api/v1/sightings"): Permission.SIGHTING_READ,
@@ -69,6 +70,7 @@ ROUTE_POLICY = {
     ("GET", "/api/v1/routes/{registration}"): Permission.ROUTE_READ,
     ("GET", "/api/v1/routes/{registration}/geojson"): Permission.ROUTE_READ,
     ("GET", "/api/v1/routes/{registration}/summary"): Permission.ROUTE_READ,
+    ("GET", "/api/v1/routes/{registration}/report.csv"): Permission.ROUTE_READ,
 
     ("GET", "/api/v1/audit"): Permission.AUDIT_READ,
 

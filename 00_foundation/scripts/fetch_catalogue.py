@@ -50,7 +50,7 @@ def main():
         )
 
     # 3. Convert JSON into CameraRecord objects
-    cameras = parse_catalogue(payload)
+    cameras = parse_catalogue(payload, base_host=client.effective_host)
 
     print(
         f"Discovered {len(cameras)} cameras"

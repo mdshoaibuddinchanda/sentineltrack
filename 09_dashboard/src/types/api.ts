@@ -1,11 +1,11 @@
 export type TargetPriority = "CRITICAL" | "HIGH" | "NORMAL" | "LOW";
-export type MatchClass = "EXACT" | "HIGH_PROBABILITY" | "PROBABLE" | "POSSIBLE";
+export type MatchClass = "EXACT" | "HIGH_PROBABILITY" | "PROBABLE" | "POSSIBLE" | "REJECTED";
 export type AlertSeverity = "CRITICAL" | "HIGH" | "NORMAL" | "LOW";
 export type FeasibilityClass = "FEASIBLE" | "QUESTIONABLE" | "IMPOSSIBLE" | "UNKNOWN";
-export type TrajectoryStatus = "PLAUSIBLE_SEQUENCE" | "AMBIGUOUS" | "CONFLICTING_SIGHTINGS" | "SINGLE_SIGHTING" | "NO_ROUTE";
+export type TrajectoryStatus = "CONFIRMED_SEQUENCE" | "PLAUSIBLE_SEQUENCE" | "AMBIGUOUS" | "CONFLICTING_SIGHTINGS" | "SINGLE_SIGHTING" | "INSUFFICIENT_EVIDENCE" | "NO_ROUTE";
 export type TimeQuality = "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
 export type LocationQuality = "VERIFIED" | "APPROXIMATE" | "UNKNOWN";
-export type CameraStreamStatus = "ONLINE" | "DEGRADED" | "OFFLINE" | "UNKNOWN" | "NOT_CONFIGURED";
+export type CameraStreamStatus = "ONLINE" | "DEGRADED" | "OFFLINE" | "UNKNOWN" | "NOT_CONFIGURED" | "AUTH_REQUIRED";
 
 export interface Camera {
   camera_id: string;
@@ -24,6 +24,8 @@ export interface Camera {
   frames_sampled?: number;
   reconnects?: number;
   last_frame_s_ago?: number | null;
+  connection_issue_code?: string | null;
+  connection_issue_message?: string | null;
   metadata?: Record<string, any>;
 }
 
@@ -44,6 +46,8 @@ export interface CameraHealth {
   frames_sampled?: number;
   reconnects?: number;
   last_frame_s_ago?: number | null;
+  connection_issue_code?: string | null;
+  connection_issue_message?: string | null;
 }
 
 export interface Target {
@@ -165,6 +169,7 @@ export interface RouteSegment {
 export interface RouteSighting {
   sighting_id: string;
   camera_id: string;
+  location_label?: string | null;
   event_time_utc: string;
   time_source: string;
   time_quality: TimeQuality;
@@ -251,16 +256,16 @@ export interface ReadinessResponse {
 
 export interface MetricsSnapshot {
   total_requests: number;
-  active_ws_clients: number;
+  active_websocket_clients: number;
   active_camera_workers: number;
   total_frames_ingested: number;
   total_frames_dropped: number;
   total_vehicle_detections: number;
   total_plate_inferences: number;
-  total_ocr_inferences: number;
+  total_ocr_consensus: number;
   total_sightings_persisted: number;
   total_alerts_generated: number;
-  total_routes_generated: number;
+  total_routes_computed: number;
   uptime_seconds: number;
 }
 

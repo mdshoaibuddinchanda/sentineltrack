@@ -16,6 +16,16 @@ LocationQuality = models_mod.LocationQuality
 PostgresCameraRepository = cam_repo_mod.PostgresCameraRepository
 
 
+@pytest.fixture(autouse=True)
+def cleanup_camera_test_rows():
+    yield
+    db = importlib.import_module("00_foundation.registry.database")
+    with db.get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM camera_health_events WHERE camera_id LIKE 'test_cam_%';")
+            cur.execute("DELETE FROM cameras WHERE camera_id LIKE 'test_cam_%';")
+
+
 def test_list_cameras_endpoint():
     client = TestClient(app)
     response = client.get("/api/v1/cameras?limit=10")

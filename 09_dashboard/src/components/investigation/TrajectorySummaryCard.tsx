@@ -15,6 +15,8 @@ interface TrajectorySummaryCardProps {
 export function TrajectorySummaryCard({ route, summary: _summary, privacyMode = false }: TrajectorySummaryCardProps) {
   const getStatusBadge = () => {
     switch (route.status) {
+      case "CONFIRMED_SEQUENCE":
+        return <Badge variant="success">CONFIRMED SEQUENCE</Badge>;
       case "PLAUSIBLE_SEQUENCE":
         return <Badge variant="success">PLAUSIBLE TRAJECTORY</Badge>;
       case "AMBIGUOUS":
@@ -23,6 +25,8 @@ export function TrajectorySummaryCard({ route, summary: _summary, privacyMode = 
         return <Badge variant="danger">CONFLICTING SIGHTINGS</Badge>;
       case "SINGLE_SIGHTING":
         return <Badge variant="neutral">SINGLE SIGHTING ONLY</Badge>;
+      case "INSUFFICIENT_EVIDENCE":
+        return <Badge variant="warning">INSUFFICIENT EVIDENCE</Badge>;
       case "NO_ROUTE":
       default:
         return <Badge variant="neutral">NO ROUTE INFERRED</Badge>;
@@ -34,7 +38,7 @@ export function TrajectorySummaryCard({ route, summary: _summary, privacyMode = 
       <div className="flex items-start justify-between gap-4 flex-wrap pb-3 border-b border-police-750/80">
         <div>
           <div className="text-xs font-mono text-slate-400">INVESTIGATION TARGET</div>
-          <div className="text-2xl font-bold font-mono text-white tracking-wider">
+          <div className="text-2xl font-bold font-mono text-slate-100 tracking-wider">
             {maskRegistration(route.registration, privacyMode)}
           </div>
         </div>

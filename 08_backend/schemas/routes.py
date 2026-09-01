@@ -21,6 +21,7 @@ class RouteSegmentResponse(BaseModel):
 class RouteSightingResponse(BaseModel):
     sighting_id: str
     camera_id: str
+    location_label: Optional[str] = None
     event_time_utc: datetime
     time_source: str
     time_quality: str

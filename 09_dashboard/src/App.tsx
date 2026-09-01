@@ -50,12 +50,14 @@ function DashboardApp() {
   const { targets, create: createTarget, update: updateTarget, disable: disableTarget, refresh: refreshTargets } = useTargets(undefined, isAuthenticated);
   const { alerts, total: totalAlerts, unackCount, acknowledge: acknowledgeAlert, prependLiveAlert, refresh: refreshAlerts } = useAlerts(undefined, isAuthenticated);
   const streamStatus = readiness?.details?.stream_ingestion as
-    | { total_frames_decoded?: number }
+    | { total_frames_decoded?: number; message?: string; source_diagnostics?: { message?: string } }
     | undefined;
   const liveFramesDecoded = streamStatus?.total_frames_decoded;
-  const noCurrentLiveInput = liveFramesDecoded === 0;
-  const activeAlerts = noCurrentLiveInput ? [] : alerts;
-  const activeUnackCount = noCurrentLiveInput ? 0 : unackCount;
+  // Alerts are persisted evidence. A later camera outage must not erase them
+  // from the operator view; database cleanup, not UI suppression, separates
+  // test/demo records from real history.
+  const activeAlerts = alerts;
+  const activeUnackCount = unackCount;
 
   useEffect(() => {
     document.documentElement.dataset.theme = darkMode ? "dark" : "light";
@@ -168,6 +170,7 @@ function DashboardApp() {
                   onRetry={refreshSystem}
                   degradedDetails={readiness?.components}
                   liveInputAvailable={liveFramesDecoded === undefined ? undefined : liveFramesDecoded > 0}
+                  liveInputMessage={streamStatus?.message || streamStatus?.source_diagnostics?.message}
                 />
 
                 {/* Primary Navigation */}

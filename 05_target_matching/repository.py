@@ -551,8 +551,13 @@ class PostgresTargetMatchingRepository(BaseTargetMatchingRepository):
                 (sighting_id, camera_id, stream_epoch, track_id, first_pts_ms, last_pts_ms, registration_candidate, confidence, match_score, match_class, target_id, created_at, raw_evidence, event_time_utc, event_time_source, event_time_quality, ingest_time_utc)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (sighting_id) DO UPDATE SET
+                    first_pts_ms = LEAST(vehicle_sightings.first_pts_ms, EXCLUDED.first_pts_ms),
+                    last_pts_ms = GREATEST(vehicle_sightings.last_pts_ms, EXCLUDED.last_pts_ms),
+                    registration_candidate = EXCLUDED.registration_candidate,
+                    confidence = EXCLUDED.confidence,
                     match_score = EXCLUDED.match_score,
                     match_class = EXCLUDED.match_class,
+                    target_id = EXCLUDED.target_id,
                     raw_evidence = EXCLUDED.raw_evidence,
                     event_time_utc = EXCLUDED.event_time_utc,
                     event_time_source = EXCLUDED.event_time_source,

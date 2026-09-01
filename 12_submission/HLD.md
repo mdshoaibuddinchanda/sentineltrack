@@ -18,7 +18,9 @@ metadata, events, alerts and selected evidence.
 ## 2. Inputs and integration contracts
 
 The official integration guide defines the catalogue as the contract. The
-platform should start with:
+current organizer deployment redirects the catalogue and HLS resources to a
+restricted feed portal, so the platform starts by creating an authorized
+session and then requesting:
 
 ```text
 GET /api/ingest
@@ -33,7 +35,10 @@ properties and available endpoints. The current supported stream patterns are:
 | Browser preview | `http://<host>:8889/stream/<id>/whep` |
 | Dashboard/mobile/restricted networks | `http://<host>/live/stream/<id>/index.m3u8` |
 
-The resolver prefers RTSP over TCP for inference, uses HLS as a fallback,
+The organizer replay adapter prefers authenticated HLS for inference and keeps
+the advertised RTSP URL as a bounded fallback. Generic integrations may retain
+RTSP-first ordering. The resolver passes the protected session directly to
+FFmpeg (never in a URL or browser),
 preserves source PTS, and carries `camera_id`, `stream_epoch`, ingest time and
 best-estimate UTC event time in each `FramePacket`. Reconnect backoff is bounded
 from approximately 2 to 30 seconds in the operational design. A stream
@@ -114,11 +119,11 @@ The existing API surface includes:
 | Area | Existing interface |
 |---|---|
 | Health/telemetry | `GET /health`, `GET /ready`, `GET /metrics` |
-| Cameras | `GET /api/v1/cameras`, detail, health and nearby search |
+| Cameras | `GET /api/v1/cameras`, detail, health, nearby search, and authenticated continuous `/live` relay |
 | Targets | `POST/GET /api/v1/targets`, `PATCH`, `DELETE` |
 | Sightings | `GET /api/v1/sightings`, `GET /api/v1/vehicles/{registration}/history` |
 | Alerts | `GET /api/v1/alerts`, detail and `POST /api/v1/alerts/{id}/ack` |
-| Routes | `GET /api/v1/routes/{registration}`, `/geojson`, `/summary` |
+| Routes | `GET /api/v1/routes/{registration}`, `/geojson`, `/summary`, `/report.csv` |
 | Real time | `WS /ws/events`, `WS /ws/alerts`, `WS /ws/sightings` |
 
 All protected mutations follow P10 authentication, CSRF, permission and audit
@@ -141,6 +146,9 @@ and a missing ReID model degrades to the existing ANPR path.
 ## 6. Failure and recovery boundaries
 
 - A camera disconnect triggers bounded reconnect backoff and health state.
+- Missing organizer access reports `AUTH_REQUIRED`; it does not launch 30
+  endless connection loops or label registry rows online.
+- Catalogue DNS failure is reported separately from model/application health.
 - A stale queue frame is dropped rather than allowing unbounded latency.
 - A stream epoch reset clears camera-local tracker and ReID identity state.
 - A worker can be restarted and reassigned cameras by the supervisor/shard

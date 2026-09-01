@@ -51,6 +51,7 @@ def export_trajectory_to_geojson(
                     'sequence_index': idx + 1,
                     'sighting_id': s.sighting_id,
                     'camera_id': s.camera_id,
+                    'location_label': s.location_label,
                     'target_registration': display_reg,
                     'event_time_utc': ev_time_str,
                     'match_score': round(s.match_score, 4),

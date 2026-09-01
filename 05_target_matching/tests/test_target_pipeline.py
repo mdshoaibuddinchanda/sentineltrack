@@ -64,3 +64,38 @@ def test_pipeline_ignores_empty_ocr():
     assert ranked == []
     assert alerts == []
     assert sighting is None
+
+
+def test_pipeline_rejects_signage_and_deduplicates_track_sightings():
+    repository_mod = importlib.import_module('05_target_matching.repository')
+    repository = repository_mod.SQLiteTargetMatchingRepository()
+    pipeline = TargetMatchingPipeline(repository=repository)
+
+    signage = TrackOCRResult(
+        camera_id='cam-1', track_id=10, stream_epoch=1,
+        first_pts_ms=0.0, last_pts_ms=500.0,
+        best_text='GSRTC', confidence=0.95, support_count=3,
+        total_hypotheses=3, status='RESOLVED'
+    )
+    assert pipeline.process_track_ocr_result(signage) == ([], [], None)
+
+    plate = TrackOCRResult(
+        camera_id='cam-1', track_id=11, stream_epoch=1,
+        first_pts_ms=0.0, last_pts_ms=500.0,
+        best_text='GJ01AB1234', confidence=0.95, support_count=3,
+        total_hypotheses=3, status='RESOLVED'
+    )
+    first = pipeline.process_track_ocr_result(plate)[2]
+    plate.last_pts_ms = 900.0
+    second = pipeline.process_track_ocr_result(plate)[2]
+
+    assert first is not None and second is not None
+    assert first.sighting_id == second.sighting_id
+    rows = repository.query_sightings(limit=10)
+    assert len(rows) == 1
+
+    restarted_pipeline = TargetMatchingPipeline(repository=repository)
+    restarted = restarted_pipeline.process_track_ocr_result(plate)[2]
+    assert restarted is not None
+    assert restarted.sighting_id != first.sighting_id
+    assert len(repository.query_sightings(limit=10)) == 2

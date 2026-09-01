@@ -10,7 +10,7 @@ class CameraResponse(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     azimuth: Optional[float] = None
-    location_quality: str = "VERIFIED"
+    location_quality: str = "UNKNOWN"
     live: bool = True
     stream_status: str = "ONLINE"
     measured_fps: Optional[float] = None
@@ -20,6 +20,8 @@ class CameraResponse(BaseModel):
     frames_sampled: int = 0
     reconnects: int = 0
     last_frame_s_ago: Optional[float] = None
+    connection_issue_code: Optional[str] = None
+    connection_issue_message: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -40,6 +42,8 @@ class CameraHealthResponse(BaseModel):
     frames_sampled: int = 0
     reconnects: int = 0
     last_frame_s_ago: Optional[float] = None
+    connection_issue_code: Optional[str] = None
+    connection_issue_message: Optional[str] = None
 
 
 class CameraNearbyQuery(BaseModel):

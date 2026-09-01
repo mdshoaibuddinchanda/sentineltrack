@@ -3,7 +3,9 @@
 This runbook is for a real software demonstration using permitted live camera
 sources. The current checkout intentionally has no runtime fixture or sample
 data mode. If official sources are unavailable, record that dependency
-failure rather than presenting invented detections.
+failure rather than presenting invented detections. The live-runtime evidence
+and current blockers are summarized in
+[`docs/release/LIVE_RUNTIME_AUDIT.md`](../docs/release/LIVE_RUNTIME_AUDIT.md).
 
 ## Preconditions
 
@@ -13,6 +15,12 @@ failure rather than presenting invented detections.
   the exact commit being demonstrated).
 - No production credentials in the repository or recording.
 - Confirm the official resource contract and feed permissions before connecting any government stream.
+- Organizer-issued restricted-feed password stored only in local `.env` as
+  `SENTINEL_ACCESS_PASSWORD`.
+- Working DNS resolution for `cctv.corp8.cloud`, `live.corp8.cloud`, and
+  `live.sentinelgujarat.in`.
+- The designated registration from the evaluator statement added to the
+  watchlist; an empty watchlist cannot generate an alert.
 
 ## PostgreSQL option
 
@@ -38,6 +46,7 @@ The repository-root launcher is the preferred Windows live-runtime path:
 conda activate PY312
 cd C:\DR2\sentineltrack
 python tools\preflight.py --strict-database
+python tools\doctor.py
 run.bat --full
 ```
 
@@ -46,6 +55,16 @@ the configured model artifacts, and connects the persisted permitted camera
 sources. It prints no temporary credentials; use the configured operator or
 administrator account. A camera is shown as online only after the worker has
 decoded a real frame.
+
+The launcher message `APPLICATION STARTED` only means that the local processes
+started. It is not proof that the external cameras are online. The readiness
+gate is the combination of `tools\doctor.py`, fresh decoded frames on the
+Cameras page, and an authorized watchlist target.
+
+Do not begin recording unless `tools\doctor.py` ends with `READY FOR LIVE
+DEMO`. If it reports `AUTH_REQUIRED`, add the organizer-issued password to
+`.env`. If it reports a DNS blocker, repair the workstation/network DNS first;
+restarting SentinelTrack cannot repair an operating-system resolver failure.
 
 ## Path B: native API plus dashboard
 
@@ -99,6 +118,10 @@ Before the official run, obtain the organizer-provided catalogue, credentials, a
 | Symptom | Action |
 |---|---|
 | Dashboard has no API data | Check API port, CORS, `.env`, and browser network panel; do not replace the live path with invented records. |
+| Feed says Access required | Set the organizer-issued `SENTINEL_ACCESS_PASSWORD` in local `.env`, then restart; never put it in Git or a URL. |
+| Feed is configured but no live video appears | Check the camera's decoded-frame count and latest error. `source_configured` is metadata; `ONLINE` requires a fresh decoded frame. |
+| Need browser video | Use the Cameras page or the authenticated `/api/v1/cameras/{id}/live` relay; upstream feed URLs are never exposed to the browser. |
+| Organizer DNS blocked | Verify `Resolve-DnsName cctv.corp8.cloud`; correct the workstation/VPN DNS before restarting. |
 | Feed reconnects | Preserve camera ID, increment stream epoch, and show the reset in diagnostics. |
 | Database unavailable | Do not fabricate results; record the dependency failure and stop the run. |
 | Model/checkpoint unavailable | Keep ANPR/ReID claims disabled and show the graceful-degradation explanation. |

@@ -72,7 +72,7 @@ export function AuditPage() {
             <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-base font-bold tracking-wide text-white font-mono">SECURITY AUDIT TRAIL</h1>
+            <h1 className="text-base font-bold tracking-wide text-slate-100 font-mono">Security audit trail</h1>
             <p className="text-xs text-slate-400">Immutable, chronological record of operator authentication and operational actions</p>
           </div>
         </div>
@@ -216,7 +216,7 @@ export function AuditPage() {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-police-850 border border-police-700 rounded-lg max-w-lg w-full p-5 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between border-b border-police-750 pb-3">
-              <div className="flex items-center gap-2 text-white font-mono font-bold text-sm">
+              <div className="flex items-center gap-2 text-slate-100 font-mono font-bold text-sm">
                 <FileText className="w-4 h-4 text-accent-blue" />
                 <span>AUDIT EVENT: {selectedEvent.audit_id}</span>
               </div>

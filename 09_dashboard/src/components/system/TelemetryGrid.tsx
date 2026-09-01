@@ -10,15 +10,15 @@ export function TelemetryGrid({ metrics }: { metrics?: MetricsSnapshot | null })
 
   const items = [
     { label: "Requests handled", val: formatNumber(metrics.total_requests), icon: <Activity className="w-4 h-4 text-accent-blue" /> },
-    { label: "Live update connections", val: formatNumber(metrics.active_ws_clients), icon: <Radio className="w-4 h-4 text-cyan-400" /> },
+    { label: "Live update connections", val: formatNumber(metrics.active_websocket_clients), icon: <Radio className="w-4 h-4 text-cyan-400" /> },
     { label: "Camera workers", val: formatNumber(metrics.active_camera_workers), icon: <Video className="w-4 h-4 text-emerald-400" /> },
     { label: "Frames received", val: formatNumber(metrics.total_frames_ingested), icon: <Cpu className="w-4 h-4 text-slate-300" /> },
     { label: "Vehicles found", val: formatNumber(metrics.total_vehicle_detections), icon: <Activity className="w-4 h-4 text-accent-blue" /> },
     { label: "Number plates found", val: formatNumber(metrics.total_plate_inferences), icon: <Eye className="w-4 h-4 text-amber-400" /> },
-    { label: "Plate readings", val: formatNumber(metrics.total_ocr_inferences), icon: <Eye className="w-4 h-4 text-cyan-400" /> },
+    { label: "Plate readings", val: formatNumber(metrics.total_ocr_consensus), icon: <Eye className="w-4 h-4 text-cyan-400" /> },
     { label: "Sightings saved", val: formatNumber(metrics.total_sightings_persisted), icon: <Eye className="w-4 h-4 text-emerald-400" /> },
     { label: "Alerts created", val: formatNumber(metrics.total_alerts_generated), icon: <AlertOctagon className="w-4 h-4 text-rose-400" /> },
-    { label: "Route checks", val: formatNumber(metrics.total_routes_generated), icon: <Compass className="w-4 h-4 text-cyan-400" /> },
+    { label: "Route checks", val: formatNumber(metrics.total_routes_computed), icon: <Compass className="w-4 h-4 text-cyan-400" /> },
     { label: "Service uptime", val: formatDuration(metrics.uptime_seconds), icon: <Activity className="w-4 h-4 text-emerald-400" /> },
   ];
 

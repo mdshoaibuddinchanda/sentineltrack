@@ -52,6 +52,7 @@ class SightingRepository:
                    s.confidence, s.match_score, s.match_class, s.target_id,
                    s.created_at, s.raw_evidence,
                    c.latitude, c.longitude, c.azimuth, c.location_quality,
+                   COALESCE(NULLIF(c.raw_metadata->>'location', ''), c.name) AS location_label,
                    s.event_time_utc, s.event_time_source, s.event_time_quality, s.ingest_time_utc
             FROM vehicle_sightings s
             LEFT JOIN cameras c ON s.camera_id = c.camera_id
@@ -81,7 +82,7 @@ class SightingRepository:
 
                     results: List[RouteSighting] = []
                     for r in rows:
-                        s_id, c_id, ep, trk, f_pts, l_pts, cand, conf, sc, cls_name, t_id, cr_at, raw_ev, lat, lon, az, lq, ev_t, ev_src, ev_qual, ing_t = r
+                        s_id, c_id, ep, trk, f_pts, l_pts, cand, conf, sc, cls_name, t_id, cr_at, raw_ev, lat, lon, az, lq, location_label, ev_t, ev_src, ev_qual, ing_t = r
 
                         # Resolve true event time
                         time_info = resolve_event_time_info({
@@ -114,6 +115,7 @@ class SightingRepository:
                             longitude=lon,
                             azimuth=az,
                             location_quality=loc_q,
+                            location_label=location_label,
                             match_score=sc,
                             match_class=cls_name,
                             ocr_confidence=conf,

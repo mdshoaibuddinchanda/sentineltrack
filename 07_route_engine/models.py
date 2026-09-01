@@ -93,6 +93,7 @@ class RouteSighting:
     longitude: Optional[float] = None
     azimuth: Optional[float] = None
     location_quality: LocationQuality = LocationQuality.VERIFIED
+    location_label: Optional[str] = None
 
     match_score: float = 1.0
     match_class: str = 'EXACT'

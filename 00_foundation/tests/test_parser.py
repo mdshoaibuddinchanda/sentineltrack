@@ -92,3 +92,18 @@ def test_parse_catalogue_dict_and_list():
 def test_parse_camera_missing_id_raises():
     with pytest.raises(ValueError):
         parse_camera({"name": "No ID Cam"})
+
+
+def test_parse_organizer_location_label_and_effective_hls_host():
+    rec = parse_camera(
+        {
+            "id": "1",
+            "name": "Camera 1",
+            "location": "01 Chiman bhai Bridge",
+            "hls_live_url": "/live/stream/1/index.m3u8",
+        },
+        base_host="https://cctv.corp8.cloud",
+    )
+
+    assert rec.name == "01 Chiman bhai Bridge"
+    assert rec.hls_url == "https://cctv.corp8.cloud/live/stream/1/index.m3u8"

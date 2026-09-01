@@ -11,10 +11,57 @@ PATTERN_STANDARD = re.compile(r'^[A-Z]{2}[0-9]{1,2}[A-Z]{0,3}[0-9]{4}$')
 PATTERN_BH_SERIES = re.compile(r'^[0-9]{2}BH[0-9]{4}[A-Z]{1,2}$')
 PATTERN_DEFENSE = re.compile(r'^[0-9]{2}[A-Z][0-9]{6}[A-Z]?$')
 PATTERN_DIPLOMATIC = re.compile(r'^[0-9]{2,3}(CD|CC|UN)[0-9]+$')
+PATTERN_STATE_PARTIAL = re.compile(r'^[0-9]{0,2}[A-Z]{0,3}[0-9]{2,5}$')
+PATTERN_SUFFIX_PARTIAL = re.compile(r'^(?:[A-Z]?[0-9]{1,2})?[A-Z]{1,3}[0-9]{3,5}$')
 
 # Positional substitution maps
 LETTER_TO_DIGIT_MAP = {'O': '0', 'Q': '0', 'D': '0', 'I': '1', 'L': '1', 'Z': '2', 'A': '4', 'S': '5', 'G': '6', 'B': '8'}
 DIGIT_TO_LETTER_MAP = {'0': 'O', '1': 'I', '2': 'Z', '4': 'A', '5': 'S', '6': 'G', '8': 'B'}
+
+
+def is_complete_indian_registration_evidence(plate_text: str) -> bool:
+    """Return True only for a structurally complete supported registration."""
+    if not plate_text or not isinstance(plate_text, str):
+        return False
+    normalized = re.sub(r'[^A-Z0-9]', '', plate_text.upper())
+    standard = bool(
+        PATTERN_STANDARD.fullmatch(normalized)
+        and normalized[:2] in INDIAN_STATE_CODES
+    )
+    return bool(
+        standard
+        or PATTERN_BH_SERIES.fullmatch(normalized)
+        or PATTERN_DEFENSE.fullmatch(normalized)
+        or PATTERN_DIPLOMATIC.fullmatch(normalized)
+    )
+
+
+def is_plausible_indian_registration_evidence(plate_text: str) -> bool:
+    """Reject obvious signage/noise before it reaches identity persistence.
+
+    This is deliberately an evidence gate, not another OCR scorer. It accepts
+    standard Indian registrations and useful partial strings, but rejects
+    alphabetic words, numeric-only reads, five-character fragments, and mixed
+    text that has neither a valid state prefix nor a plausible numeric suffix.
+    """
+    if not plate_text or not isinstance(plate_text, str):
+        return False
+    normalized = re.sub(r'[^A-Z0-9]', '', plate_text.upper())
+    if not 6 <= len(normalized) <= 12:
+        return False
+    if not any(ch.isalpha() for ch in normalized) or not any(ch.isdigit() for ch in normalized):
+        return False
+    if is_complete_indian_registration_evidence(normalized):
+        return True
+    # A complete-looking standard plate with an invalid state prefix is not
+    # downgraded into "partial" evidence.
+    if PATTERN_STANDARD.fullmatch(normalized):
+        return False
+    if normalized[:2] in INDIAN_STATE_CODES:
+        return bool(PATTERN_STATE_PARTIAL.fullmatch(normalized[2:]))
+    # A cropped plate may have lost one or both state-code characters. Keep
+    # only a compact registration-shaped suffix, not a word plus a number.
+    return bool(PATTERN_SUFFIX_PARTIAL.fullmatch(normalized))
 
 
 def score_indian_grammar(plate_text: str) -> float:

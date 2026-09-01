@@ -133,6 +133,7 @@ export function CamerasPage({ cameras, onSelectCamera, liveFramesDecoded }: Came
             <option value="ONLINE">Online ({cameras.filter((c) => c.stream_status === "ONLINE").length})</option>
             <option value="DEGRADED">Needs attention ({cameras.filter((c) => c.stream_status === "DEGRADED").length})</option>
             <option value="OFFLINE">Offline ({cameras.filter((c) => c.stream_status === "OFFLINE").length})</option>
+            <option value="AUTH_REQUIRED">Access required ({cameras.filter((c) => c.stream_status === "AUTH_REQUIRED").length})</option>
             <option value="NOT_CONFIGURED">Not configured ({cameras.filter((c) => c.stream_status === "NOT_CONFIGURED").length})</option>
           </select>
         </div>
@@ -295,12 +296,17 @@ export function CamerasPage({ cameras, onSelectCamera, liveFramesDecoded }: Came
                   {liveFramesDecoded === 0 && (
                     <div className="text-[11px] font-semibold text-amber-700 dark:text-amber-300">No live frames have entered this run.</div>
                   )}
+                  {selectedCam.connection_issue_message && (
+                    <div className="rounded border border-amber-600 bg-amber-50 p-2 text-[11px] font-semibold text-slate-900 dark:bg-amber-950 dark:text-white">
+                      {selectedCam.connection_issue_message}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-1 text-slate-300">
                   <div className="text-slate-400 font-semibold mb-1">Geographic Coordinates:</div>
-                  <div>Latitude: <span className="font-bold text-slate-100">{selectedCam.latitude || "--"}</span></div>
-                  <div>Longitude: <span className="font-bold text-slate-100">{selectedCam.longitude || "--"}</span></div>
+                  <div>Latitude: <span className="font-bold text-slate-100">{selectedCam.latitude ?? "--"}</span></div>
+                  <div>Longitude: <span className="font-bold text-slate-100">{selectedCam.longitude ?? "--"}</span></div>
                   <div>Azimuth Heading: <span className="font-bold text-slate-100">{selectedCam.azimuth ? `${selectedCam.azimuth}°` : "--"}</span></div>
                 </div>
 

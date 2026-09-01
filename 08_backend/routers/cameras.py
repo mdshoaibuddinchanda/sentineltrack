@@ -2,7 +2,6 @@ import asyncio
 import time
 from typing import AsyncGenerator, List, Optional
 import importlib
-import cv2
 from fastapi import APIRouter, Depends, Query, Response, HTTPException
 from fastapi.responses import StreamingResponse
 
@@ -136,6 +135,10 @@ async def get_camera_live_stream(
     metrics.inc_requests()
 
     async def frame_stream() -> AsyncGenerator[bytes, None]:
+        # Keep API-only workers lightweight. OpenCV is loaded only when an
+        # authorized operator actually consumes a live camera response.
+        import cv2
+
         last_frame_time = 0.0
         stale_started_at: Optional[float] = None
         try:

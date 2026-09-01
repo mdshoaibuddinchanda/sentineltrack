@@ -1,7 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timezone
+import re
 from typing import Any, Dict, Optional
 import importlib
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, Response
 
 try:
     from ..schemas.routes import RouteResponse, RouteSummaryResponse, GeoJSONFeatureCollection
@@ -127,5 +128,46 @@ async def get_target_route_summary(
         start_time_utc=start_time,
         end_time_utc=end_time,
         min_match_score=min_match_score
+    )
+
+
+@router.get("/{registration}/report.csv")
+async def export_target_route_report(
+    http_request: Request,
+    registration: str,
+    start_time: Optional[datetime] = Query(default=None),
+    end_time: Optional[datetime] = Query(default=None),
+    min_match_score: float = Query(default=0.60, ge=0.0, le=1.0),
+    service: RouteService = Depends(get_route_service),
+    metrics: MetricsCollector = Depends(get_metrics),
+    principal: AuthenticatedPrincipal = Depends(require_permission(Permission.ROUTE_READ)),
+    audit = Depends(get_audit_logger),
+):
+    """Download a timestamped CSV report from the same evidence as the route UI."""
+    metrics.inc_requests()
+    report = service.build_route_csv_report(
+        registration=registration,
+        start_time_utc=start_time,
+        end_time_utc=end_time,
+        min_match_score=min_match_score,
+    )
+    audit.log_event(
+        action="EXPORT_ROUTE_REPORT",
+        resource_type="route_report",
+        outcome="SUCCESS",
+        principal=principal,
+        resource_id=registration,
+        request_id=http_request.headers.get("X-Request-ID"),
+        details={"format": "csv", "min_match_score": min_match_score},
+    )
+    safe_registration = re.sub(r"[^A-Z0-9_-]", "", registration.upper()) or "vehicle"
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return Response(
+        content=report,
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="sentineltrack_{safe_registration}_{stamp}.csv"',
+            "Cache-Control": "no-store, max-age=0",
+        },
     )
 

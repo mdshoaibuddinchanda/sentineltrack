@@ -39,6 +39,36 @@ def _runtime_state(camera_id: str) -> Optional[Dict[str, Any]]:
         return None
 
 
+def _source_issue(camera_id: str) -> tuple[Optional[str], Optional[str]]:
+    """Return the startup source blocker for a camera, without secrets."""
+    try:
+        lifecycle = importlib.import_module("08_backend.lifecycle")
+        diagnostics = lifecycle.get_stream_ingestion_diagnostics()
+        blocked = {str(value) for value in diagnostics.get("blocked_camera_ids", [])}
+        if str(camera_id) not in blocked:
+            return None, None
+        return (
+            str(diagnostics.get("code") or "SOURCE_UNAVAILABLE"),
+            str(diagnostics.get("message") or "The camera source is unavailable."),
+        )
+    except Exception:
+        return None, None
+
+
+def _display_name(name: Optional[str], raw_metadata: Any) -> Optional[str]:
+    if isinstance(raw_metadata, dict):
+        location = raw_metadata.get("location")
+        if isinstance(location, str) and location.strip():
+            return location.strip()
+    return name
+
+
+def _location_quality(value: Optional[str], latitude: Any, longitude: Any) -> str:
+    if latitude is None or longitude is None:
+        return "UNKNOWN"
+    return value or "UNKNOWN"
+
+
 def _runtime_stream_status(
     camera_id: str,
     fallback: str,
@@ -46,6 +76,7 @@ def _runtime_stream_status(
     live: bool,
     source_configured: bool,
     runtime_state: Optional[Dict[str, Any]] = None,
+    issue_code: Optional[str] = None,
 ) -> str:
     """Prefer current worker state and never call an inactive registry row online."""
     camera_state = runtime_state if runtime_state is not None else _runtime_state(camera_id)
@@ -55,6 +86,11 @@ def _runtime_stream_status(
         if camera_state.get("degraded"):
             return "OFFLINE"
         return "CONNECTING"
+
+    if issue_code in {"AUTH_REQUIRED", "AUTH_FAILED"}:
+        return "AUTH_REQUIRED"
+    if issue_code:
+        return "OFFLINE"
 
     # A persisted probe status is not a current runtime connection. The
     # current worker state is the only source allowed to claim ONLINE.
@@ -100,7 +136,7 @@ class CameraService:
         conn = db.get_connection()
         query = [
             "SELECT camera_id, name, department, latitude, longitude, azimuth, location_quality, live, stream_status, measured_fps, last_checked, "
-            "(COALESCE(rtsp_url, '') <> '' OR COALESCE(hls_url, '') <> '') AS source_configured "
+            "(COALESCE(rtsp_url, '') <> '' OR COALESCE(hls_url, '') <> '') AS source_configured, raw_metadata "
             "FROM cameras WHERE 1=1"
         ]
         params: List[Any] = []
@@ -128,25 +164,29 @@ class CameraService:
                 live = bool(r[7])
                 source_configured = bool(r[11])
                 runtime_state = _runtime_state(r[0])
+                issue_code, issue_message = _source_issue(r[0])
                 runtime_fields = _runtime_fields(runtime_state)
                 cameras.append(CameraResponse(
                     camera_id=r[0],
-                    name=r[1],
+                    name=_display_name(r[1], r[12]),
                     department=r[2],
                     latitude=r[3],
                     longitude=r[4],
                     azimuth=r[5],
-                    location_quality=r[6] or "VERIFIED",
+                    location_quality=_location_quality(r[6], r[3], r[4]),
                     live=live,
                     stream_status=_runtime_stream_status(
                         r[0], r[8] or ("ONLINE" if live else "OFFLINE"),
                         live=live,
                         source_configured=source_configured,
                         runtime_state=runtime_state,
+                        issue_code=issue_code,
                     ),
                     measured_fps=r[9],
                     last_checked=r[10],
                     source_configured=source_configured,
+                    connection_issue_code=issue_code,
+                    connection_issue_message=issue_message,
                     **runtime_fields,
                 ))
         conn.close()
@@ -161,7 +201,7 @@ class CameraService:
         with conn.cursor() as cur:
             cur.execute(
                 "SELECT camera_id, name, department, latitude, longitude, azimuth, location_quality, live, stream_status, measured_fps, last_checked, "
-                "(COALESCE(rtsp_url, '') <> '' OR COALESCE(hls_url, '') <> '') AS source_configured "
+                "(COALESCE(rtsp_url, '') <> '' OR COALESCE(hls_url, '') <> '') AS source_configured, raw_metadata "
                 "FROM cameras WHERE camera_id = %s;",
                 (camera_id,)
             )
@@ -174,24 +214,28 @@ class CameraService:
         live = bool(r[7])
         source_configured = bool(r[11])
         runtime_state = _runtime_state(r[0])
+        issue_code, issue_message = _source_issue(r[0])
         return CameraResponse(
             camera_id=r[0],
-            name=r[1],
+            name=_display_name(r[1], r[12]),
             department=r[2],
             latitude=r[3],
             longitude=r[4],
             azimuth=r[5],
-            location_quality=r[6] or "VERIFIED",
+            location_quality=_location_quality(r[6], r[3], r[4]),
             live=live,
             stream_status=_runtime_stream_status(
                 r[0], r[8] or ("ONLINE" if live else "OFFLINE"),
                 live=live,
                 source_configured=source_configured,
                 runtime_state=runtime_state,
+                issue_code=issue_code,
             ),
             measured_fps=r[9],
             last_checked=r[10],
             source_configured=source_configured,
+            connection_issue_code=issue_code,
+            connection_issue_message=issue_message,
             **_runtime_fields(runtime_state),
         )
 
@@ -206,6 +250,7 @@ class CameraService:
             live = bool(record.get("live")) if record else False
             source_configured = bool(record and (record.get("rtsp_url") or record.get("hls_url")))
             runtime_state = _runtime_state(c.camera_id)
+            issue_code, issue_message = _source_issue(c.camera_id)
             runtime_fields = _runtime_fields(runtime_state)
             results.append(CameraResponse(
                 camera_id=c.camera_id,
@@ -214,7 +259,11 @@ class CameraService:
                 latitude=c.latitude,
                 longitude=c.longitude,
                 azimuth=c.azimuth,
-                location_quality=c.location_quality.value if hasattr(c.location_quality, "value") else str(c.location_quality),
+                location_quality=_location_quality(
+                    c.location_quality.value if hasattr(c.location_quality, "value") else str(c.location_quality),
+                    c.latitude,
+                    c.longitude,
+                ),
                 live=live,
                 stream_status=_runtime_stream_status(
                     c.camera_id,
@@ -222,10 +271,13 @@ class CameraService:
                     live=live,
                     source_configured=source_configured,
                     runtime_state=runtime_state,
+                    issue_code=issue_code,
                 ),
                 measured_fps=record.get("measured_fps") if record else None,
                 last_checked=record.get("last_checked") if record else None,
                 source_configured=source_configured,
+                connection_issue_code=issue_code,
+                connection_issue_message=issue_message,
                 **runtime_fields,
             ))
         return results
@@ -233,6 +285,7 @@ class CameraService:
     def get_camera_health(self, camera_id: str) -> CameraHealthResponse:
         cam = self.get_camera_by_id(camera_id)
         runtime_state = _runtime_state(camera_id)
+        issue_code, issue_message = _source_issue(camera_id)
         runtime_fields = _runtime_fields(runtime_state)
         return CameraHealthResponse(
             camera_id=cam.camera_id,
@@ -248,5 +301,7 @@ class CameraService:
             ),
             source_configured=cam.source_configured,
             connected=bool(runtime_state and runtime_state.get("connected")),
+            connection_issue_code=issue_code,
+            connection_issue_message=issue_message,
             **runtime_fields,
         )

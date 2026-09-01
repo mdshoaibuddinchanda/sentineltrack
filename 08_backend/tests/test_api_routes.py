@@ -75,9 +75,19 @@ def test_get_target_route_endpoint():
     assert data["status"] == "CONFIRMED_SEQUENCE"
     assert data["sighting_count"] == 2
     assert data["camera_count"] == 2
+    assert data["sightings"][0]["location_label"] == "Junction A"
     assert len(data["segments"]) == 1
     assert data["segments"][0]["feasibility"] == "FEASIBLE"
     assert "LineString connects observed camera sightings" in data["disclaimer"]
+
+    report = client.get(f"/api/v1/routes/{target_plate}/report.csv")
+    assert report.status_code == 200
+    assert report.headers["content-type"].startswith("text/csv")
+    assert "attachment; filename=" in report.headers["content-disposition"]
+    assert "generated_at_utc" in report.text
+    assert "sighting_sequence" in report.text
+    assert "SOURCE_WALLCLOCK" in report.text
+    assert "Junction A" in report.text
 
 
 def test_get_target_route_geojson_rfc_validation():
@@ -122,3 +132,10 @@ def test_get_target_route_summary():
     assert data["registration"] == "GJ01NONEXISTENT"
     assert data["status"] == "NO_ROUTE"
     assert data["sighting_count"] == 0
+
+
+def test_route_report_escapes_spreadsheet_formula_cells():
+    route_service = importlib.import_module("08_backend.services.route_service")
+    assert route_service.RouteService._csv_cell("=HYPERLINK(\"bad\")").startswith("'")
+    assert route_service.RouteService._csv_cell("  +1+1").startswith("'")
+    assert route_service.RouteService._csv_cell("Junction A") == "Junction A"

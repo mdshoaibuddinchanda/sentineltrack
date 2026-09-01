@@ -23,322 +23,256 @@
 
 </div>
 
-SentinelTrack is a production-oriented, multi-camera vehicle intelligence and ANPR platform prepared for the Sentinel Gujarat CCTV integration challenge. It turns heterogeneous camera observations into traceable evidence: plate-first identity, per-camera tracking, chronological feasibility, auditable decisions, and a conservative vehicle-appearance fallback.
+SentinelTrack is a multi-camera vehicle intelligence platform for the Gujarat
+Sentinel CCTV integration challenge. It receives permitted camera metadata and
+video, detects vehicles, reads number plates, follows vehicles within a camera,
+correlates sightings across cameras, and presents evidence to an operator.
 
-> **The promise:** help an operator find and explain a vehicle movement across cameras.
-> **The boundary:** appearance-only evidence never becomes an automatic police identity claim.
+The system is designed around one simple rule: every result must explain its
+source. A camera row is not considered live until the worker decodes a current
+frame. A plate result is not treated as a strong identity without corroboration.
+Appearance similarity is a conservative review signal, never a replacement for
+ANPR.
 
-## Why this submission stands out
+> **Current live-status boundary:** the local checkout contains the official
+> camera registry records, but the organizer feed portal requires an issued
+> access password. Until that password is present in local `.env`, no live
+> government frame or model detection can honestly be claimed.
 
-| Signal | What SentinelTrack delivers | Why it matters |
+## What the platform does
+
+| Area | Responsibility | Operator-visible evidence |
 | --- | --- | --- |
-| **Evidence before confidence** | Every sighting preserves camera, time, quality, source, and explanation metadata. | Operators can inspect why a result was suggested. |
-| **Plate-first identity** | Strong ANPR remains authoritative; ReID supports only partial or missing plates. | A visual similarity cannot silently override a known plate. |
-| **Operational realism** | Bounded queues, stale-frame handling, fair scheduling, health signals, audit, RBAC, and CSRF protection. | The design addresses the control-room environment, not only a notebook demo. |
-| **Honest scale story** | Regional inference, sharding, capacity arithmetic, HA/DR, and rollout gates are documented as measured or projected. | The submission separates evidence from assumptions. |
+| Camera registry | Imports the permitted catalogue and normalizes camera metadata. | Camera ID, location label, protocol, source state, and health details. |
+| Stream ingestion | Opens protected HLS or RTSP sources with bounded recovery. | Decoded-frame count, sampled-frame count, reconnects, freshness, and error reason. |
+| Vehicle analytics | Runs vehicle detection and per-camera tracking. | Vehicle boxes, track IDs, timestamps, and model provenance. |
+| ANPR | Detects plate regions, reads text, and combines observations over time. | Raw/normalized candidates, quality, consensus support, and decision reason. |
+| Target matching | Compares verified plate evidence against an authorized watchlist. | Match class, score, alert severity, and audit trail. |
+| Vehicle appearance | Supplies a masked, track-level ReID fallback when plate evidence is incomplete. | `ANPR_REID_SUPPORT` or `REID_REVIEW`; never an appearance-only high-severity claim. |
+| Route investigation | Orders sightings and checks lower-bound time/distance feasibility. | Camera sequence, timestamps, locations, and feasibility explanation. |
+| Control room | Provides the secured API, WebSocket events, and React dashboard. | Cameras, alerts, watchlist, investigation, system health, and audit views. |
 
-## Quick navigation
+## Identity and safety policy
 
-| I want to… | Start here |
+SentinelTrack uses a plate-first hierarchy:
+
+| Evidence available | System behavior |
 | --- | --- |
-| See the evaluator story | [`12_submission/FINAL_SUBMISSION_REPORT.md`](12_submission/FINAL_SUBMISSION_REPORT.md) |
-| Run the five-minute demo | [`12_submission/DEMO_RUNBOOK.md`](12_submission/DEMO_RUNBOOK.md) |
-| Understand the architecture | [`12_submission/HLD.md`](12_submission/HLD.md) and [`12_submission/ARCHITECTURE.md`](12_submission/ARCHITECTURE.md) |
-| Inspect measured evidence | [`12_submission/EVIDENCE_INVENTORY.md`](12_submission/EVIDENCE_INVENTORY.md) and [`reports/`](reports/) |
-| Understand tests and caches | [`docs/TESTING_GUIDE.md`](docs/TESTING_GUIDE.md) |
-| Review security/privacy | [`SECURITY.md`](SECURITY.md), [`12_submission/SECURITY_PRIVACY.md`](12_submission/SECURITY_PRIVACY.md), and [`docs/security/`](docs/security/) |
-| Browse the documentation map | [`docs/README.md`](docs/README.md) |
+| Strong/full plate | ANPR remains authoritative. ReID is skipped or logged diagnostically and cannot override it. |
+| Partial/degraded plate | Plate evidence may be supported by appearance, time, and route feasibility. It cannot become an exact identity from appearance alone. |
+| No usable plate | Appearance is fallback evidence only. The result remains `POSSIBLE`/`REVIEW` and cannot create an automatic `HIGH` or `CRITICAL` identity alert. |
 
-## At a glance
+The implementation does not pass OCR text into the appearance model. If a plate
+box is available inside the vehicle crop, that region is masked before the
+appearance embedding is calculated. Stream epochs scope tracker and ReID state
+so an old track cannot silently cross a reconnect boundary.
 
-| Capability | Implementation | Safety boundary |
-| --- | --- | --- |
-| Stream ingestion | RTSP/HLS readers, PTS health, bounded queues | UTC provenance is preserved |
-| Vehicle detection | YOLO11m, pinned Ultralytics runtime | Canonical path is in `models/manifest.json` |
-| Tracking | Per-camera ByteTrack with epoch/gap resets | Track IDs are camera/epoch scoped |
-| Plate detection | Selected P11.5 clean single-class YOLO candidate | Cropped coordinates are reprojected to frame space |
-| Plate OCR | PP-OCRv5 Mobile ONNX and multi-frame consensus | Strong identity requires corroboration |
-| Target matching | Normalization, confusion-aware fuzzy matching, watchlists | Existing P5 alert safeguards remain authoritative |
-| Vehicle ReID | MobileNetV3-Small 576-D appearance baseline | Fallback only; appearance-only is `POSSIBLE/REVIEW` |
-| Route reasoning | Chronological camera graph and lower-bound feasibility | Not road-level routing |
-| Operations | FastAPI/WebSocket backend and React dashboard | Security and audit surfaces are tested |
-
-## Architecture
+## End-to-end flow
 
 ```mermaid
 flowchart LR
-  A[RTSP / HLS streams] --> B[00 Foundation\nreaders + UTC/PTS]
-  B --> C[01 YOLO11m\nvehicle detection]
-  C --> D[02 ByteTrack\nper-camera epoch state]
-  D --> E[03 Plate detection\nvehicle crop + reprojection]
-  E --> F[04 PP-OCRv5\nmulti-frame consensus]
-  F --> G[05 Target matching\nwatchlist + safeguards]
-  D --> H{Plate evidence gate}
-  H -->|Strong plate| G
-  H -->|Partial / none| I[06 Vehicle ReID\nmasked appearance embedding]
-  I --> J[07 Route feasibility\noptional chronological support]
-  J --> K[08 Backend\nevents + persistence]
-  G --> K
-  K --> L[09 Dashboard]
-  K --> M[10 Security]
-  K --> N[11 Scale and deployment]
+  A[Official catalogue] --> B[Authenticated HLS / RTSP]
+  B --> C[Decoded frame with PTS]
+  C --> D[Vehicle detection]
+  D --> E[ByteTrack per camera and epoch]
+  E --> F[Plate detection and OCR]
+  F --> G[Watchlist matching]
+  E --> H{Plate evidence}
+  H -->|Partial or none| I[Masked appearance fallback]
+  I --> J[Temporal and route support]
+  G --> K[Evidence and alerts]
+  J --> K
+  K --> L[FastAPI and WebSocket]
+  L --> M[React control room]
 ```
 
-The identity hierarchy is deliberate: strong ANPR wins; partial plates may receive appearance and temporal support; no-plate appearance suggestions remain review-only. P6 cannot bypass P5 matching, watchlist logic, OCR normalization, or alert safeguards.
+The runtime is split into numbered stages so each responsibility has a clear
+home. The numbers describe ownership, not a mandatory reading order.
 
-## Priority status
+## Repository map
 
-| Stage | Status | Scope |
-| --- | --- | --- |
-| P0 | Complete | Foundation and ingestion |
-| P1 | Complete | Vehicle detection |
-| P2 | Complete | Single-camera tracking |
-| P3 | Complete | Plate detection and crop provenance |
-| P4 | Complete | OCR and temporal consensus |
-| P5 | Complete | Target matching and watchlists |
-| P6 | Frozen | Conservative vehicle appearance fallback |
-| P7 | Complete | Chronological route/feasibility engine |
-| P8 | Complete | Backend orchestration and event delivery |
-| P9 | Complete | Operator dashboard |
-| P10 | Complete | Security and privacy controls |
-| P11 | Complete | Scale/deployment evidence |
-| P12 | Complete | Final hackathon submission package |
+| Directory | Contents |
+| --- | --- |
+| `00_foundation/` | Stream readers, catalogue client, frame packets, registry, and shared infrastructure. |
+| `01_vehicle_detection/` | YOLO11m vehicle detector and local benchmarks. |
+| `02_tracking/` | ByteTrack state and track lifecycle management. |
+| `03_plate_detection/` | Plate detector, crop validation, quality scoring, and training utilities. |
+| `04_plate_ocr/` | PP-OCRv5 Mobile recognition, grammar, consensus, and evaluation. |
+| `05_target_matching/` | Watchlists, normalization, matching safeguards, alerts, and history. |
+| `06_vehicle_reid/` | Bounded MobileNetV3-Small appearance fallback. |
+| `07_route_engine/` | Chronological sightings, feasibility checks, GeoJSON, and reports. |
+| `08_backend/` | FastAPI application, services, authentication boundary, event bus, and workers. |
+| `09_dashboard/` | React, TypeScript, Vite, dashboard pages, and live camera relay UI. |
+| `10_security/` | Authentication, authorization, CSRF, audit, and security tests. |
+| `11_scale_deployment/` | Fair scheduling, bounded queues, health, sharding, and deployment planning. |
+| `12_submission/` | Hackathon report, HLD, evidence map, runbook, scripts, and checklist. |
+| `configs/` | Active runtime configuration. |
+| `models/` | Model manifest and locally provisioned model files. |
+| `reports/` | Tracked evaluation and benchmark evidence. |
+| `scripts/` | Setup and verification helpers. |
+| `tools/` | Preflight, schema, cleanup, doctor, benchmark, and evidence tools. |
+| `tests/` | Cross-stage contract tests. |
+| `docs/` | Architecture, operations, security, reproducibility, and release audits. |
 
-## Repository layout
-
-```text
-00_foundation/       streams, catalogue, registry
-01_vehicle_detection YOLO11m detector and benchmarks
-02_tracking/         ByteTrack and track lifecycle
-03_plate_detection/  plate model, cropper, quality, training
-04_plate_ocr/        OCR, grammar, voting, evaluation
-05_target_matching/  watchlists, scoring, alerts, history
-06_vehicle_reid/     bounded appearance fallback
-07_route_engine/     chronological route/feasibility logic
-08_backend/          API, services, event bus, worker
-09_dashboard/        React + TypeScript control-room UI
-10_security/         auth, authorization, audit, CSRF
-11_scale_deployment/ scheduler, capacity, health, deployment
-12_submission/       evaluator-facing package and diagrams
-main.py              one-command Windows visual-review/full launcher
-run.bat              Conda-aware Windows launcher wrapper
-configs/             live runtime configuration
-experiments/archive/ historical experiment inputs and reproducibility scripts
-docs/                architecture, operations, security, release docs
-models/              operational manifest and local model directories
-reports/             tracked evidence and evaluation artifacts
-scripts/             model setup and verification tools
-tools/               active preflight, benchmark, evaluation, and evidence tools
-tests/               cross-stage contract tests
-LICENSE              academic/non-commercial evaluation license
-SECURITY.md          vulnerability reporting and security boundaries
-```
-
-Large datasets, generated caches, and model binaries are local/ignored artifacts. They are inventoried in [`docs/release/REPOSITORY_AUDIT.md`](docs/release/REPOSITORY_AUDIT.md); runtime code never depends on local training output directories.
-
-Historical run outputs are kept outside the checkout under `C:\DR2\sentineltrack_archive\runs` when available; the tracked reports and provenance files remain the reviewable evidence source.
+Datasets, raw media, generated runs, logs, caches, frontend dependencies, and
+model binaries are local provisioning artifacts and are ignored by Git. Their
+provenance and cleanup decisions are recorded in
+[`docs/release/REPOSITORY_AUDIT.md`](docs/release/REPOSITORY_AUDIT.md).
 
 ## Canonical runtime models
 
-The operational source of truth is [`models/manifest.json`](models/manifest.json). Runtime code resolves model paths from the repository root and does not depend on CWD downloads, `runs/`, Torch cache, or a developer’s absolute path.
+The operational source of truth is [`models/manifest.json`](models/manifest.json).
+It records model identity, path, required/optional status, and SHA-256.
 
-| Consumer | Model | Canonical path |
+| Stage | Selected runtime model | Local path |
 | --- | --- | --- |
-| P1 | YOLO11m | `models/vehicle/yolo11m.pt` |
-| P3 | Selected P11.5 clean YOLO11s plate model | `models/plate/yolo11s_plate_v2.pt` |
-| P4 | PP-OCRv5 Mobile recognition ONNX | `models/ocr/PP-OCRv5_mobile_rec_infer.onnx` |
-| P6 | MobileNetV3-Small ImageNet appearance baseline, 576-D | `models/reid/mobilenet_v3_small-047dcff4.pth` |
+| Vehicle detection | YOLO11m | `models/vehicle/yolo11m.pt` |
+| Plate detection | Selected P11.5 YOLO11s candidate | `models/plate/yolo11s_plate_v2.pt` |
+| Plate recognition | PP-OCRv5 Mobile ONNX | `models/ocr/PP-OCRv5_mobile_rec_infer.onnx` |
+| Appearance fallback | MobileNetV3-Small ImageNet baseline, 576-D | `models/reid/mobilenet_v3_small-047dcff4.pth` |
 
-The P6 checkpoint is optional at runtime and remains review-only. Superseded and experimental artifacts are retained outside the operational manifest for provenance.
+The appearance model is a retrieval baseline, not a claim of trained
+cross-camera vehicle identity accuracy. No true cross-camera vehicle-ID ground
+truth is available in the local dataset, so P6 reports proxy pair evidence only.
 
-The optional PP-OCR server checkpoint and unpromoted YOLO variants are intentionally outside this checkout; they are not production dependencies.
+## Run with Conda `PY312`
 
-## Configuration precedence
-
-Use this order when changing a runtime setting:
-
-1. Checked-in subsystem YAML under `configs/`.
-2. Environment variables from `.env` (never commit `.env`).
-3. Explicit command-line arguments.
-
-`models/manifest.json` controls model identity, path, required/optional status, and SHA-256. Experiment profiles and historical model evidence do not override it.
-
-## Setup with Conda `PY312`
-
-```bash
-git clone https://github.com/mdshoaibuddinchanda/sentineltrack.git
-cd sentineltrack
-conda activate PY312
-python -m pip install -r requirements.txt
-copy .env.example .env       # Windows; use cp on POSIX
-python scripts/setup_models.py
-python tools/preflight.py
-```
-
-To refresh the local camera registry from the permitted official catalogue API,
-set `SENTINEL_HOST` in `.env` and run:
-
-```bash
-python -m 00_foundation.scripts.fetch_catalogue
-```
-
-The importer records the API response and upserts camera metadata into
-PostgreSQL. It does not print or commit stream credentials. The runtime then
-uses the persisted sources; it does not silently replace them with sample
-records.
-
-`setup_models.py` creates canonical directories, downloads/verifies public models, verifies SHA-256 values, and reports missing project-trained artifacts explicitly. Server OCR and YOLO26 are optional/experimental and are not installed by the production bundle.
-
-For a no-network verification of an already provisioned machine:
-
-```bash
-python scripts/setup_models.py --verify-only
-```
-
-Start local PostgreSQL/PostGIS with `docker compose up -d postgres` when using the full stack. The preflight command bounds its database probe and returns a warning if the local database is stopped.
-
-## Run the application
-
-On Windows, activate Conda `PY312`, switch to the launcher branch, and run the
-root launcher:
-
-```bat
-conda activate PY312
-git switch launcher-visual-review
-run.bat
-```
-
-The launcher now starts the configured PostgreSQL/PostGIS database, models,
-camera-processing path, and protected account. `run.bat --full` is retained as
-an explicit equivalent for submission scripts. It never creates a temporary
-demo account or injects dashboard fixtures. Child-process and model diagnostics
-are written under `logs/`, and the launcher refuses to attach to an already-used
-API or dashboard port.
-
-Before a submission capture, clean a local development database with:
-
-```bat
-python tools\clean_submission_database.py --apply --yes --clear-watchlist
-```
-
-This removes local operational history and non-numeric test camera rows while
-preserving numeric catalogue camera definitions, model files, security users,
-and the append-only security audit trail. Add only authorized watchlist entries
-and camera sources after the cleanup.
-
-```bash
-# Native diagnostics and launch instructions
-
-# API
-python -m uvicorn 08_backend.app:app --host 0.0.0.0 --port 8000
-
-# Frontend
-cd 09_dashboard
-npm ci
-npm run dev -- --host 127.0.0.1 --port 5173
-```
-
-For a real local run with the persisted camera sources, start PostgreSQL first
-and explicitly enable stream ingestion in the all-in-one backend process:
+The normal Windows path is:
 
 ```powershell
-$env:SENTINEL_PROCESS_ROLE = "all"
-$env:SENTINEL_ENABLE_STREAM_INGESTION = "true"
-python -m uvicorn 08_backend.app:app --host 0.0.0.0 --port 8000
+conda activate PY312
+Set-Location C:\DR2\sentineltrack
+python -m pip install -r requirements.txt
+docker compose up -d postgres
+python tools\preflight.py
+python tools\doctor.py
+run.bat --full
 ```
 
-The backend loads live camera URLs from the camera registry, uses RTSP with
-the stored HLS URL as fallback, and reports connection/decoded-frame counts in
-System status. OpenCV uses the configured `RTSP_CONNECT_TIMEOUT` and the
-supervisor fails over after `STREAM_FAILOVER_THRESHOLD` failed attempts, so a
-dead source cannot block the live run indefinitely and marks a source stale
-after `STREAM_STALE_AFTER` seconds without a decoded frame. API-only mode remains
-suitable for CI and dashboard work and does not open camera connections.
+The launcher starts PostgreSQL/PostGIS when needed, the API on port `8000`, and
+the dashboard on port `5173`. It uses the configured account and does not create
+a temporary demo account or insert fake alerts.
 
-### Reading live status correctly
+### Configure the official feed
 
-The camera registry is metadata, not proof of a current connection. In full
-mode, a camera is `ONLINE` only when the current process has connected to its
-source. `source_configured`, decoded-frame counts, sampled-frame counts, and
-reconnect attempts are exposed separately. A stored `ONLINE` probe on an
-inactive registry row is shown as `NOT CONFIGURED` rather than being presented
-as a live feed.
+The camera catalogue and media endpoints are protected by the organizer portal.
+Put the issued password only in the local, ignored `.env` file:
 
-If the current run has received zero camera frames, the dashboard suppresses
-stored records from the active operations feed and labels the Alerts page as
-historical. It must not be used as evidence of a current detection.
+```dotenv
+SENTINEL_HOST=https://cctv.corp8.cloud
+SENTINEL_ACCESS_PASSWORD=<organizer-issued-password>
+```
 
-The Cameras page provides an authenticated latest-frame preview when a worker
-has decoded a frame. RTSP sources cannot be rendered directly by a browser; the
-preview is therefore a bounded JPEG snapshot rather than an unprotected RTSP
-player. No preview is shown until a real source delivers a frame.
+Then run:
 
-The submission runbook is [`12_submission/DEMO_RUNBOOK.md`](12_submission/DEMO_RUNBOOK.md).
-It describes live prerequisites and evidence capture without claiming that an
-unconnected camera or stored database row is live.
+```powershell
+python -m 00_foundation.scripts.fetch_catalogue
+python tools\doctor.py
+run.bat --full
+```
 
-## Testing and validation
+The password is used to create an in-memory session. It is not printed, stored
+in a URL, committed, or passed to the browser. The launcher reports
+`AUTH_REQUIRED` when the credential is absent; it does not substitute mock
+feeds.
 
-```bash
+### How to prove a camera is live
+
+Use the Cameras page or the authenticated relay endpoint:
+
+```text
+http://127.0.0.1:8000/api/v1/cameras/<camera-id>/live
+```
+
+This is a continuous MJPEG relay backed by the worker's current decoded frame.
+It is not a still-image refresh and it does not expose the upstream camera URL.
+A camera becomes `ONLINE` only after a fresh frame is decoded. `Configured`,
+`Connecting`, `Access required`, `Decode error`, and `Stale` are separate states.
+
+The dashboard and API expose the evidence needed to answer whether analytics are
+running: decoded frames, sampled frames, active tracks, model readiness,
+inference counters, reconnects, and the latest error. If decoded frames are
+zero, the model cannot be processing that source.
+
+### Add the authorized target
+
+An empty watchlist is intentional after the local demo-data cleanup. Add only
+the registration authorized for the challenge through the Watchlist page or the
+protected target API. The system must never invent a target or an alert.
+
+## Validation commands
+
+Backend and repository checks:
+
+```powershell
 python -m pytest -q
-python -m pytest tests/test_p6_vehicle_reid.py 08_backend/tests/test_analytics_reid_integration.py -q
 python -m compileall -q 00_foundation 01_vehicle_detection 02_tracking 03_plate_detection 04_plate_ocr 05_target_matching 06_vehicle_reid 07_route_engine 08_backend 10_security 11_scale_deployment scripts tools
-python tools/preflight.py
+python tools\preflight.py
+python tools\doctor.py
 ```
 
-Frontend gates:
+Frontend checks:
 
-```bash
-cd 09_dashboard
+```powershell
+Set-Location 09_dashboard
+npm ci
 npm run typecheck
 npm run lint
 npx vitest run
 npm run build
 ```
 
-GitHub Actions runs the backend security/scale contract gate and the frontend typecheck, lint, test, and build gate. See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+GitHub Actions runs the security/scale backend gate and the frontend
+typecheck, lint, test, and build gates. See
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
-## Evidence and documentation
+## Documentation starting points
 
-- [`docs/README.md`](docs/README.md) — documentation index.
-- [`docs/release/REPOSITORY_AUDIT.md`](docs/release/REPOSITORY_AUDIT.md) — tracked/ignored inventory and cleanup decisions.
-- [`docs/release/MODEL_INVENTORY.md`](docs/release/MODEL_INVENTORY.md) — selected, legacy, and experimental model evidence.
-- [`docs/release/FINAL_HYGIENE_AUDIT.md`](docs/release/FINAL_HYGIENE_AUDIT.md) — final local artifact and repository hygiene record.
-- [`docs/release/FINAL_DELETION_REPORT.md`](docs/release/FINAL_DELETION_REPORT.md) — exact deletion, archival, and legacy-tool ledger.
-- [`reports/p6/P6_REPORT.md`](reports/p6/P6_REPORT.md) — P6 proxy evaluation and safety boundary.
-- [`reports/p11_5/FINAL_REPORT.md`](reports/p11_5/FINAL_REPORT.md) — frozen P11.5 evidence.
-- [`12_submission/README.md`](12_submission/README.md) — final submission navigation.
+| Question | Document |
+| --- | --- |
+| How do I run and record the software? | [`12_submission/DEMO_RUNBOOK.md`](12_submission/DEMO_RUNBOOK.md) |
+| What is the evaluator package? | [`12_submission/README.md`](12_submission/README.md) |
+| How is the platform structured? | [`12_submission/HLD.md`](12_submission/HLD.md) and [`12_submission/ARCHITECTURE.md`](12_submission/ARCHITECTURE.md) |
+| What official requirements were checked? | [`12_submission/OFFICIAL_REQUIREMENTS_MATRIX.md`](12_submission/OFFICIAL_REQUIREMENTS_MATRIX.md) |
+| What is the current live-runtime diagnosis? | [`docs/release/LIVE_RUNTIME_AUDIT.md`](docs/release/LIVE_RUNTIME_AUDIT.md) |
+| What evidence is measured? | [`12_submission/EVIDENCE_INVENTORY.md`](12_submission/EVIDENCE_INVENTORY.md) and [`reports/`](reports/) |
+| How are tests run? | [`docs/TESTING_GUIDE.md`](docs/TESTING_GUIDE.md) |
+| How is the repository cleaned? | [`docs/release/FINAL_HYGIENE_AUDIT.md`](docs/release/FINAL_HYGIENE_AUDIT.md) |
+| How are security and privacy handled? | [`SECURITY.md`](SECURITY.md) and [`docs/security/`](docs/security/) |
 
-## Security and privacy
+Historical experiments and development baselines remain under
+`experiments/archive/` and `docs/archive/`. They are retained for provenance,
+not used as active runtime instructions.
 
-Authentication, authorization, CSRF, rate limiting, security headers, audit events, retention, and data-classification decisions are documented under [`docs/security/`](docs/security/) and implemented/tested in `10_security/`. Do not commit credentials, raw watchlists, raw video, or unreviewed personal data.
+## Official challenge references
 
-## Scale and operational honesty
+The implementation and submission package were aligned against the public
+official pages:
 
-P11 scale documents provide a bounded architecture projection, storage/bandwidth arithmetic, HA/DR design, and a rollout plan. They are not a claim that this checkout has been deployed to 80,000 cameras. P7 provides chronological lower-bound feasibility, not live road routing. P6 provides appearance retrieval evidence only because no true cross-camera vehicle-ID ground truth exists locally.
+- [Problems](https://sentinel.gujarat.gov.in/problems)
+- [FAQs](https://sentinel.gujarat.gov.in/faqs)
+- [Resource and integration guide](https://sentinel.gujarat.gov.in/resource)
+- [Phases and prizes](https://sentinel.gujarat.gov.in/phases)
 
-## Screenshots
-
-The dashboard is implemented under `09_dashboard/`. No generated or
-potentially sensitive runtime screenshot is committed in this release; follow
-[`docs/assets/README.md`](docs/assets/README.md) to capture a fresh redacted
-screenshot when required by the submission portal.
+The published challenge describes a registry/GIS foundation, permitted
+multi-camera feeds, a designated-vehicle test case, timestamped output,
+working-software demonstration, and a statewide scale plan. External organizer
+credentials, designated vehicle data, team eligibility, and portal-only upload
+fields are not present in this repository and must be supplied by the submission
+owner.
 
 ## License and responsible use
 
-The original project source is available under the
+SentinelTrack is released under the
 [SentinelTrack Academic and Non-Commercial Evaluation License](LICENSE).
 Academic research, teaching, evaluation, and hackathon judging are permitted.
-Commercial use, production deployment, operational surveillance, paid
-services, and other use outside that scope require prior written permission
-from the copyright holder. This is a custom restrictive license, not an
-OSI-approved open-source license.
+Commercial use, production deployment, operational surveillance, paid services,
+and other use outside that scope require prior written permission from the
+copyright holder. This is a custom restrictive license, not an OSI-approved
+open-source license.
 
-Model weights, datasets, fonts, libraries, and other third-party materials
-remain subject to their own licenses and terms. Review
-[`docs/release/MODEL_INVENTORY.md`](docs/release/MODEL_INVENTORY.md) and the
-evidence inventories before using or redistributing any component.
-
-SentinelTrack is decision-support software. Operators and deploying
-departments remain responsible for authorization, lawful use, retention,
-security, and human review of any identity-related result.
+Third-party models, datasets, fonts, and libraries retain their own licenses.
+Review [`docs/release/MODEL_INVENTORY.md`](docs/release/MODEL_INVENTORY.md)
+before redistributing any component. SentinelTrack is decision-support
+software; deploying departments remain responsible for authorization, lawful
+use, retention, security, and human review.

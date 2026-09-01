@@ -1,4 +1,5 @@
 import uuid
+import importlib
 import numpy as np
 from typing import Optional, Any
 from datetime import datetime, timezone
@@ -17,6 +18,14 @@ from .scorer import TargetMatchScorer
 from .alerts import AlertManager
 from .repository import BaseTargetMatchingRepository, get_repository
 from .normalizer import normalize_plate_text
+
+
+_grammar = importlib.import_module("04_plate_ocr.grammar")
+
+
+def _stable_id(kind: str, *parts: Any) -> str:
+    material = ":".join(str(part) for part in parts)
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"sentineltrack:{kind}:{material}"))
 
 
 class TargetMatchingPipeline:
@@ -39,6 +48,10 @@ class TargetMatchingPipeline:
         self.watchlist_manager = watchlist_manager or WatchlistManager(config=self.config, repository=self.repository)
         self.scorer = scorer or TargetMatchScorer(config=self.config)
         self.alert_manager = alert_manager or AlertManager(config=self.config)
+        # stream_epoch and track_id can restart at the same values after a
+        # process restart. Scope deterministic track upserts to this pipeline
+        # run so a later run cannot overwrite historical evidence.
+        self._persistence_run_id = uuid.uuid4().hex
 
     def process_track_ocr_result(
         self,
@@ -53,7 +66,7 @@ class TargetMatchingPipeline:
             return [], [], None
 
         obs_reg = normalize_plate_text(track_result.best_text)
-        if not obs_reg or len(obs_reg) < 4:
+        if not obs_reg or not _grammar.is_plausible_indian_registration_evidence(obs_reg):
             return [], [], None
 
         # 1. Derive real crop quality from P4 hypotheses if available
@@ -71,8 +84,20 @@ class TargetMatchingPipeline:
         # 2. Shortlist Watchlist Candidates using Multi-Index Fast Path
         candidates_to_eval = self.watchlist_manager.lookup_candidates(obs_reg)
         if not candidates_to_eval:
+            # A one-frame candidate is useful for live review, but is not
+            # strong enough to become searchable registration history.
+            if not bool(getattr(track_result, "is_resolved", False)):
+                return [], [], None
+            if not _grammar.is_complete_indian_registration_evidence(obs_reg):
+                return [], [], None
             # Persist raw sighting for un-watchlisted vehicle (searchable in history)
-            sighting_id = str(uuid.uuid4())
+            sighting_id = _stable_id(
+                "sighting",
+                self._persistence_run_id,
+                track_result.camera_id,
+                track_result.stream_epoch,
+                track_result.track_id,
+            )
             sighting = Sighting(
                 sighting_id=sighting_id,
                 camera_id=track_result.camera_id,
@@ -88,7 +113,9 @@ class TargetMatchingPipeline:
                     'support_count': track_result.support_count,
                     'total_hypotheses': track_result.total_hypotheses,
                     'status': track_result.status,
-                    'crop_quality': crop_quality
+                    'crop_quality': crop_quality,
+                    'grammar_score': _grammar.score_indian_grammar(obs_reg),
+                    'identity_source': 'ANPR'
                 },
                 event_time_utc=ev_time,
                 event_time_source=ev_source,
@@ -164,7 +191,13 @@ class TargetMatchingPipeline:
         ranked_candidates.sort(key=lambda x: x[0].match_score, reverse=True)
 
         top_cand, top_w_entry = ranked_candidates[0]
-        sighting_id = str(uuid.uuid4())
+        sighting_id = _stable_id(
+            "sighting",
+            self._persistence_run_id,
+            track_result.camera_id,
+            track_result.stream_epoch,
+            track_result.track_id,
+        )
         now = datetime.now(timezone.utc)
 
         # 4. Persist Vehicle Sighting
@@ -204,7 +237,7 @@ class TargetMatchingPipeline:
                 except Exception:
                     pass
                 match_rec = TargetMatchRecord(
-                    match_id=str(uuid.uuid4()),
+                    match_id=_stable_id("target-match", sighting_id, w_entry.watchlist_id),
                     sighting_id=sighting_id,
                     watchlist_id=w_entry.watchlist_id,
                     match_score=cand.match_score,

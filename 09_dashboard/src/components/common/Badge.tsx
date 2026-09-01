@@ -76,6 +76,7 @@ export function MatchClassBadge({ matchClass }: { matchClass: MatchClass }) {
     HIGH_PROBABILITY: { variant: "success", label: "HIGH PROBABILITY" },
     PROBABLE: { variant: "normal", label: "PROBABLE" },
     POSSIBLE: { variant: "neutral", label: "POSSIBLE" },
+    REJECTED: { variant: "neutral", label: "REJECTED" },
   };
   const conf = map[matchClass] || { variant: "neutral", label: matchClass };
   return <Badge variant={conf.variant}>{conf.label}</Badge>;
@@ -104,6 +105,7 @@ export function CameraStatusBadge({ status }: { status: CameraStreamStatus }) {
     OFFLINE: { variant: "danger", label: "OFFLINE" },
     UNKNOWN: { variant: "neutral", label: "UNKNOWN" },
     NOT_CONFIGURED: { variant: "neutral", label: "NOT CONFIGURED" },
+    AUTH_REQUIRED: { variant: "warning", label: "ACCESS REQUIRED" },
   };
   const conf = map[status] || { variant: "neutral", label: status };
   return <Badge variant={conf.variant} dot={status === "ONLINE"}>{conf.label}</Badge>;

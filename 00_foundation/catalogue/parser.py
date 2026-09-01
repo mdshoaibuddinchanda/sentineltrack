@@ -16,7 +16,7 @@ def first_value(data, *keys):
     return None
 
 
-def parse_camera(item: dict) -> CameraRecord:
+def parse_camera(item: dict, base_host: str | None = None) -> CameraRecord:
 
     stream_data = (
         item.get("stream")
@@ -87,9 +87,9 @@ def parse_camera(item: dict) -> CameraRecord:
 
     import os
     if hls and isinstance(hls, str) and hls.startswith("/"):
-        base_host = os.getenv("SENTINEL_HOST", "").rstrip("/")
-        if base_host:
-            hls = f"{base_host}{hls}"
+        resolved_host = (base_host or os.getenv("SENTINEL_HOST", "")).rstrip("/")
+        if resolved_host:
+            hls = f"{resolved_host}{hls}"
 
 
     latitude = first_value(
@@ -124,12 +124,12 @@ def parse_camera(item: dict) -> CameraRecord:
 
         camera_id=str(camera_id),
 
-        name=first_value(
-            item,
-            "name",
-            "camera_name",
-            "label",
-            "title",
+        # The organizer payload has a generic name and a useful string
+        # location. Prefer the location label while retaining raw_metadata.
+        name=(
+            item.get("location")
+            if isinstance(item.get("location"), str) and item.get("location").strip()
+            else first_value(item, "name", "camera_name", "label", "title")
         ),
 
         department=first_value(
@@ -186,7 +186,7 @@ def parse_camera(item: dict) -> CameraRecord:
     )
 
 
-def parse_catalogue(payload):
+def parse_catalogue(payload, base_host: str | None = None):
 
     if isinstance(payload, list):
         items = payload
@@ -206,6 +206,6 @@ def parse_catalogue(payload):
         )
 
     return [
-        parse_camera(item)
+        parse_camera(item, base_host=base_host)
         for item in items
     ]

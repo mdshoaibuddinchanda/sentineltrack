@@ -123,7 +123,7 @@ export function UsersPage() {
             <Users className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-base font-bold tracking-wide text-white font-mono">USER ADMINISTRATION</h1>
+            <h1 className="text-base font-bold tracking-wide text-slate-100 font-mono">User administration</h1>
             <p className="text-xs text-slate-400">Manage authenticated operators, supervisors, and role assignments</p>
           </div>
         </div>
@@ -245,7 +245,7 @@ export function UsersPage() {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-police-850 border border-police-700 rounded-lg max-w-md w-full p-5 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between border-b border-police-750 pb-3">
-              <div className="flex items-center gap-2 text-white font-mono font-bold text-sm">
+              <div className="flex items-center gap-2 text-slate-100 font-mono font-bold text-sm">
                 <UserPlus className="w-4 h-4 text-accent-blue" />
                 <span>CREATE OPERATOR ACCOUNT</span>
               </div>
@@ -340,7 +340,7 @@ export function UsersPage() {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-police-850 border border-police-700 rounded-lg max-w-md w-full p-5 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between border-b border-police-750 pb-3">
-              <div className="flex items-center gap-2 text-white font-mono font-bold text-sm">
+              <div className="flex items-center gap-2 text-slate-100 font-mono font-bold text-sm">
                 <KeyRound className="w-4 h-4 text-amber-400" />
                 <span>RESET PASSWORD: {resetTargetUser.username}</span>
               </div>

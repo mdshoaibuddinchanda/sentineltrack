@@ -1,14 +1,13 @@
 import os
 import time
 import logging
+import threading
 import cv2
-from typing import Optional, Generator, Tuple
+from typing import Callable, Optional, Generator, Tuple
 
 logger = logging.getLogger("sentineltrack.stream_reader")
 
-os.environ[
-    "OPENCV_FFMPEG_CAPTURE_OPTIONS"
-] = "rtsp_transport;tcp"
+_CAPTURE_OPTIONS_LOCK = threading.Lock()
 
 try:
     from .models import FramePacket
@@ -31,6 +30,7 @@ class RTSPReader:
         failover_threshold: int = 3,
         recovery_interval_s: float = 60.0,
         connect_timeout_s: Optional[float] = None,
+        http_cookie_provider: Optional[Callable[[str], str]] = None,
     ):
         self.primary_url = url
         self.fallback_url = fallback_url
@@ -42,6 +42,7 @@ class RTSPReader:
         if configured_timeout is None:
             configured_timeout = os.getenv("RTSP_CONNECT_TIMEOUT", "10")
         self.connect_timeout_s = max(1.0, float(configured_timeout))
+        self.http_cookie_provider = http_cookie_provider
 
         self.active_url = self.primary_url
         self.is_using_fallback = False
@@ -52,6 +53,24 @@ class RTSPReader:
         self.stream_epoch = 0
         self.last_pts_ms = -1.0
 
+    def _ffmpeg_capture_options(self, url: str) -> str:
+        options: list[str] = []
+        if url.lower().startswith("rtsp://"):
+            options.append("rtsp_transport;tcp")
+        if url.lower().startswith(("http://", "https://")) and self.http_cookie_provider:
+            try:
+                cookies = self.http_cookie_provider(url)
+            except Exception:
+                logger.warning(
+                    "Could not obtain the authorized media session for camera %s",
+                    self.camera_id,
+                    exc_info=True,
+                )
+                cookies = ""
+            if cookies:
+                options.append(f"cookies;{cookies}")
+        return "|".join(options)
+
     def _open_capture(self, url: str):
         """Open a capture with bounded FFmpeg open/read timeouts."""
         timeout_ms = int(self.connect_timeout_s * 1000)
@@ -61,17 +80,30 @@ class RTSPReader:
             cv2.CAP_PROP_READ_TIMEOUT_MSEC,
             timeout_ms,
         ]
-        try:
-            return cv2.VideoCapture(url, cv2.CAP_FFMPEG, params)
-        except (TypeError, cv2.error):
-            # Keep compatibility with OpenCV builds that do not expose the
-            # parameterized constructor. The configured timeout remains the
-            # source of truth on supported FFmpeg builds.
-            logger.warning(
-                "OpenCV build does not support bounded capture parameters for camera %s",
-                self.camera_id,
-            )
-            return cv2.VideoCapture(url, cv2.CAP_FFMPEG)
+        options = self._ffmpeg_capture_options(url)
+        # OpenCV reads this process-global variable while VideoCapture is
+        # constructed. Serialize that small critical section so 30 camera
+        # threads cannot leak one camera's cookie/options into another open.
+        with _CAPTURE_OPTIONS_LOCK:
+            previous = os.environ.get("OPENCV_FFMPEG_CAPTURE_OPTIONS")
+            if options:
+                os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = options
+            else:
+                os.environ.pop("OPENCV_FFMPEG_CAPTURE_OPTIONS", None)
+            try:
+                try:
+                    return cv2.VideoCapture(url, cv2.CAP_FFMPEG, params)
+                except (TypeError, cv2.error):
+                    logger.warning(
+                        "OpenCV build does not support bounded capture parameters for camera %s",
+                        self.camera_id,
+                    )
+                    return cv2.VideoCapture(url, cv2.CAP_FFMPEG)
+            finally:
+                if previous is None:
+                    os.environ.pop("OPENCV_FFMPEG_CAPTURE_OPTIONS", None)
+                else:
+                    os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = previous
 
     def connect(self) -> bool:
         if self.cap is not None:
@@ -120,8 +152,14 @@ class RTSPReader:
         if self.is_using_fallback and (time.time() - self.last_failover_time) >= self.recovery_interval_s:
             logger.info("Camera %s attempting recovery to its primary source", self.camera_id)
             test_cap = self._open_capture(self.primary_url)
+            recovered = False
             if test_cap.isOpened():
-                test_cap.release()
+                try:
+                    recovered, _ = test_cap.read()
+                except Exception:
+                    recovered = False
+            test_cap.release()
+            if recovered:
                 logger.info("Camera %s primary stream recovered", self.camera_id)
                 self.active_url = self.primary_url
                 self.is_using_fallback = False
@@ -130,7 +168,6 @@ class RTSPReader:
                     self.cap.release()
                     self.cap = None
             else:
-                test_cap.release()
                 self.last_failover_time = time.time()
 
     def frames(self) -> Generator[Tuple[any, float], None, None]:

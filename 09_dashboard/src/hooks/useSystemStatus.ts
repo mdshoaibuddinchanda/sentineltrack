@@ -26,10 +26,11 @@ export function useSystemStatus(pollIntervalMs = 8000, enabled = true) {
         getHealth().catch(() => null),
         getReadiness().catch((err) => {
           if (err?.status === 503) {
+            const payload = err?.details || {};
             return {
               status: "degraded" as const,
-              components: err?.details?.components || {},
-              details: err?.details || {},
+              components: payload?.components || {},
+              details: payload?.details || {},
             };
           }
           return null;

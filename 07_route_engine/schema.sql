@@ -7,7 +7,11 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 
 -- 1. Camera Schema Migrations (Idempotent)
 ALTER TABLE cameras ADD COLUMN IF NOT EXISTS azimuth DOUBLE PRECISION;
-ALTER TABLE cameras ADD COLUMN IF NOT EXISTS location_quality TEXT DEFAULT 'VERIFIED';
+ALTER TABLE cameras ADD COLUMN IF NOT EXISTS location_quality TEXT DEFAULT 'UNKNOWN';
+ALTER TABLE cameras ALTER COLUMN location_quality SET DEFAULT 'UNKNOWN';
+UPDATE cameras
+SET location_quality = 'UNKNOWN'
+WHERE latitude IS NULL OR longitude IS NULL;
 
 -- 2. Vehicle Sightings Schema Migrations (Idempotent)
 ALTER TABLE vehicle_sightings ADD COLUMN IF NOT EXISTS event_time_utc TIMESTAMPTZ;

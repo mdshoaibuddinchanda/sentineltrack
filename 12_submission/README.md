@@ -35,6 +35,8 @@ case, a presentation, an HLD, working-software demonstrations and a statewide
 
 The complete claim-to-source map is [`EVIDENCE_INVENTORY.md`](EVIDENCE_INVENTORY.md).
 All diagrams are reproducible Mermaid sources under [`diagrams/`](diagrams/).
+The current machine-level live-feed diagnosis is documented in the repository
+[`LIVE_RUNTIME_AUDIT.md`](../docs/release/LIVE_RUNTIME_AUDIT.md).
 
 ## Frozen implementation state
 
@@ -74,3 +76,9 @@ assumptions and projections. In particular, no safe 80k-camera capacity has
 been measured, P1 vehicle accuracy GT is unavailable, P6 has no true
 cross-camera identity GT, and P7 connects observed camera points rather than
 roads. These are engineering limits, not hidden claims.
+
+For a real government-feed recording, the organizer-issued feed password,
+permitted network access, designated vehicle registration, and any required
+department/GIS metadata must be supplied outside the repository. Until those
+inputs are available, the application reports `AUTH_REQUIRED` or an empty
+watchlist instead of showing fabricated live alerts.

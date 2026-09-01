@@ -8,8 +8,9 @@ import { SightingTimeline } from "../components/investigation/SightingTimeline";
 import { KinematicSegmentsTable } from "../components/investigation/KinematicSegmentsTable";
 import { WarningsPanel } from "../components/investigation/WarningsPanel";
 import { Card } from "../components/common/Card";
+import { downloadVehicleRouteReport } from "../api/routes";
 import { TableSkeleton } from "../components/common/Skeleton";
-import { Compass, Eye, MapPin, AlertTriangle } from "lucide-react";
+import { Compass, Download, Eye, MapPin, AlertTriangle } from "lucide-react";
 
 interface InvestigationPageProps {
   privacyMode?: boolean;
@@ -23,6 +24,8 @@ export function InvestigationPage({
 
   const [selectedReg, setSelectedReg] = useState<string>(routeReg || "");
   const [selectedSightingId, setSelectedSightingId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     if (routeReg) {
@@ -40,6 +43,19 @@ export function InvestigationPage({
     navigate(`/investigation/${encodeURIComponent(clean)}`);
   };
 
+  const handleExport = async () => {
+    if (!selectedReg || privacyMode) return;
+    setExporting(true);
+    setExportError(null);
+    try {
+      await downloadVehicleRouteReport(selectedReg);
+    } catch (err: any) {
+      setExportError(err?.message || "The route report could not be downloaded.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Top Search Bar */}
@@ -47,6 +63,18 @@ export function InvestigationPage({
         title="Find a vehicle"
         subtitle="Search recorded sightings and review movement between cameras"
         icon={<Compass className="w-4 h-4 text-accent-blue" />}
+        actions={route && route.sightings.length > 0 ? (
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={exporting || privacyMode}
+            title={privacyMode ? "Turn off privacy mode before exporting identifying data" : "Download timestamped CSV report"}
+            className="inline-flex items-center gap-1.5 rounded border border-blue-700 bg-blue-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Download className="h-3.5 w-3.5" />
+            {exporting ? "Preparing report…" : "Download report"}
+          </button>
+        ) : undefined}
         bodyClassName="p-3"
       >
         <SearchBar
@@ -61,6 +89,12 @@ export function InvestigationPage({
         <div className="p-4 bg-police-850 border border-police-700 rounded-lg text-slate-300 font-mono text-xs flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
           <span>{error}</span>
+        </div>
+      )}
+
+      {exportError && (
+        <div className="rounded border border-red-700 bg-red-50 p-3 text-sm font-semibold text-slate-900 dark:bg-red-950 dark:text-white">
+          {exportError}
         </div>
       )}
 

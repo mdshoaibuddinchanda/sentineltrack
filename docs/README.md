@@ -10,6 +10,7 @@ Use this index to navigate the implementation, operations, evidence, and submiss
 - [Deployment](deployment/retention_and_growth.md)
 - [Performance backlog](performance_backlog.md)
 - [Release hygiene audit](release/FINAL_HYGIENE_AUDIT.md)
+- [Live runtime audit](release/LIVE_RUNTIME_AUDIT.md)
 
 ## Active evidence and submission
 

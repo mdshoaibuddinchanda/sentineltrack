@@ -25,10 +25,10 @@ def init_database_schemas():
                 time.sleep(1.0)
             else:
                 print(f"Could not connect to PostgreSQL after {max_retries} attempts: {e}")
-                return 0
+                return 1
 
     if conn is None:
-        return 0
+        return 1
 
     schema_files = [
         REPO_ROOT / "00_foundation" / "registry" / "schema.sql",
@@ -46,17 +46,8 @@ def init_database_schemas():
                     sql = sf.read_text(encoding="utf-8")
                     cur.execute(sql)
 
-            # Seed basic test cameras if not present
-            print("Seeding test cameras...")
-            cur.execute("""
-                INSERT INTO cameras (camera_id, name, department, latitude, longitude, location, stream_status)
-                VALUES 
-                    ('cam_01', 'Intersection North', 'Traffic', 23.0225, 72.5714, ST_SetSRID(ST_MakePoint(72.5714, 23.0225), 4326)::geography, 'ONLINE'),
-                    ('cam_02', 'Highway Entry East', 'Traffic', 23.0300, 72.5800, ST_SetSRID(ST_MakePoint(72.5800, 23.0300), 4326)::geography, 'ONLINE')
-                ON CONFLICT (camera_id) DO NOTHING;
-            """)
         conn.close()
-        print("Database schemas and test fixtures initialized successfully.")
+        print("Database schemas initialized successfully (no sample cameras inserted).")
         return 0
 
 

@@ -74,6 +74,47 @@ def test_readiness_endpoint_cv_model_degraded():
         assert data["components"]["plate_detector"] is False
 
 
+def test_readiness_reports_no_live_frames_after_catalogue_success():
+    analytics_mod = importlib.import_module("08_backend.services.analytics_service")
+    scale_mod = importlib.import_module("11_scale_deployment.config")
+    lifecycle_mod = importlib.import_module("08_backend.lifecycle")
+    worker = analytics_mod.get_analytics_worker()
+    fake_models = {
+        "detector": True,
+        "tracker": True,
+        "plate_detector": True,
+        "ocr_pipeline": True,
+        "target_pipeline": True,
+    }
+    fake_supervisor = MagicMock()
+    fake_supervisor.get_status.return_value = {
+        "running": True,
+        "total_cameras": 30,
+        "connected_cameras": 0,
+        "total_frames_decoded": 0,
+        "cameras": {},
+    }
+    fake_config = MagicMock(enable_stream_ingestion=True)
+
+    with (
+        patch.object(worker, "_lazy_init_models", return_value=None),
+        patch.object(worker, "get_status", return_value={"models_loaded": fake_models}),
+        patch.object(scale_mod, "get_scale_config", return_value=fake_config),
+        patch.object(lifecycle_mod, "get_stream_supervisor", return_value=fake_supervisor),
+        patch.object(
+            lifecycle_mod,
+            "get_stream_ingestion_diagnostics",
+            return_value={"code": "READY", "message": "Catalogue refreshed."},
+        ),
+    ):
+        response = TestClient(app).get("/ready")
+
+    assert response.status_code == 503
+    stream = response.json()["details"]["stream_ingestion"]
+    assert stream["reason"] == "NO_LIVE_FRAMES"
+    assert "none has delivered" in stream["message"]
+
+
 def test_metrics_endpoint():
     client = TestClient(app)
     # Perform a request to increment counters

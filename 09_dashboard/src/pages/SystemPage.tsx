@@ -26,7 +26,19 @@ export function SystemPage({
   const serviceHealthy = health?.status === "healthy" && !coreServiceUnavailable;
   const serviceDegraded = health?.status === "healthy" && coreServiceUnavailable;
   const streamStatus = readiness?.details?.stream_ingestion as
-    | { total_cameras?: number; connected_cameras?: number; total_frames_decoded?: number; total_reconnects?: number }
+    | {
+        total_cameras?: number;
+        connected_cameras?: number;
+        total_frames_decoded?: number;
+        total_reconnects?: number;
+        message?: string;
+        source_diagnostics?: {
+          code?: string;
+          message?: string;
+          configured_camera_count?: number;
+          blocked_camera_count?: number;
+        };
+      }
     | undefined;
 
   return (
@@ -77,12 +89,17 @@ export function SystemPage({
             <div className="text-slate-400 text-[11px]">Live camera feeds</div>
             <div className="text-sm font-bold text-slate-100">
               {streamStatus
-                ? `${streamStatus.connected_cameras ?? 0} of ${streamStatus.total_cameras ?? 0} connected`
+                ? `${streamStatus.connected_cameras ?? 0} of ${streamStatus.source_diagnostics?.configured_camera_count ?? streamStatus.total_cameras ?? 0} connected`
                 : "Not enabled in this process"}
             </div>
             {streamStatus && (
               <div className="mt-1 text-[11px] text-slate-500">
                 {streamStatus.total_frames_decoded ?? 0} frames received · {streamStatus.total_reconnects ?? 0} reconnect attempts
+              </div>
+            )}
+            {(streamStatus?.message || streamStatus?.source_diagnostics?.message) && streamStatus.connected_cameras === 0 && (
+              <div className="mt-2 rounded border border-amber-600 bg-amber-50 p-2 text-[11px] font-semibold text-slate-900 dark:bg-amber-950 dark:text-white">
+                {streamStatus.message || streamStatus.source_diagnostics?.message}
               </div>
             )}
           </div>

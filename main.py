@@ -233,6 +233,17 @@ def maybe_start_postgres() -> None:
     )
 
 
+def initialize_database_schema() -> None:
+    """Apply idempotent production schemas; this never inserts sample data."""
+    print("[full] Applying idempotent SentinelTrack database schemas...")
+    subprocess.run(
+        [sys.executable, str(ROOT / "tools" / "init_schema.py")],
+        cwd=ROOT,
+        env=os.environ.copy(),
+        check=True,
+    )
+
+
 def terminate(process: subprocess.Popen | None) -> None:
     if process is None or process.poll() is not None:
         return
@@ -286,7 +297,13 @@ def main(argv: list[str] | None = None) -> int:
 
         if full:
             maybe_start_postgres()
+            initialize_database_schema()
             os.environ["SENTINEL_ENABLE_STREAM_INGESTION"] = "true"
+            if not os.getenv("SENTINEL_ACCESS_PASSWORD", "").strip():
+                print(
+                    "[attention] SENTINEL_ACCESS_PASSWORD is not configured. "
+                    "The protected official feeds will be shown as Access required."
+                )
 
         if not args.frontend_only:
             backend = start_backend(
@@ -307,7 +324,7 @@ def main(argv: list[str] | None = None) -> int:
         ui_url = f"http://127.0.0.1:{args.ui_port}"
         print()
         print("=" * 68)
-        print(" SENTINELTRACK IS READY")
+        print(" SENTINELTRACK APPLICATION STARTED")
         print("=" * 68)
         print(f" Dashboard : {ui_url}")
         if not args.frontend_only:
@@ -315,6 +332,14 @@ def main(argv: list[str] | None = None) -> int:
         if full:
             print(" Mode      : full analytics/backend runtime")
             print(" Login     : use your configured SentinelTrack operator/admin account")
+            print(
+                " Feed      : "
+                + (
+                    "credentials configured; verify decoded frames in Cameras/System status"
+                    if os.getenv("SENTINEL_ACCESS_PASSWORD", "").strip()
+                    else "BLOCKED - organizer password required"
+                )
+            )
         else:
             print(" Mode      : frontend only")
         print("=" * 68)

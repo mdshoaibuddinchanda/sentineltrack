@@ -8,6 +8,7 @@ interface OfflineBannerProps {
   onRetry: () => void;
   degradedDetails?: Record<string, any>;
   liveInputAvailable?: boolean;
+  liveInputMessage?: string;
 }
 
 function readableName(name: string): string {
@@ -17,7 +18,7 @@ function readableName(name: string): string {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-export function OfflineBanner({ status, error, onRetry, degradedDetails, liveInputAvailable }: OfflineBannerProps) {
+export function OfflineBanner({ status, error, onRetry, degradedDetails, liveInputAvailable, liveInputMessage }: OfflineBannerProps) {
   if (status === "LOADING") return null;
   if (status === "HEALTHY" && liveInputAvailable !== false) return null;
 
@@ -53,7 +54,7 @@ export function OfflineBanner({ status, error, onRetry, degradedDetails, liveInp
             <strong>{cameraInputUnavailable ? "Camera input not connected" : "Some services need attention"}</strong>
             <span>
             {cameraInputUnavailable
-              ? "The application is connected, but no camera source is currently delivering frames. This page checks again automatically."
+              ? liveInputMessage || "The application is connected, but no camera source is currently delivering frames. This page checks again automatically."
               : failedModules.length > 0
               ? `${failedModules.join(", ")} unavailable. Core information remains available where possible.`
               : "The system is available with limited services."}

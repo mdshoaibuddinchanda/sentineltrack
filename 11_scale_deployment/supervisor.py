@@ -37,6 +37,8 @@ class CameraStreamWorker:
         max_backoff_s: float = 30.0,
         failover_threshold: int = 3,
         stale_after_s: float = 20.0,
+        recovery_interval_s: float = 300.0,
+        http_cookie_provider: Optional[Callable[[str], str]] = None,
     ):
         self.camera_id = camera_id
         self.rtsp_url = rtsp_url
@@ -49,6 +51,8 @@ class CameraStreamWorker:
         self.max_backoff_s = max(1.0, float(max_backoff_s))
         self.failover_threshold = max(1, int(failover_threshold))
         self.stale_after_s = max(5.0, float(stale_after_s))
+        self.recovery_interval_s = max(30.0, float(recovery_interval_s))
+        self.http_cookie_provider = http_cookie_provider
 
         self._running = False
         self._thread: Optional[threading.Thread] = None
@@ -148,6 +152,8 @@ class CameraStreamWorker:
             max_backoff=int(max_backoff_s),
             failover_threshold=self.failover_threshold,
             connect_timeout_s=self.connect_timeout_s,
+            recovery_interval_s=self.recovery_interval_s,
+            http_cookie_provider=self.http_cookie_provider,
         )
 
         try:
@@ -262,11 +268,15 @@ class StreamSupervisor:
         self,
         config=None,
         scheduler: Optional[FairStreamScheduler] = None,
-        on_frame_callback: Optional[Callable[[FramePacket], None]] = None
+        on_frame_callback: Optional[Callable[[FramePacket], None]] = None,
+        http_cookie_provider: Optional[Callable[[str], str]] = None,
+        source_diagnostics: Optional[Dict[str, Any]] = None,
     ):
         self.config = config or get_scale_config()
         self.scheduler = scheduler
         self.on_frame_callback = on_frame_callback
+        self.http_cookie_provider = http_cookie_provider
+        self.source_diagnostics = source_diagnostics or {}
         self._workers: Dict[str, CameraStreamWorker] = {}
         self._lock = threading.Lock()
         self._running = False
@@ -302,6 +312,8 @@ class StreamSupervisor:
                 max_backoff_s=float(getattr(self.config, "stream_max_backoff_s", 30.0)),
                 failover_threshold=int(getattr(self.config, "stream_failover_threshold", 1)),
                 stale_after_s=float(getattr(self.config, "stream_stale_after_s", 20.0)),
+                recovery_interval_s=float(getattr(self.config, "stream_recovery_interval_s", 300.0)),
+                http_cookie_provider=self.http_cookie_provider,
             )
             self._workers[camera_id] = worker
 
@@ -331,10 +343,12 @@ class StreamSupervisor:
 
     def _dispatch_frame(self, packet: FramePacket) -> None:
         """Routes sampled frame packet to scheduler or callback."""
-        if self.scheduler:
-            self.scheduler.enqueue_frame(packet)
+        # AnalyticsWorker.enqueue_frame already writes to the same scheduler.
+        # Choose one delivery path so every sampled frame is enqueued exactly once.
         if self.on_frame_callback:
             self.on_frame_callback(packet)
+        elif self.scheduler:
+            self.scheduler.enqueue_frame(packet)
 
     def start(self) -> None:
         with self._lock:
@@ -410,7 +424,8 @@ class StreamSupervisor:
                 "total_reconnects": reconnects,
                 "shard_index": self.config.shard_index,
                 "shard_count": self.config.shard_count,
-                "cameras": camera_states
+                "cameras": camera_states,
+                "source_diagnostics": dict(self.source_diagnostics),
             }
 
     def get_preview(self, camera_id: str) -> Optional[bytes]:
