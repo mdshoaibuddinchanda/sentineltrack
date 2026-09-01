@@ -176,6 +176,13 @@ in a URL, committed, or passed to the browser. The launcher reports
 `AUTH_REQUIRED` when the credential is absent; it does not substitute mock
 feeds.
 
+The current organizer portal publishes `GET /cameras.json` after authentication
+and uses camera IDs `cam01` through `cam30`. SentinelTrack keeps compatibility
+with the older `/api/ingest` contract, derives the portal HLS playlist path, and
+derives the direct RTSP/TCP inference path from the published ID. In the local
+inference profile, RTSP/TCP is primary so a decoder that cannot open the portal's
+encrypted HLS playlist does not make a healthy camera appear offline.
+
 ### How to prove a camera is live
 
 Use the Cameras page or the authenticated relay endpoint:

@@ -156,6 +156,14 @@ def _start_stream_ingestion(worker, scale_config):
 
         if official_source and scale_config.prefer_hls_for_official_feeds and hls_url:
             primary_url, fallback_url = hls_url, rtsp_url
+        elif official_source:
+            # In the RTSP-first inference profile, do not park a worker on
+            # the organizer's encrypted portal HLS playlist after a transient
+            # RTSP failure. That playlist is the browser/remote delivery path
+            # and is not decodable by every local OpenCV FFmpeg build. Retry
+            # the direct TCP source instead; HLS can still be selected via
+            # SENTINEL_PREFER_OFFICIAL_HLS=true.
+            primary_url, fallback_url = rtsp_url, None
         else:
             primary_url, fallback_url = rtsp_url, hls_url
         if not camera_id or (not primary_url and not fallback_url):

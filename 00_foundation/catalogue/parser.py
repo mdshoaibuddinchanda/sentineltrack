@@ -86,6 +86,29 @@ def parse_camera(item: dict, base_host: str | None = None) -> CameraRecord:
         )
 
     import os
+    # The current organizer portal exposes a compact registry containing only
+    # {id, name}; its media endpoints follow stable paths. Derive those URLs
+    # only for named portal records so generic catalogues do not silently
+    # acquire stream endpoints they did not publish.
+    if (
+        base_host
+        and isinstance(item.get("name"), str)
+        and item.get("name").strip()
+    ):
+        portal_id = str(camera_id).lstrip("/")
+        if hls is None:
+            hls = f"{base_host.rstrip('/')}/{portal_id}/index.m3u8"
+        if rtsp is None:
+            rtsp_host = os.getenv("SENTINEL_RTSP_HOST", "103.250.160.189").strip()
+            rtsp_port = os.getenv("SENTINEL_RTSP_PORT", "8554").strip()
+            if rtsp_host:
+                rtsp = f"rtsp://{rtsp_host}:{rtsp_port}/stream/{portal_id}"
+        if webrtc is None:
+            whep_host = os.getenv("SENTINEL_WHEP_HOST", "103.250.160.189").strip()
+            whep_port = os.getenv("SENTINEL_WHEP_PORT", "8889").strip()
+            if whep_host:
+                webrtc = f"http://{whep_host}:{whep_port}/stream/{portal_id}/whep"
+
     if hls and isinstance(hls, str) and hls.startswith("/"):
         resolved_host = (base_host or os.getenv("SENTINEL_HOST", "")).rstrip("/")
         if resolved_host:

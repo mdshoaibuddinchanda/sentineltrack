@@ -81,10 +81,11 @@ class SentinelCatalogueClient:
         self.authenticated = False
         self._lock = threading.RLock()
 
-    def _get_catalogue(self) -> requests.Response:
+    def _get_catalogue(self, url: str | None = None) -> requests.Response:
+        request_url = url or self.catalogue_url
         try:
             return self.session.get(
-                self.catalogue_url,
+                request_url,
                 timeout=self.timeout_s,
                 allow_redirects=True,
             )
@@ -92,6 +93,20 @@ class SentinelCatalogueClient:
             raise CatalogueConnectionError(
                 f"The organizer catalogue could not be reached: {exc}"
             ) from exc
+
+    def _get_authorized_catalogue(self, url: str) -> requests.Response:
+        """Fetch a catalogue endpoint, authenticating when the portal asks."""
+        response = self._get_catalogue(url)
+        if _looks_like_login(response):
+            self._authenticate(response)
+            response = self._get_catalogue(url)
+
+        if _looks_like_login(response):
+            raise CatalogueAuthenticationFailed(
+                "The organizer feed session did not authorize the catalogue."
+            )
+
+        return response
 
     def _authenticate(self, login_response: requests.Response) -> None:
         if not self.password:
@@ -122,15 +137,17 @@ class SentinelCatalogueClient:
     def fetch(self) -> dict | list:
         """Return a validated JSON catalogue, authenticating once if required."""
         with self._lock:
-            response = self._get_catalogue()
-            if _looks_like_login(response):
-                self._authenticate(response)
-                response = self._get_catalogue()
+            response = self._get_authorized_catalogue(self.catalogue_url)
 
-            if _looks_like_login(response):
-                raise CatalogueAuthenticationFailed(
-                    "The organizer feed session did not authorize the catalogue."
-                )
+            # The organizer's current portal publishes its authenticated
+            # registry at /cameras.json. Keep /api/ingest as the primary
+            # contract for deployments that expose it, then fall back only
+            # when that endpoint is absent.
+            if response.status_code == 404 and self.catalogue_url.endswith("/api/ingest"):
+                portal_catalogue_url = f"{self.host}/cameras.json"
+                response = self._get_authorized_catalogue(portal_catalogue_url)
+                if response.status_code < 400:
+                    self.catalogue_url = portal_catalogue_url
 
             try:
                 response.raise_for_status()

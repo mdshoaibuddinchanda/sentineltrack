@@ -20,25 +20,33 @@ metadata, events, alerts and selected evidence.
 The official integration guide defines the catalogue as the contract. The
 current organizer deployment redirects the catalogue and HLS resources to a
 restricted feed portal, so the platform starts by creating an authorized
-session and then requesting:
+session and first requests the published contract:
 
 ```text
 GET /api/ingest
 ```
+
+The current portal deployment returns `404` for that legacy route after
+authentication and publishes the live registry at `GET /cameras.json`; the
+client supports both routes without hard-coding the camera list. For each
+catalogue record (`cam01` through `cam30` in the current grant), the portal
+publishes HLS at `https://cctv.corp8.cloud/<id>/index.m3u8` and the direct media
+gateway publishes RTSP at `rtsp://103.250.160.189:8554/stream/<id>`.
 
 The catalogue provides camera IDs, location, codec, live status, stream
 properties and available endpoints. The current supported stream patterns are:
 
 | Use | Endpoint pattern |
 |---|---|
-| AI inference | `rtsp://<host>:8554/stream/<id>` |
-| Browser preview | `http://<host>:8889/stream/<id>/whep` |
-| Dashboard/mobile/restricted networks | `http://<host>/live/stream/<id>/index.m3u8` |
+| AI inference | `rtsp://103.250.160.189:8554/stream/<id>` over TCP |
+| Browser preview | `http://103.250.160.189:8889/stream/<id>/whep` |
+| Dashboard/mobile/restricted networks | `https://cctv.corp8.cloud/<id>/index.m3u8` with the organizer session |
 
-The organizer replay adapter prefers authenticated HLS for inference and keeps
-the advertised RTSP URL as a bounded fallback. Generic integrations may retain
-RTSP-first ordering. The resolver passes the protected session directly to
-FFmpeg (never in a URL or browser),
+The local inference profile uses RTSP-first ordering and forces TCP. It retries
+the direct source after a transient failure; the portal HLS path remains the
+authenticated remote/browser delivery path and can be selected explicitly for
+environments whose decoder supports it. The resolver passes the protected
+session directly to FFmpeg (never in a URL or browser),
 preserves source PTS, and carries `camera_id`, `stream_epoch`, ingest time and
 best-estimate UTC event time in each `FramePacket`. Reconnect backoff is bounded
 from approximately 2 to 30 seconds in the operational design. A stream

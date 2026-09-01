@@ -30,8 +30,10 @@ class FakeSession:
         self._gets = iter(get_responses)
         self._post_response = post_response
         self.post_data = None
+        self.get_urls = []
 
-    def get(self, *_args, **_kwargs):
+    def get(self, url, **_kwargs):
+        self.get_urls.append(url)
         return next(self._gets)
 
     def post(self, _url, data, **_kwargs):
@@ -79,3 +81,37 @@ def test_catalogue_authenticates_and_exports_ffmpeg_cookie_without_password():
     assert "feed_session=opaque-token" in cookie
     assert "organizer-secret" not in cookie
     assert client.effective_host == "https://cctv.corp8.cloud"
+
+
+def test_catalogue_falls_back_to_current_authenticated_portal_registry():
+    login = FakeResponse(
+        url="https://cctv.corp8.cloud/auth/login",
+        text='<form><input name="password"></form>Restricted Feed Access',
+    )
+    auth_ok = FakeResponse(url="https://cctv.corp8.cloud/")
+    missing_legacy_endpoint = FakeResponse(
+        url="https://cctv.corp8.cloud/api/ingest",
+        status=404,
+    )
+    portal_catalogue = FakeResponse(
+        url="https://cctv.corp8.cloud/cameras.json",
+        content_type="application/json",
+        payload=[{"id": "cam01", "name": "01 Chiman bhai Bridge"}],
+    )
+    session = FakeSession(
+        [login, missing_legacy_endpoint, portal_catalogue],
+        post_response=auth_ok,
+    )
+    client = client_m.SentinelCatalogueClient(
+        host="https://cctv.corp8.cloud",
+        password="organizer-secret",
+        session=session,
+    )
+
+    assert client.fetch() == [{"id": "cam01", "name": "01 Chiman bhai Bridge"}]
+    assert session.get_urls == [
+        "https://cctv.corp8.cloud/api/ingest",
+        "https://cctv.corp8.cloud/api/ingest",
+        "https://cctv.corp8.cloud/cameras.json",
+    ]
+    assert client.catalogue_url == "https://cctv.corp8.cloud/cameras.json"

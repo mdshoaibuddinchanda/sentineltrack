@@ -96,8 +96,11 @@ def _database_check() -> tuple[Check, dict[str, int]]:
                 ):
                     cur.execute(f"SELECT COUNT(*) FROM {table};")
                     counts[key] = int(cur.fetchone()[0])
-                cur.execute("SELECT COUNT(*) FROM cameras WHERE camera_id !~ '^[0-9]+$';")
-                counts["non_numeric_cameras"] = int(cur.fetchone()[0])
+                # The organizer's current catalogue uses cam01..cam30 IDs.
+                # Numeric IDs were the stale pre-portal registry shape, so
+                # hygiene must recognize the official camNN form as valid.
+                cur.execute("SELECT COUNT(*) FROM cameras WHERE camera_id !~ '^cam[0-9]+$';")
+                counts["non_portal_cameras"] = int(cur.fetchone()[0])
                 cur.execute(
                     "SELECT COUNT(*) FROM cameras WHERE COALESCE(rtsp_url, '') <> '' OR COALESCE(hls_url, '') <> '';"
                 )
@@ -175,8 +178,8 @@ def run_doctor() -> int:
     checks.append(db_check)
     checks.extend([_dns_check(list(dict.fromkeys(hosts))), _catalogue_check(), _security_check(), _frontend_check()])
 
-    if counts.get("non_numeric_cameras", 0):
-        checks.append(Check("Database hygiene", "WARN", f"{counts['non_numeric_cameras']} non-official/test camera rows remain"))
+    if counts.get("non_portal_cameras", 0):
+        checks.append(Check("Database hygiene", "WARN", f"{counts['non_portal_cameras']} non-official/test camera rows remain"))
     if counts.get("watchlist", 0) == 0:
         checks.append(Check("Designated vehicle", "BLOCKED", "watchlist is empty; no registration can generate an alert"))
     else:

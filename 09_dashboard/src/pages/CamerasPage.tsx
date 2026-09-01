@@ -219,6 +219,7 @@ export function CamerasPage({ cameras, onSelectCamera, liveFramesDecoded }: Came
                     <div className="relative">
                       <img
                         src={liveStreamUrl}
+                        crossOrigin="use-credentials"
                         alt={`Live video from ${selectedCam.name || selectedCam.camera_id}`}
                         className="w-full aspect-video object-cover rounded border border-police-750 bg-black"
                         onLoad={() => {

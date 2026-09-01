@@ -107,3 +107,16 @@ def test_parse_organizer_location_label_and_effective_hls_host():
 
     assert rec.name == "01 Chiman bhai Bridge"
     assert rec.hls_url == "https://cctv.corp8.cloud/live/stream/1/index.m3u8"
+
+
+def test_parse_current_portal_registry_derives_authenticated_hls_playlist():
+    rec = parse_camera(
+        {"id": "cam01", "name": "01 Chiman bhai Bridge"},
+        base_host="https://cctv.corp8.cloud",
+    )
+
+    assert rec.camera_id == "cam01"
+    assert rec.name == "01 Chiman bhai Bridge"
+    assert rec.hls_url == "https://cctv.corp8.cloud/cam01/index.m3u8"
+    assert rec.rtsp_url == "rtsp://103.250.160.189:8554/stream/cam01"
+    assert rec.webrtc_url == "http://103.250.160.189:8889/stream/cam01/whep"
