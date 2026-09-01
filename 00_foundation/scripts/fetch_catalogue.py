@@ -25,7 +25,8 @@ def main():
 
     client = SentinelCatalogueClient()
 
-    # 1. Download /api/ingest
+    # 1. Fetch the current catalogue (legacy-route compatibility is handled
+    #    inside the client).
     payload = client.fetch()
 
     # 2. Save original JSON

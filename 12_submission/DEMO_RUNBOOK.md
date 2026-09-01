@@ -17,8 +17,9 @@ and current blockers are summarized in
 - Confirm the official resource contract and feed permissions before connecting any government stream.
 - Organizer-issued restricted-feed password stored only in local `.env` as
   `SENTINEL_ACCESS_PASSWORD`.
-- Working DNS resolution for `cctv.corp8.cloud`, `live.corp8.cloud`, and
-  `live.sentinelgujarat.in`.
+- Working DNS resolution for the configured organizer portal
+  (`cctv.corp8.cloud` in the current grant) and direct access to the published
+  RTSP gateway at `103.250.160.189:8554`.
 - The designated registration from the evaluator statement added to the
   watchlist; an empty watchlist cannot generate an alert.
 

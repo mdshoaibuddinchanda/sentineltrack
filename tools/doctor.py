@@ -172,7 +172,10 @@ def run_doctor() -> int:
     print("=" * 78)
 
     configured_host = urlparse(os.getenv("SENTINEL_HOST", "https://cctv.corp8.cloud")).hostname
-    hosts = [value for value in [configured_host, "live.sentinelgujarat.in", "live.corp8.cloud"] if value]
+    # Check only the organizer host selected by the active configuration. Older
+    # challenge hostnames are retained in compatibility tests, but are not
+    # runtime dependencies and must not create a false demo blocker.
+    hosts = [configured_host] if configured_host else []
     checks: list[Check] = [_runtime_check(), _model_check()]
     db_check, counts = _database_check()
     checks.append(db_check)

@@ -1,9 +1,10 @@
 """Authenticated client for the organizer-provided Sentinel camera catalogue.
 
-The official portal currently protects both ``/api/ingest`` and HLS media
-behind a password session. This client keeps that session in memory and can
-export it in FFmpeg's cookie format without ever putting the password or the
-cookie in a URL or log message.
+The current portal publishes the catalogue at ``/cameras.json`` and protects
+the HLS media behind a password session. The client also probes the older
+``/api/ingest`` route for compatibility. It keeps the authorized session in
+memory and can export it in FFmpeg's cookie format without ever putting the
+password or cookie in a URL or log message.
 """
 
 from __future__ import annotations

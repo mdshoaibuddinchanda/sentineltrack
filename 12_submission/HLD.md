@@ -20,15 +20,16 @@ metadata, events, alerts and selected evidence.
 The official integration guide defines the catalogue as the contract. The
 current organizer deployment redirects the catalogue and HLS resources to a
 restricted feed portal, so the platform starts by creating an authorized
-session and first requests the published contract:
+session. For backward compatibility it first probes the older contract:
 
 ```text
 GET /api/ingest
 ```
 
 The current portal deployment returns `404` for that legacy route after
-authentication and publishes the live registry at `GET /cameras.json`; the
-client supports both routes without hard-coding the camera list. For each
+authentication and publishes the live registry at `GET /cameras.json`; this is
+the active catalogue used by the audited runtime. The client supports both
+routes without hard-coding the camera list. For each
 catalogue record (`cam01` through `cam30` in the current grant), the portal
 publishes HLS at `https://cctv.corp8.cloud/<id>/index.m3u8` and the direct media
 gateway publishes RTSP at `rtsp://103.250.160.189:8554/stream/<id>`.

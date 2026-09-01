@@ -464,6 +464,17 @@ textarea:focus-visible {
   border-color: var(--brand);
 }
 
+.privacy-button {
+  min-width: 108px;
+  padding-inline: 10px;
+}
+
+.privacy-button__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .user-menu {
   gap: 9px;
   margin-left: 5px;

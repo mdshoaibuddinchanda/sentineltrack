@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   Activity,
   Bell,
+  Eye,
   EyeOff,
   LogOut,
   Moon,
@@ -127,11 +128,13 @@ export function Header({
         <button
           type="button"
           onClick={onTogglePrivacyMode}
-          className={`icon-button ${privacyMode ? "icon-button--selected" : ""}`}
-          title={privacyMode ? "Show full registration numbers" : "Hide registration numbers"}
-          aria-label={privacyMode ? "Show full registration numbers" : "Hide registration numbers"}
+          className={`icon-button privacy-button ${privacyMode ? "icon-button--selected" : ""}`}
+          title={privacyMode ? "Privacy mode is on. Show full registration numbers" : "Privacy mode is off. Hide registration numbers"}
+          aria-label={privacyMode ? "Turn privacy mode off and show full registration numbers" : "Turn privacy mode on and hide registration numbers"}
+          aria-pressed={privacyMode}
         >
-          <EyeOff size={18} />
+          {privacyMode ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+          <span className="privacy-button__label">Privacy {privacyMode ? "on" : "off"}</span>
         </button>
         <button
           type="button"

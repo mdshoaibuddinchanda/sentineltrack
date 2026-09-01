@@ -11,11 +11,18 @@
 
 The software path for authenticated catalogue ingestion, protected HLS/RTSP
 opening, decoded-frame health, continuous browser preview, unified camera
-overview, and staged analytics
-is implemented and locally testable. The organizer credential is now configured
-only in the local ignored `.env`; the current portal catalogue was authenticated,
-30 official sources were registered, and a clean runtime settled all 30 workers
-to `ONLINE` with decoded frames.
+overview, and staged analytics is implemented and locally testable. The
+organizer credential is configured only in the local ignored `.env`; the
+current portal catalogue authenticated successfully and registered 30 official
+sources.
+
+An earlier clean run settled all 30 workers to `ONLINE`. In the final re-audit,
+29 sources continuously delivered fresh decoded frames. `cam30` delivered 47
+frames and then became stale/offline; a separate direct RTSP/TCP probe also
+timed out. The application reported that source truthfully instead of replacing
+it with a fake green status. This is current upstream-feed evidence, not an
+internal readiness failure: the other 29 feeds and the analytics worker stayed
+live.
 
 The workstation is still not submission-ready for a designated-vehicle alert
 until the challenge-authorized registration is added to the watchlist. The
@@ -56,8 +63,9 @@ returns `404` in the current deployment; the live registry is available at
 | PostgreSQL/PostGIS | PASS — PostGIS 3.5 | Database dependency is available. |
 | Camera registry | PASS — 30 `camNN` camera records | Current organizer IDs remain after stale numeric rows were removed. |
 | Watchlist | BLOCKED — 0 entries | A designated authorized vehicle has not been added. |
+| Persisted evidence | PASS — 1 current sighting, 0 alerts | Real runtime evidence is preserved; no sample alert or target was invented. |
 | Catalogue authentication | PASS — 30 cameras; one in-memory session cookie | Current organizer password accepted; no secret is persisted in Git. |
-| Decoded camera frames | PASS — 30/30 workers `ONLINE` after startup settle | Direct RTSP/TCP opened and decoded current frames. |
+| Decoded camera frames | DEGRADED EXTERNAL — 29/30 fresh in final re-audit | Direct RTSP/TCP decoded all other sources; `cam30` became stale after 47 frames and its direct probe timed out. |
 | Frontend build | PASS | Dashboard bundle is available. |
 | Security/RBAC | PASS | Authentication and role boundaries remain tested. |
 
@@ -79,7 +87,7 @@ resolution fields are missing. The UI displays missing geographic values as
 | Scheduler could dispatch a camera twice | Supervisor dispatch is now exactly once per scheduled camera cycle. |
 | Dashboard crashed on missing coordinates or undefined values | Nullable coordinate and metric rendering now has explicit fallbacks. |
 | Stored alerts disappeared whenever the current stream stopped | Historical persisted evidence remains visible and is labelled historical; it is not presented as current live activity. |
-| Demo/sample records made the operational view misleading | Operational database rows were cleaned; 30 camera definitions remain, while watchlist, sightings, matches, alerts, route runs, and health-event rows are zero. |
+| Demo/sample records made the operational view misleading | Sample rows were cleaned. New real runtime evidence is preserved; the final re-audit has 30 camera definitions, 1 sighting, and no fabricated targets or alerts. |
 | Invalid OCR strings could become targets | Indian registration grammar and evidence gates reject signage/noise while preserving valid partial/degraded candidates for review. |
 | Route output lacked useful human-readable location context | Catalogue location labels flow into timeline, GeoJSON properties, and authenticated CSV reports. |
 
@@ -137,9 +145,9 @@ run.bat --full
 On the audited workstation, `tools\doctor.py` passes runtime, model manifest,
 database/PostGIS, organizer DNS, catalogue authentication, RBAC, and dashboard
 checks. It reports one intentional blocker: the watchlist is empty. During the
-full run, the API became healthy on port 8000, the Vite dashboard became
-reachable on port 5173, and the camera registry reported 30 `ONLINE` sources
-after workers completed their initial RTSP/TCP connects.
+final full run, the API became healthy on port 8000, the Vite dashboard became
+reachable on port 5173, and 29 camera sources continued delivering fresh
+frames. `cam30` is the one current upstream exception described above.
 
 The dashboard is served at `http://127.0.0.1:5173`; the API is served at
 `http://127.0.0.1:8000`. A live camera relay is available through the
@@ -149,14 +157,32 @@ authenticated application route:
 GET /api/v1/cameras/{camera_id}/live
 ```
 
+## Final authenticated route and processing evidence
+
+- `/health`, authenticated `/ready`, and authenticated `/metrics` returned
+  successful responses; every readiness component was true.
+- All nine frontend routes returned the SentinelTrack application shell:
+  login, operations, cameras, watchlist, alerts, investigation, system status,
+  user administration, and audit.
+- `cam01` returned a current JPEG preview and a continuous authenticated MJPEG
+  response. The relay returned actual bytes from the decoded worker frame.
+- The final process metrics recorded 280,525 decoded frames, 23,664 sampled
+  frames, 677 vehicle detections, 361 plate/OCR inferences, zero generated
+  alerts, zero dropped frames, and zero pipeline errors.
+- The route engine was not fabricated or forced: route generation was not
+  exercised because the authorized watchlist is empty.
+
 ## Validation evidence
 
-The final local Python suite completed with **372 passed and 1 skipped**. The
-exact GitHub backend command completed with **116 passed**. The frontend suite
-completed with **53 passed** across 13 files; TypeScript typecheck, ESLint, and
-the production Vite build also passed. The Python suite includes stream
-recovery, catalogue authentication, worker integration, API health, route
-reports, security, WebSocket isolation, and P6 safety contracts.
+The final local Python suite completed with **374 passed and 1 skipped**. The
+exact GitHub backend command completed locally with **116 passed**. The
+frontend suite completed with **55 passed** across 13 files; TypeScript
+typecheck, ESLint, and the production Vite build also passed. Python compilation,
+Docker Compose validation, all five runtime model hashes, all five active YAML
+configurations, and the frozen detector/OCR manifest hashes passed. The Python
+suite includes stream recovery, catalogue authentication, worker integration,
+API health, route reports, security, WebSocket isolation, and P6 safety
+contracts.
 
 GitHub Actions run `33501256138` completed successfully for the verified commit
 listed above. It ran the backend security/scale contract gate and the frontend
@@ -165,7 +191,8 @@ substitute for that remote check.
 
 ## Remaining external inputs
 
-- Organizer-issued feed password and permitted network/VPN access.
+- Continued organizer feed availability and validity of the locally configured
+  access grant; `cam30` is currently unavailable from the published gateway.
 - The designated challenge vehicle registration, entered through the protected
   watchlist workflow.
 - Verified latitude/longitude and department metadata if the organizer requires

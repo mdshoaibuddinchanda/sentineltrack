@@ -216,6 +216,11 @@ The overview is a health-and-operations screen, not fabricated playback. A
 source marked `ONLINE` means the worker has decoded a current frame; a missing
 snapshot or stale counter is shown as a real dependency state.
 
+The header's clearly labelled **Privacy on/off** control masks or reveals
+vehicle registration numbers in operator views. It is a privacy control—not an
+AI switch. Keep privacy mode on while presenting screens to anyone who is not
+authorized to view full registrations.
+
 ### Add the authorized target
 
 An empty watchlist is intentional after the local demo-data cleanup. Add only
