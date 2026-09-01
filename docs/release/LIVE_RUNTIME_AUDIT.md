@@ -1,16 +1,17 @@
 # Live Runtime Audit
 
-**Audit date:** 1 September 2026
+**Audit date:** 2 September 2026
 **Repository:** `C:\DR2\sentineltrack`
 **Environment:** Conda `PY312`, Python 3.12
 **Branch under review:** `launcher-visual-review`
-**Verified commit:** `f09bfc42c8894b940829a59aae23815a9211c801`
-**GitHub Actions:** [run 33501256138](https://github.com/mdshoaibuddinchanda/sentineltrack/actions/runs/33501256138) — successful
+**Verified implementation commit:** `09783e731bab0e4c4c5f1b520a1fefae72dbf7f2`
+**GitHub Actions:** [run 33559801209](https://github.com/mdshoaibuddinchanda/sentineltrack/actions/runs/33559801209) — successful
 
 ## Executive result
 
 The software path for authenticated catalogue ingestion, protected HLS/RTSP
-opening, decoded-frame health, continuous browser preview, and staged analytics
+opening, decoded-frame health, continuous browser preview, unified camera
+overview, and staged analytics
 is implemented and locally testable. The organizer credential is now configured
 only in the local ignored `.env`; the current portal catalogue was authenticated,
 30 official sources were registered, and a clean runtime settled all 30 workers
