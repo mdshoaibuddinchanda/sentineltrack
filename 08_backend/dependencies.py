@@ -51,6 +51,11 @@ def get_camera_service() -> CameraService:
     return CameraService()
 
 
+def get_vms_service():
+    service_m = importlib.import_module("08_backend.services.vms_service")
+    return service_m.VMSIntegrationService()
+
+
 def get_target_service() -> TargetService:
     return TargetService()
 

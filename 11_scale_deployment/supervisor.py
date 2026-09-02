@@ -154,6 +154,10 @@ class CameraStreamWorker:
             connect_timeout_s=self.connect_timeout_s,
             recovery_interval_s=self.recovery_interval_s,
             http_cookie_provider=self.http_cookie_provider,
+            # This worker owns reconnect/backoff accounting. Keeping a second
+            # invisible loop inside RTSPReader previously left cameras stuck
+            # as CONNECTING with reconnects=0 while fallback opens queued.
+            reconnect_internally=False,
         )
 
         try:
@@ -370,12 +374,39 @@ class StreamSupervisor:
     def get_status(self) -> Dict[str, Any]:
         """Returns aggregate stream health, active feeds, decode/sampled FPS."""
         now = time.time()
+        monotonic_now = time.monotonic()
         with self._lock:
             total = len(self._workers)
             def frame_is_fresh(worker: CameraStreamWorker) -> bool:
                 return (
                     worker.last_frame_time > 0
                     and (now - worker.last_frame_time) <= worker.stale_after_s
+                )
+
+            def connection_timeout_code(worker: CameraStreamWorker) -> Optional[str]:
+                if worker._connect_started_at <= 0:
+                    return None
+                elapsed = monotonic_now - worker._connect_started_at
+                deadline = max(worker.stale_after_s, worker.connect_timeout_s * 2.0)
+                if elapsed <= deadline:
+                    return None
+                if worker.last_frame_time <= 0:
+                    return (
+                        "FIRST_FRAME_TIMEOUT"
+                        if worker.stream_epoch > 0
+                        else "SOURCE_OPEN_TIMEOUT"
+                    )
+                return None
+
+            def worker_is_degraded(worker: CameraStreamWorker) -> bool:
+                return bool(
+                    worker.is_degraded
+                    or (
+                        worker.is_connected
+                        and worker.last_frame_time > 0
+                        and not frame_is_fresh(worker)
+                    )
+                    or connection_timeout_code(worker)
                 )
 
             connected = sum(
@@ -385,8 +416,7 @@ class StreamSupervisor:
             degraded = sum(
                 1
                 for w in self._workers.values()
-                if w.is_degraded
-                or (w.is_connected and w.last_frame_time > 0 and not frame_is_fresh(w))
+                if worker_is_degraded(w)
             )
             total_decoded = sum(w.total_frames_decoded for w in self._workers.values())
             total_sampled = sum(w.total_frames_sampled for w in self._workers.values())
@@ -396,10 +426,29 @@ class StreamSupervisor:
             for cid, w in self._workers.items():
                 fresh = frame_is_fresh(w)
                 runtime_connected = bool(w.is_connected and fresh)
-                runtime_degraded = bool(
-                    w.is_degraded
-                    or (w.is_connected and w.last_frame_time > 0 and not fresh)
-                )
+                timeout_code = connection_timeout_code(w)
+                runtime_degraded = worker_is_degraded(w)
+                issue_code = timeout_code
+                issue_message = None
+                if timeout_code == "FIRST_FRAME_TIMEOUT":
+                    issue_message = (
+                        "The source opened but did not yield a decodable first frame "
+                        "within the bounded startup window; automatic retry is active."
+                    )
+                elif timeout_code == "SOURCE_OPEN_TIMEOUT":
+                    issue_message = (
+                        "Opening the source exceeded the bounded startup window; "
+                        "automatic retry/failover is active."
+                    )
+                elif w.is_connected and w.last_frame_time > 0 and not fresh:
+                    issue_code = "STALE_FRAME"
+                    issue_message = (
+                        "The source stopped delivering fresh decoded frames; "
+                        "automatic retry/failover is active."
+                    )
+                elif w.is_degraded:
+                    issue_code = "RECONNECTING"
+                    issue_message = "The source failed and is in bounded reconnect backoff."
                 camera_states[cid] = {
                     "connected": runtime_connected,
                     "degraded": runtime_degraded,
@@ -412,6 +461,8 @@ class StreamSupervisor:
                     "last_frame_s_ago": round(now - w.last_frame_time, 2) if w.last_frame_time > 0 else None,
                     "last_pts_ms": w.last_pts_ms,
                     "preview_available": w.get_preview() is not None,
+                    "connection_issue_code": issue_code,
+                    "connection_issue_message": issue_message,
                 }
 
             return {

@@ -34,8 +34,11 @@ catalogue record (`cam01` through `cam30` in the current grant), the portal
 publishes HLS at `https://cctv.corp8.cloud/<id>/index.m3u8` and the direct media
 gateway publishes RTSP at `rtsp://103.250.160.189:8554/stream/<id>`.
 
-The catalogue provides camera IDs, location, codec, live status, stream
-properties and available endpoints. The current supported stream patterns are:
+The catalogue provides camera IDs, location labels, codec, live status, stream
+properties and available endpoints. It does not currently provide authoritative
+latitude/longitude or department ownership, so those fields remain `UNKNOWN`
+until an official GIS/VMS record is imported. The current supported stream
+patterns are:
 
 | Use | Endpoint pattern |
 |---|---|
@@ -57,8 +60,18 @@ boundary.
 
 The design accepts analog cameras through the department's encoder/VMS gateway;
 SentinelTrack does not pretend to decode an arbitrary analog signal directly.
-Vendor SDKs, ONVIF and other adapters can feed the same normalized catalogue
-contract without changing downstream analytics.
+Two heterogeneous integration paths now feed the same normalized registry
+contract without changing downstream analytics:
+
+| Organization path | Implemented adapter | Boundary |
+|---|---|---|
+| GIS/catalogue-oriented department | OGC API Features GeoJSON `FeatureCollection` | Contract tested; real endpoint/token requires department approval |
+| Device/VMS-oriented traffic department | ONVIF Profile T Device + Media/Media2 discovery and RTSP profile selection | Contract tested; real device/credentials require department approval |
+
+Manual registration and bounded CSV import use the same validation path. GPS
+requires coordinate source and quality; credentials in URLs/metadata are
+rejected. Disabled templates are in `configs/vms_connectors.json`, and the full
+contract is [`../docs/CAMERA_REGISTRY_GIS_VMS.md`](../docs/CAMERA_REGISTRY_GIS_VMS.md).
 
 ## 3. End-to-end processing chain
 
@@ -128,7 +141,9 @@ The existing API surface includes:
 | Area | Existing interface |
 |---|---|
 | Health/telemetry | `GET /health`, `GET /ready`, `GET /metrics` |
-| Cameras | `GET /api/v1/cameras`, detail, health, nearby search, and authenticated continuous `/live` relay |
+| Cameras | List/detail/health/nearby, authenticated `/live`, manual create/update, bulk dry-run/apply, gap CSV, and safe GeoJSON |
+| VMS integration | Secret-free connector readiness and operator-triggered validate/sync for OGC API Features and ONVIF Profile T |
+| GIS planning | Operator AOI coverage estimate plus non-persisting camera-pair lower-bound feasibility check |
 | Targets | `POST/GET /api/v1/targets`, `PATCH`, `DELETE` |
 | Sightings | `GET /api/v1/sightings`, `GET /api/v1/vehicles/{registration}/history` |
 | Alerts | `GET /api/v1/alerts`, detail and `POST /api/v1/alerts/{id}/ack` |
@@ -167,6 +182,9 @@ and a missing ReID model degrades to the existing ANPR path.
 - A slow WebSocket client receives bounded queue behavior and cannot block
   inference.
 - A P6 load/crop failure produces no confident ReID output; P5/ANPR continues.
+- A VMS discovery failure rolls back the import and reports a secret-free
+  connector error; it does not remove the prior camera registry.
+- An ONVIF device cannot redirect service discovery to an unapproved host.
 
 ## 7. Evidence and limits
 
@@ -174,4 +192,5 @@ Measured values, proxy results and planning assumptions are indexed in
 [`EVIDENCE_INVENTORY.md`](EVIDENCE_INVENTORY.md) and
 [`MODEL_EVIDENCE.md`](MODEL_EVIDENCE.md). No local measurement supports a safe
 statewide camera capacity, true cross-camera ReID accuracy or a road-level
-route claim.
+route claim. The current Model 1 data gaps and their owners are recorded in
+[`../reports/model1/MODEL1_GAP_ANALYSIS.md`](../reports/model1/MODEL1_GAP_ANALYSIS.md).

@@ -3,6 +3,7 @@ import {
   RouteResponse,
   RouteSummaryResponse,
   GeoJSONFeatureCollection,
+  CameraPairFeasibilityResponse,
 } from "../types/api";
 
 const BASE_URL = import.meta.env.VITE_SENTINEL_API_URL || import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
@@ -56,6 +57,17 @@ export async function getVehicleRouteSummary(
 
   const qs = query.toString();
   return request<RouteSummaryResponse>(`/api/v1/routes/${encodeURIComponent(registration)}/summary${qs ? `?${qs}` : ""}`);
+}
+
+export async function checkCameraPairFeasibility(payload: {
+  from_camera_id: string;
+  to_camera_id: string;
+  elapsed_seconds: number;
+}): Promise<CameraPairFeasibilityResponse> {
+  return request<CameraPairFeasibilityResponse>("/api/v1/routes/feasibility-check", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function downloadVehicleRouteReport(registration: string): Promise<string> {

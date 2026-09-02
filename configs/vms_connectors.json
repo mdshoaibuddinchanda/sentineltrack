@@ -1,0 +1,32 @@
+{
+  "connectors": [
+    {
+      "connector_id": "municipal-ogc-catalogue",
+      "connector_type": "OGC_API_FEATURES",
+      "enabled": false,
+      "organization": "Municipal CCTV Organization",
+      "source_system": "MUNICIPAL_OGC_VMS",
+      "camera_id_prefix": "municipal",
+      "endpoint": "https://vms.example.gov.in/ogc/collections/cameras/items",
+      "bearer_token_env": "MUNICIPAL_VMS_BEARER_TOKEN",
+      "timeout_s": 15,
+      "allow_insecure_http": false
+    },
+    {
+      "connector_id": "traffic-onvif-camera",
+      "connector_type": "ONVIF_PROFILE_T",
+      "enabled": false,
+      "organization": "Traffic Police Organization",
+      "source_system": "TRAFFIC_ONVIF_VMS",
+      "camera_id_prefix": "traffic",
+      "endpoint": "https://camera.example.gov.in/onvif/device_service",
+      "camera_external_id": "junction-001",
+      "allowed_service_hosts": ["camera.example.gov.in"],
+      "username_env": "TRAFFIC_ONVIF_USERNAME",
+      "password_env": "TRAFFIC_ONVIF_PASSWORD",
+      "timeout_s": 10,
+      "allow_insecure_http": false,
+      "location_quality": "UNKNOWN"
+    }
+  ]
+}

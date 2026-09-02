@@ -10,7 +10,7 @@ The official Sentinel material describes a multi-department, heterogeneous catal
 | Panchayat / local bodies | Distributed low-bandwidth feeds | Gateway placement, connectivity, local storage | Store-and-forward and degraded-mode evidence | `PARTIAL — owner confirmation required` |
 | Municipal corporation | Urban camera catalogue | GIS coordinates, codecs, retention, traffic peaks | Cross-camera chronology and department report | `PARTIAL — owner confirmation required` |
 | State catalogue / GIS | Central registry and location source | Stable camera IDs, coordinates, departments, routes | Camera identity and feasibility inputs | `PARTIAL — official schema not supplied` |
-| VMS/RTSP/WebRTC/HLS | Stream ingestion | RTSP/WHEP/HLS endpoint, auth, codec, time base | Connect/reconnect/epoch evidence | `READY FOR SANDBOX CONTRACT` |
+| VMS/RTSP/WebRTC/HLS | Stream ingestion | RTSP/WHEP/HLS endpoint, auth, codec, time base; OGC API Features or ONVIF Profile T where supported | Connect/reconnect/epoch evidence and normalized registry records | `ADAPTERS CONTRACT-TESTED — LIVE OWNER ACCEPTANCE REQUIRED` |
 
 ## Deployment responsibility matrix
 
@@ -34,4 +34,4 @@ For every department: roles, watchlist authority, alert severity policy, review 
 
 ## Official alignment
 
-The official FAQ describes 26 independent government departments, heterogeneous analog/IP sources, and a central registry/GIS requirement. The official resource guidance exposes RTSP, WHEP, HLS, and API-ingest patterns. Exact production catalogue schema, credentials, and department-level retention values were not published in the verified public material and remain `OFFICIAL_REQUIREMENT_NOT_VERIFIED` until supplied by the organizers or departments.
+The official FAQ describes 26 independent government departments, heterogeneous analog/IP sources, and a central registry/GIS requirement. The official resource guidance exposes RTSP, WHEP, HLS, and API-ingest patterns. SentinelTrack now adds normalized OGC API Features catalogue and ONVIF Profile T device paths, but no unnamed department is represented as live-integrated without its endpoint and acceptance test. Exact production catalogue schema, credentials, GPS provenance, and department-level retention values were not published in the verified public material and remain `OFFICIAL_REQUIREMENT_NOT_VERIFIED` until supplied by the organizers or departments.

@@ -8,6 +8,7 @@ import json
 import os
 import socket
 import sys
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
@@ -126,21 +127,39 @@ def _dns_check(hosts: list[str]) -> Check:
 
 
 def _catalogue_check() -> Check:
+    client_m = importlib.import_module("00_foundation.catalogue.client")
+    parser_m = importlib.import_module("00_foundation.catalogue.parser")
     try:
-        client_m = importlib.import_module("00_foundation.catalogue.client")
-        parser_m = importlib.import_module("00_foundation.catalogue.parser")
-        client = client_m.SentinelCatalogueClient(timeout_s=8.0)
-        payload = client.fetch()
-        cameras = parser_m.parse_catalogue(payload, base_host=client.effective_host)
-        cookies = client.diagnostics()["session_cookie_count"]
-        return Check(
-            "Official catalogue and feed session",
-            "PASS",
-            f"{len(cameras)} cameras; effective host={client.effective_host}; session cookies={cookies}",
-        )
-    except Exception as exc:
-        code = getattr(exc, "code", "CATALOGUE_ERROR")
-        return Check("Official catalogue and feed session", "BLOCKED", f"{code}: {exc}")
+        configured_attempts = int(os.getenv("SENTINEL_CATALOGUE_FETCH_ATTEMPTS", "3"))
+    except ValueError:
+        configured_attempts = 3
+    max_attempts = min(5, max(1, configured_attempts))
+    client = client_m.SentinelCatalogueClient(timeout_s=8.0)
+    last_exc: Exception | None = None
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            payload = client.fetch()
+            cameras = parser_m.parse_catalogue(payload, base_host=client.effective_host)
+            cookies = client.diagnostics()["session_cookie_count"]
+            return Check(
+                "Official catalogue and feed session",
+                "PASS",
+                f"{len(cameras)} cameras; effective host={client.effective_host}; "
+                f"session cookies={cookies}; attempts={attempt}",
+            )
+        except Exception as exc:
+            last_exc = exc
+            if attempt < max_attempts:
+                time.sleep(min(2 ** (attempt - 1), 4))
+
+    assert last_exc is not None
+    code = getattr(last_exc, "code", "CATALOGUE_ERROR")
+    return Check(
+        "Official catalogue and feed session",
+        "BLOCKED",
+        f"{code} after {max_attempts} attempts: {last_exc}",
+    )
 
 
 def _security_check() -> Check:

@@ -11,10 +11,18 @@ export interface Camera {
   camera_id: string;
   name?: string;
   department?: string;
+  organization?: string | null;
+  source_system?: string | null;
+  external_id?: string | null;
+  onboarding_method?: string | null;
   latitude?: number | null;
   longitude?: number | null;
-  azimuth?: number;
+  azimuth?: number | null;
   location_quality: LocationQuality;
+  coordinate_source?: string | null;
+  coordinate_accuracy_m?: number | null;
+  coverage_radius_m?: number | null;
+  field_of_view_degrees?: number | null;
   live: boolean;
   stream_status: CameraStreamStatus;
   measured_fps?: number;
@@ -27,6 +35,112 @@ export interface Camera {
   connection_issue_code?: string | null;
   connection_issue_message?: string | null;
   metadata?: Record<string, any>;
+}
+
+export interface CameraRegistryInput {
+  camera_id: string;
+  name?: string | null;
+  department?: string | null;
+  organization?: string | null;
+  source_system?: string;
+  external_id?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  azimuth?: number | null;
+  location_quality?: LocationQuality;
+  coordinate_source?: string | null;
+  coordinate_accuracy_m?: number | null;
+  coverage_radius_m?: number | null;
+  field_of_view_degrees?: number | null;
+  rtsp_url?: string | null;
+  hls_url?: string | null;
+  webrtc_url?: string | null;
+  live?: boolean;
+  metadata?: Record<string, any>;
+}
+
+export type CameraUpdateRequest = Omit<Partial<CameraRegistryInput>, "camera_id">;
+
+export interface CameraMutationResponse {
+  camera: Camera;
+  created: boolean;
+  worker_status: string;
+}
+
+export type CameraImportMode = "CREATE_ONLY" | "UPSERT";
+
+export interface CameraImportItemResult {
+  row: number;
+  camera_id: string;
+  status: string;
+  message: string;
+}
+
+export interface CameraBulkImportResponse {
+  dry_run: boolean;
+  received: number;
+  valid: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  worker_started: number;
+  worker_restart_required: number;
+  items: CameraImportItemResult[];
+}
+
+export interface CameraGapAnalysisResponse {
+  generated_at_utc: string;
+  total_cameras: number;
+  geolocated_cameras: number;
+  verified_coordinates: number;
+  approximate_coordinates: number;
+  unknown_coordinates: number;
+  missing_coordinates: number;
+  missing_coordinate_source: number;
+  missing_department: number;
+  missing_organization: number;
+  missing_azimuth: number;
+  missing_stream_source: number;
+  enabled_cameras: number;
+  source_systems: Record<string, number>;
+  organizations: Record<string, number>;
+  departments: Record<string, number>;
+  isolated_camera_ids: string[];
+  isolation_radius_m: number;
+  limitations: string[];
+}
+
+export interface CoverageAnalysisResponse {
+  generated_at_utc: string;
+  eligible_camera_count: number;
+  area_of_interest_m2: number;
+  covered_area_m2: number;
+  uncovered_area_m2: number;
+  coverage_percent: number;
+  default_coverage_radius_m: number;
+  include_approximate: boolean;
+  coverage_model: string;
+  geojson: GeoJSONFeatureCollection;
+  limitations: string[];
+}
+
+export interface VMSConnectorStatus {
+  connector_id: string;
+  connector_type: string;
+  enabled: boolean;
+  organization: string;
+  source_system: string;
+  camera_id_prefix: string;
+  endpoint_host?: string | null;
+  credential_env_configured: boolean;
+  ready: boolean;
+  readiness_message: string;
+}
+
+export interface VMSConnectorListResponse {
+  config_path: string;
+  items: VMSConnectorStatus[];
+  total: number;
 }
 
 export interface CameraListResponse {
@@ -210,6 +324,20 @@ export interface RouteSummaryResponse {
   camera_count: number;
   reasons: string[];
   warnings: string[];
+  disclaimer: string;
+}
+
+export interface CameraPairFeasibilityResponse {
+  from_camera_id: string;
+  to_camera_id: string;
+  elapsed_seconds: number;
+  distance_lower_bound_m: number;
+  minimum_required_speed_kmh: number;
+  feasibility: FeasibilityClass;
+  segment_score: number;
+  location_quality: LocationQuality;
+  warnings: string[];
+  explanation: string;
   disclaimer: string;
 }
 

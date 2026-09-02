@@ -5,13 +5,14 @@ import importlib
 from fastapi import APIRouter, Depends, Query, Request, Response
 
 try:
-    from ..schemas.routes import RouteResponse, RouteSummaryResponse, GeoJSONFeatureCollection
+    from ..schemas.routes import RouteResponse, RouteSummaryResponse, GeoJSONFeatureCollection, CameraPairFeasibilityRequest, CameraPairFeasibilityResponse
     from ..services.route_service import RouteService
     from ..dependencies import get_route_service, get_metrics
     from ..metrics import MetricsCollector
 except (ImportError, ValueError):
     rt_m = importlib.import_module("08_backend.schemas.routes")
     RouteResponse, RouteSummaryResponse, GeoJSONFeatureCollection = rt_m.RouteResponse, rt_m.RouteSummaryResponse, rt_m.GeoJSONFeatureCollection
+    CameraPairFeasibilityRequest, CameraPairFeasibilityResponse = rt_m.CameraPairFeasibilityRequest, rt_m.CameraPairFeasibilityResponse
     RouteService = importlib.import_module("08_backend.services.route_service").RouteService
     dep_m = importlib.import_module("08_backend.dependencies")
     get_route_service, get_metrics = dep_m.get_route_service, dep_m.get_metrics
@@ -25,6 +26,37 @@ get_audit_logger = _sec_m.get_audit_logger
 require_permission = importlib.import_module("10_security.dependencies").require_permission
 
 router = APIRouter(prefix="/api/v1/routes", tags=["Route Engine & Trajectory GIS"])
+
+
+@router.post("/feasibility-check", response_model=CameraPairFeasibilityResponse)
+async def check_camera_pair_feasibility(
+    http_request: Request,
+    payload: CameraPairFeasibilityRequest,
+    service: RouteService = Depends(get_route_service),
+    metrics: MetricsCollector = Depends(get_metrics),
+    principal: AuthenticatedPrincipal = Depends(require_permission(Permission.ROUTE_READ)),
+    audit=Depends(get_audit_logger),
+):
+    """Demonstrate P7 lower-bound movement feasibility without creating sightings."""
+    metrics.inc_requests()
+    result = service.evaluate_camera_pair(
+        payload.from_camera_id,
+        payload.to_camera_id,
+        payload.elapsed_seconds,
+    )
+    audit.log_event(
+        action="CHECK_CAMERA_PAIR_FEASIBILITY",
+        resource_type="route_demo",
+        outcome="SUCCESS",
+        principal=principal,
+        resource_id=f"{payload.from_camera_id}:{payload.to_camera_id}",
+        request_id=http_request.headers.get("X-Request-ID"),
+        details={
+            "elapsed_seconds": payload.elapsed_seconds,
+            "feasibility": result.feasibility,
+        },
+    )
+    return result
 
 
 

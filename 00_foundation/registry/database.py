@@ -252,6 +252,16 @@ def upsert_camera(camera):
         latitude,
         longitude,
         location,
+        azimuth,
+        location_quality,
+        organization,
+        source_system,
+        external_id,
+        onboarding_method,
+        coordinate_source,
+        coordinate_accuracy_m,
+        coverage_radius_m,
+        field_of_view_degrees,
         codec,
         width,
         height,
@@ -285,6 +295,17 @@ def upsert_camera(camera):
             ELSE NULL
         END,
 
+        %(azimuth)s,
+        %(location_quality)s,
+        %(organization)s,
+        %(source_system)s,
+        %(external_id)s,
+        %(onboarding_method)s,
+        %(coordinate_source)s,
+        %(coordinate_accuracy_m)s,
+        %(coverage_radius_m)s,
+        %(field_of_view_degrees)s,
+
 
         %(codec)s,
         %(width)s,
@@ -303,13 +324,28 @@ def upsert_camera(camera):
 
     DO UPDATE SET
 
-        name = EXCLUDED.name,
-        department = EXCLUDED.department,
+        name = COALESCE(EXCLUDED.name, cameras.name),
+        department = COALESCE(EXCLUDED.department, cameras.department),
 
-        latitude = EXCLUDED.latitude,
-        longitude = EXCLUDED.longitude,
+        latitude = COALESCE(EXCLUDED.latitude, cameras.latitude),
+        longitude = COALESCE(EXCLUDED.longitude, cameras.longitude),
 
-        location = EXCLUDED.location,
+        location = COALESCE(EXCLUDED.location, cameras.location),
+
+        azimuth = COALESCE(EXCLUDED.azimuth, cameras.azimuth),
+        location_quality = CASE
+            WHEN EXCLUDED.latitude IS NOT NULL AND EXCLUDED.longitude IS NOT NULL
+            THEN EXCLUDED.location_quality
+            ELSE cameras.location_quality
+        END,
+        organization = COALESCE(EXCLUDED.organization, cameras.organization),
+        source_system = COALESCE(cameras.source_system, EXCLUDED.source_system),
+        external_id = COALESCE(cameras.external_id, EXCLUDED.external_id),
+        onboarding_method = COALESCE(cameras.onboarding_method, EXCLUDED.onboarding_method),
+        coordinate_source = COALESCE(EXCLUDED.coordinate_source, cameras.coordinate_source),
+        coordinate_accuracy_m = COALESCE(EXCLUDED.coordinate_accuracy_m, cameras.coordinate_accuracy_m),
+        coverage_radius_m = COALESCE(EXCLUDED.coverage_radius_m, cameras.coverage_radius_m),
+        field_of_view_degrees = COALESCE(EXCLUDED.field_of_view_degrees, cameras.field_of_view_degrees),
 
         codec = EXCLUDED.codec,
 
@@ -320,7 +356,7 @@ def upsert_camera(camera):
 
         bitrate = EXCLUDED.bitrate,
 
-        live = EXCLUDED.live,
+        live = COALESCE(EXCLUDED.live, cameras.live, TRUE),
 
         rtsp_url = EXCLUDED.rtsp_url,
 
@@ -328,16 +364,14 @@ def upsert_camera(camera):
 
         hls_url = EXCLUDED.hls_url,
 
-        raw_metadata = EXCLUDED.raw_metadata,
+        raw_metadata = COALESCE(cameras.raw_metadata, '{}'::jsonb) || EXCLUDED.raw_metadata,
 
         updated_at = NOW();
     """
 
     params = camera.model_dump()
 
-    params["raw_metadata"] = json.dumps(
-        params["raw_metadata"]
-    )
+    params["raw_metadata"] = json.dumps(params.get("raw_metadata") or {})
 
     with get_connection() as conn:
 
@@ -353,7 +387,9 @@ def get_all_cameras() -> list[dict]:
     """Fetch all camera records from the registry."""
     query = """
     SELECT
-        camera_id, name, department, latitude, longitude,
+        camera_id, name, department, latitude, longitude, azimuth, location_quality,
+        organization, source_system, external_id, onboarding_method,
+        coordinate_source, coordinate_accuracy_m, coverage_radius_m, field_of_view_degrees,
         codec, width, height, reported_fps, measured_fps, bitrate, live,
         rtsp_url, webrtc_url, hls_url, stream_status,
         first_frame_latency_ms, last_pts_ms, last_checked,
@@ -371,7 +407,9 @@ def get_camera(camera_id: str) -> dict | None:
     """Fetch a single camera record by camera_id."""
     query = """
     SELECT
-        camera_id, name, department, latitude, longitude,
+        camera_id, name, department, latitude, longitude, azimuth, location_quality,
+        organization, source_system, external_id, onboarding_method,
+        coordinate_source, coordinate_accuracy_m, coverage_radius_m, field_of_view_degrees,
         codec, width, height, reported_fps, measured_fps, bitrate, live,
         rtsp_url, webrtc_url, hls_url, stream_status,
         first_frame_latency_ms, last_pts_ms, last_checked,

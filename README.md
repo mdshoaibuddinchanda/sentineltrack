@@ -34,16 +34,17 @@ frame. A plate result is not treated as a strong identity without corroboration.
 Appearance similarity is a conservative review signal, never a replacement for
 ANPR.
 
-> **Current live-status boundary:** the local checkout contains the official
-> camera registry records, but the organizer feed portal requires an issued
-> access password. Until that password is present in local `.env`, no live
-> government frame or model detection can honestly be claimed.
+> **External-source boundary:** organizer and departmental credentials stay in
+> the local environment and are never committed. Camera `ONLINE` state is based
+> on a fresh decoded worker frame—not on a configured URL, a database flag, or a
+> demo fixture. If an authorized host is unavailable, SentinelTrack reports the
+> dependency failure and keeps the last persisted registry intact.
 
 ## What the platform does
 
 | Area | Responsibility | Operator-visible evidence |
 | --- | --- | --- |
-| Camera registry | Imports the permitted catalogue and normalizes camera metadata. | Camera ID, location label, protocol, source state, and health details. |
+| Camera registry | Imports permitted catalogues, supports manual/CSV onboarding, and normalizes two VMS adapter contracts. | Camera ID, ownership, GPS provenance, protocol, source state, health, and gap evidence. |
 | Stream ingestion | Opens protected HLS or RTSP sources with bounded recovery. | Decoded-frame count, sampled-frame count, reconnects, freshness, and error reason. |
 | Vehicle analytics | Runs vehicle detection and per-camera tracking. | Vehicle boxes, track IDs, timestamps, and model provenance. |
 | ANPR | Detects plate regions, reads text, and combines observations over time. | Raw/normalized candidates, quality, consensus support, and decision reason. |
@@ -71,8 +72,9 @@ so an old track cannot silently cross a reconnect boundary.
 
 ```mermaid
 flowchart LR
-  A[Official catalogue] --> B[Authenticated HLS / RTSP]
-  B --> C[Decoded frame with PTS]
+  A[Catalogue / approved VMS / CSV] --> B[Normalized camera and GIS registry]
+  B --> C0[Authenticated HLS / RTSP]
+  C0 --> C[Decoded frame with PTS]
   C --> D[Vehicle detection]
   D --> E[ByteTrack per camera and epoch]
   E --> F[Plate detection and OCR]
@@ -93,7 +95,7 @@ home. The numbers describe ownership, not a mandatory reading order.
 
 | Directory | Contents |
 | --- | --- |
-| `00_foundation/` | Stream readers, catalogue client, frame packets, registry, and shared infrastructure. |
+| `00_foundation/` | Stream readers, catalogue client, OGC/ONVIF adapters, frame packets, registry, and shared infrastructure. |
 | `01_vehicle_detection/` | YOLO11m vehicle detector and local benchmarks. |
 | `02_tracking/` | ByteTrack state and track lifecycle management. |
 | `03_plate_detection/` | Plate detector, crop validation, quality scoring, and training utilities. |
@@ -216,6 +218,24 @@ The overview is a health-and-operations screen, not fabricated playback. A
 source marked `ONLINE` means the worker has decoded a current frame; a missing
 snapshot or stale counter is shown as a real dependency state.
 
+### Camera onboarding, GPS, and GIS
+
+The same Cameras page includes a clearly named **Camera setup and GIS** panel;
+there is no hidden “More” menu. Administrators and supervisors can register one
+camera, edit the selected camera, or validate and apply a CSV of up to 500
+records. Every coordinate requires a quality and source. The platform never
+geocodes a location label silently.
+
+The panel also exports a spreadsheet-safe gap report and safe GeoJSON, shows
+whether two configured organization adapters are ready, checks lower-bound
+travel feasibility between two geolocated cameras, and estimates circular-buffer
+coverage for an operator-supplied GeoJSON area. The route result is not a road
+path, and coverage is labelled a planning approximation. Full contracts,
+security controls, and setup are in
+[`docs/CAMERA_REGISTRY_GIS_VMS.md`](docs/CAMERA_REGISTRY_GIS_VMS.md); the current
+30-camera data gaps are recorded in
+[`reports/model1/MODEL1_GAP_ANALYSIS.md`](reports/model1/MODEL1_GAP_ANALYSIS.md).
+
 The header's clearly labelled **Privacy on/off** control masks or reveals
 vehicle registration numbers in operator views. It is a privacy control—not an
 AI switch. Keep privacy mode on while presenting screens to anyone who is not
@@ -260,6 +280,8 @@ typecheck, lint, test, and build gates. See
 | How do I run and record the software? | [`12_submission/DEMO_RUNBOOK.md`](12_submission/DEMO_RUNBOOK.md) |
 | What is the evaluator package? | [`12_submission/README.md`](12_submission/README.md) |
 | How is the platform structured? | [`12_submission/HLD.md`](12_submission/HLD.md) and [`12_submission/ARCHITECTURE.md`](12_submission/ARCHITECTURE.md) |
+| How do camera onboarding, GIS, and VMS adapters work? | [`docs/CAMERA_REGISTRY_GIS_VMS.md`](docs/CAMERA_REGISTRY_GIS_VMS.md) |
+| Which official camera metadata is still missing? | [`reports/model1/MODEL1_GAP_ANALYSIS.md`](reports/model1/MODEL1_GAP_ANALYSIS.md) |
 | What official requirements were checked? | [`12_submission/OFFICIAL_REQUIREMENTS_MATRIX.md`](12_submission/OFFICIAL_REQUIREMENTS_MATRIX.md) |
 | What is the current live-runtime diagnosis? | [`docs/release/LIVE_RUNTIME_AUDIT.md`](docs/release/LIVE_RUNTIME_AUDIT.md) |
 | What evidence is measured? | [`12_submission/EVIDENCE_INVENTORY.md`](12_submission/EVIDENCE_INVENTORY.md) and [`reports/`](reports/) |

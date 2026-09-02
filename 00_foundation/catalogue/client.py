@@ -20,6 +20,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+DEFAULT_MEDIA_USER_AGENT = "Mozilla/5.0 SentinelTrack/1.0"
+
+
+def _media_user_agent() -> str:
+    """Return a bounded, header-safe agent accepted by the organizer CDN."""
+    configured = os.getenv("SENTINEL_MEDIA_USER_AGENT", DEFAULT_MEDIA_USER_AGENT)
+    cleaned = " ".join(str(configured).replace("\r", " ").replace("\n", " ").split())
+    return cleaned[:256] or DEFAULT_MEDIA_USER_AGENT
+
+
 class CatalogueError(RuntimeError):
     """Base error with a stable, operator-facing diagnostic code."""
 
@@ -77,7 +87,11 @@ class SentinelCatalogueClient:
         self.password = password if password is not None else os.getenv("SENTINEL_ACCESS_PASSWORD", "")
         self.timeout_s = max(1.0, float(timeout_s))
         self.session = session or requests.Session()
-        self.session.headers.setdefault("User-Agent", "SentinelTrack/1.0")
+        # The organizer CDN currently rejects libavformat/non-browser agents
+        # with ``403 browser required`` even after successful password auth.
+        # Keep one transparent browser-compatible agent on catalogue, HLS
+        # manifest, and segment requests; credentials remain cookie-only.
+        self.session.headers["User-Agent"] = _media_user_agent()
         self.effective_host = self.host
         self.authenticated = False
         self._lock = threading.RLock()

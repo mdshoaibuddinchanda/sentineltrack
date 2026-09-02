@@ -28,6 +28,7 @@ case, a presentation, an HLD, working-software demonstrations and a statewide
 |---|---|
 | Evaluator / management | [`FINAL_SUBMISSION_REPORT.md`](FINAL_SUBMISSION_REPORT.md) |
 | Technical evaluator | [`HLD.md`](HLD.md), [`ARCHITECTURE.md`](ARCHITECTURE.md), [`MODEL_EVIDENCE.md`](MODEL_EVIDENCE.md) |
+| Camera/GIS/VMS evaluator | [`../docs/CAMERA_REGISTRY_GIS_VMS.md`](../docs/CAMERA_REGISTRY_GIS_VMS.md), [`../reports/model1/MODEL1_GAP_ANALYSIS.md`](../reports/model1/MODEL1_GAP_ANALYSIS.md) |
 | Infrastructure evaluator | [`ROLLOUT_80K_CAMERAS.md`](ROLLOUT_80K_CAMERAS.md), [`STORAGE_BANDWIDTH_SIZING.md`](STORAGE_BANDWIDTH_SIZING.md), [`HA_DR_PLAN.md`](HA_DR_PLAN.md) |
 | Police/control-room evaluator | [`DEMO_RUNBOOK.md`](DEMO_RUNBOOK.md), [`DEMO_SCRIPT_5_MIN.md`](DEMO_SCRIPT_5_MIN.md) |
 | Governance/security evaluator | [`SECURITY_PRIVACY.md`](SECURITY_PRIVACY.md), [`DEPARTMENT_REQUIREMENTS.md`](DEPARTMENT_REQUIREMENTS.md) |
@@ -42,7 +43,7 @@ The current machine-level live-feed diagnosis is documented in the repository
 
 | Phase | State |
 |---|---|
-| P0 Foundation | DONE |
+| P0 / Model 1 Foundation | DONE; manual/CSV onboarding, GPS provenance, gap exports, and two contract-tested VMS adapter paths |
 | P1 Vehicle Detection | DONE; external vehicle GT unavailable |
 | P2 Tracking | DONE |
 | P3 Plate Detection | DONE; selected P11.5 YOLO11s candidate documented |
@@ -80,5 +81,14 @@ roads. These are engineering limits, not hidden claims.
 For a real government-feed recording, the organizer-issued feed password,
 permitted network access, designated vehicle registration, and any required
 department/GIS metadata must be supplied outside the repository. Until those
-inputs are available, the application reports `AUTH_REQUIRED` or an empty
-watchlist instead of showing fabricated live alerts.
+inputs are available, the application preserves explicit states: missing feed
+credentials report `AUTH_REQUIRED`, unavailable hosts report their dependency
+failure, and an empty watchlist stays empty instead of producing fabricated
+live alerts.
+
+The current 30-camera data snapshot has stream endpoints but no authoritative
+GPS/department/organization fields. This is an external metadata gap with an
+implemented remediation workflow, not a reason to invent coordinates. The two
+VMS connectors are disabled templates until real organization endpoints and
+credentials are approved; contract tests are not represented as vendor
+acceptance.

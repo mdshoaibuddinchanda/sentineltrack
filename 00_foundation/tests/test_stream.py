@@ -9,11 +9,12 @@ import json
 import os
 import numpy as np
 import cv2
+import pytest
 from unittest.mock import patch, MagicMock
 from streams.probe import probe_rtsp
 from streams.health import StreamHealthTracker
 from streams.models import FramePacket
-from streams.reader import RTSPReader
+from streams.reader import RTSPReader, StreamReadError
 
 
 def test_probe_rtsp_h264_success():
@@ -216,7 +217,33 @@ def test_hls_reader_passes_authorized_cookie_only_during_capture_open():
         assert reader.connect() is True
 
     assert "cookies;feed_session=opaque" in seen_options[0]
+    assert "user_agent;Mozilla/5.0 SentinelTrack/1.0" in seen_options[0]
     assert os.environ.get("OPENCV_FFMPEG_CAPTURE_OPTIONS") == previous
+
+
+def test_hls_reader_sanitizes_configured_user_agent(monkeypatch):
+    monkeypatch.setenv(
+        "SENTINEL_MEDIA_USER_AGENT",
+        "Mozilla/5.0|injected;option\r\nUnsafe",
+    )
+    reader = RTSPReader(url="https://mock.stream/live.m3u8", camera_id="cam_agent")
+
+    options = reader._ffmpeg_capture_options(reader.primary_url)
+
+    assert options == "user_agent;Mozilla/5.0 injected option Unsafe"
+
+
+def test_reader_normalizes_invalid_negative_opencv_pts():
+    reader = RTSPReader(url="rtsp://mock.stream/live", camera_id="cam_bad_pts")
+    mock_cap = MagicMock()
+    mock_cap.isOpened.return_value = True
+    mock_cap.read.return_value = (True, np.zeros((10, 10, 3), dtype=np.uint8))
+    mock_cap.get.return_value = -1.0248191152060747e17
+
+    with patch("cv2.VideoCapture", return_value=mock_cap):
+        _, pts_ms = next(reader.frames())
+
+    assert pts_ms == -1.0
 
 
 def test_rtsp_reader_runtime_failover_to_hls():
@@ -248,6 +275,27 @@ def test_rtsp_reader_runtime_failover_to_hls():
         assert reader.connect() is True
         assert reader.is_using_fallback is True
         assert reader.active_url == "https://mock.stream/live.m3u8"
+
+
+def test_supervised_reader_exposes_read_failure_and_preserves_failover_choice():
+    reader = RTSPReader(
+        url="rtsp://mock.stream/live",
+        fallback_url="https://mock.stream/live.m3u8",
+        camera_id="cam_supervised",
+        failover_threshold=1,
+        reconnect_internally=False,
+    )
+    capture = MagicMock()
+    capture.isOpened.return_value = True
+    capture.read.return_value = (False, None)
+    reader.cap = capture
+
+    with pytest.raises(StreamReadError):
+        next(reader.frames())
+
+    assert reader.is_using_fallback is True
+    assert reader.active_url == "https://mock.stream/live.m3u8"
+    capture.release.assert_called_once()
 
 
 def test_frame_packet_timing_utc_and_provenance():

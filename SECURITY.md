@@ -57,5 +57,13 @@ identity provenance. It does not claim OIDC, JWT/Keycloak, HSM-backed key
 management, a statewide security assessment, or a completed independent
 penetration test.
 
+Camera onboarding rejects credentials embedded in RTSP/HLS/WHEP URLs and
+password/token/cookie keys nested in registry metadata. Bulk changes are
+validated before an atomic, audited apply. External VMS definitions are trusted
+deployment configuration: HTTPS is required by default, redirects and oversized
+responses are rejected, secret values come from environment variables, and
+ONVIF-discovered service hosts are constrained by an explicit allowlist. See
+[`docs/CAMERA_REGISTRY_GIS_VMS.md`](docs/CAMERA_REGISTRY_GIS_VMS.md).
+
 See [`docs/security/`](docs/security/) for the implementation and deployment
 security guidance.

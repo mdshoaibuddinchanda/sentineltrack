@@ -28,11 +28,13 @@ runs/
 *.weights
 
 # Reports, video chunks & outputs (narrowly scoped to prevent ignoring .ts TypeScript source files)
-reports/
+reports/*
 !reports/security/
 !reports/security/**
 !reports/p11/
 !reports/p11/**
+!reports/model1/
+!reports/model1/**
 *.jpg
 *.jpeg
 *.png
@@ -50,7 +52,7 @@ __pycache__/
 *.py[cod]
 *.pyo
 *.class
-.pytest_cache/
+.pytest*/
 .coverage*
 .mypy_cache/
 .ruff_cache/
@@ -59,6 +61,7 @@ htmlcov/
 # Logs & scratch
 *.log
 logs/*.pid
+logs/*
 !logs/.gitkeep
 scratch/
 mlruns/

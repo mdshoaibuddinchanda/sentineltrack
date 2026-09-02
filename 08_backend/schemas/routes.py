@@ -72,3 +72,26 @@ class GeoJSONFeatureCollection(BaseModel):
     type: str = "FeatureCollection"
     features: List[Dict[str, Any]]
     properties: Dict[str, Any] = Field(default_factory=dict)
+
+
+class CameraPairFeasibilityRequest(BaseModel):
+    from_camera_id: str = Field(..., min_length=1, max_length=128)
+    to_camera_id: str = Field(..., min_length=1, max_length=128)
+    elapsed_seconds: float = Field(..., gt=0.0, le=604800.0)
+
+
+class CameraPairFeasibilityResponse(BaseModel):
+    from_camera_id: str
+    to_camera_id: str
+    elapsed_seconds: float
+    distance_lower_bound_m: float
+    minimum_required_speed_kmh: float
+    feasibility: str
+    segment_score: float
+    location_quality: str
+    warnings: List[str] = Field(default_factory=list)
+    explanation: str
+    disclaimer: str = (
+        "Demonstration uses the straight-line lower-bound distance between registered cameras. "
+        "It is not a road route, travel-time prediction, or proof that a vehicle took this path."
+    )

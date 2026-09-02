@@ -1,0 +1,2 @@
+camera_id,name,department,organization,source_system,external_id,latitude,longitude,location_quality,coordinate_source,azimuth,coordinate_accuracy_m,coverage_radius_m,field_of_view_degrees,rtsp_url,hls_url,webrtc_url,live
+cam-example-01,Example Junction,Traffic Police,Example Organization,CSV_IMPORT,external-01,23.0225,72.5714,VERIFIED,Official survey reference,90,5,100,70,rtsp://camera.example/stream,,,true

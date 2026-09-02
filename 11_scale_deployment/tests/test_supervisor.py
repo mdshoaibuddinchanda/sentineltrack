@@ -23,9 +23,11 @@ class TestStreamSupervisor:
         """A registered camera must forward RTSPReader packets to analytics."""
         delivered = []
         delivered_event = threading.Event()
+        reader_options = []
 
         class FakeReader:
             def __init__(self, **kwargs):
+                reader_options.append(kwargs)
                 self.stream_epoch = 0
                 self.released = False
 
@@ -57,6 +59,7 @@ class TestStreamSupervisor:
 
         assert len(delivered) == 1
         assert delivered[0].camera_id == "cam_packet_01"
+        assert reader_options[0]["reconnect_internally"] is False
 
     def test_camera_worker_burst_mode_transition(self):
         worker = CameraStreamWorker(
@@ -97,6 +100,25 @@ class TestStreamSupervisor:
         assert status["degraded_cameras"] == 1
         assert status["cameras"][worker.camera_id]["connected"] is False
         assert status["cameras"][worker.camera_id]["degraded"] is True
+        assert status["cameras"][worker.camera_id]["connection_issue_code"] == "STALE_FRAME"
+
+    def test_supervisor_marks_open_source_without_first_frame_timed_out(self):
+        worker = CameraStreamWorker(
+            camera_id="cam_first_frame_timeout",
+            rtsp_url="rtsp://dummy",
+            connect_timeout_s=5.0,
+            stale_after_s=5.0,
+        )
+        worker.stream_epoch = 1
+        worker._connect_started_at = time.monotonic() - 15.0
+
+        supervisor = StreamSupervisor()
+        supervisor._workers[worker.camera_id] = worker
+        state = supervisor.get_status()["cameras"][worker.camera_id]
+
+        assert state["connected"] is False
+        assert state["degraded"] is True
+        assert state["connection_issue_code"] == "FIRST_FRAME_TIMEOUT"
 
     def test_supervisor_live_snapshot_requires_fresh_connected_frame(self):
         worker = CameraStreamWorker(

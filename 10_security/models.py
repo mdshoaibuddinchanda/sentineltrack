@@ -13,6 +13,7 @@ class UserRole(str, Enum):
 
 class Permission(str, Enum):
     CAMERA_READ = "camera:read"
+    CAMERA_MANAGE = "camera:manage"
     TARGET_READ = "target:read"
     TARGET_CREATE = "target:create"
     TARGET_UPDATE = "target:update"

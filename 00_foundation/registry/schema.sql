@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS cameras (
 
     bitrate BIGINT,
 
-    live BOOLEAN,
+    live BOOLEAN NOT NULL DEFAULT TRUE,
 
     rtsp_url TEXT,
     webrtc_url TEXT,

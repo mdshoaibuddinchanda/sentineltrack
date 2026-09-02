@@ -10,6 +10,15 @@ vi.mock("../api/cameras", () => ({
   searchNearbyCameras: vi.fn().mockResolvedValue([]),
   getCameraLiveStreamUrl: vi.fn((cameraId: string) => `/live/${cameraId}`),
   getCameraPreviewUrl: vi.fn((cameraId: string) => `/preview/${cameraId}`),
+  getCameraGapAnalysis: vi.fn().mockResolvedValue({
+    total_cameras: 2,
+    geolocated_cameras: 2,
+    verified_coordinates: 2,
+    missing_stream_source: 0,
+  }),
+  listVMSConnectors: vi.fn().mockResolvedValue({ items: [], total: 0, config_path: "test" }),
+  downloadCameraGapAnalysis: vi.fn(),
+  downloadCameraGeoJSON: vi.fn(),
 }));
 
 describe("Camera Deep Linking & Asynchronous Loading Tests", () => {
@@ -112,7 +121,7 @@ describe("Camera Deep Linking & Asynchronous Loading Tests", () => {
     });
   });
 
-  it("displays truthful not-found state when requested camera ID does not exist", () => {
+  it("displays truthful not-found state when requested camera ID does not exist", async () => {
     render(
       <MemoryRouter initialEntries={["/cameras/cam_nonexistent_999"]}>
         <Routes>
@@ -124,7 +133,9 @@ describe("Camera Deep Linking & Asynchronous Loading Tests", () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText("Camera 'cam_nonexistent_999' not found")).toBeDefined();
-    expect(screen.getByText("This camera ID is not registered in the CCTV network.")).toBeDefined();
+    await waitFor(() => {
+      expect(screen.getByText("Camera 'cam_nonexistent_999' not found")).toBeDefined();
+      expect(screen.getByText("This camera ID is not registered in the CCTV network.")).toBeDefined();
+    });
   });
 });

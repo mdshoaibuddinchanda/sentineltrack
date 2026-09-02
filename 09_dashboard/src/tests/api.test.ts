@@ -1,8 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { searchNearbyCameras, getNearbyCamerasForCamera, fetchCameraPreview, getCameraLiveStreamUrl } from "../api/cameras";
+import {
+  bulkImportCameras,
+  createCamera,
+  getCameraGapAnalysis,
+  getNearbyCamerasForCamera,
+  fetchCameraPreview,
+  getCameraLiveStreamUrl,
+  listVMSConnectors,
+  searchNearbyCameras,
+} from "../api/cameras";
 import { listTargets } from "../api/targets";
 import { listAlerts } from "../api/alerts";
-import { getVehicleRoute, getVehicleRouteGeoJSON, getVehicleRouteSummary } from "../api/routes";
+import { checkCameraPairFeasibility, getVehicleRoute, getVehicleRouteGeoJSON, getVehicleRouteSummary } from "../api/routes";
 
 describe("P8 REST API Contract Verification", () => {
   beforeEach(() => {
@@ -131,5 +140,55 @@ describe("P8 REST API Contract Verification", () => {
 
     await getVehicleRouteSummary("GJ01AB1234", { min_match_score: 0.85 });
     expect(capturedUrl).toContain("min_match_score=0.85");
+  });
+
+  it("uses the audited camera registry contracts for manual and bulk onboarding", async () => {
+    const requests: Array<{ url: string; init?: RequestInit }> = [];
+    global.fetch = vi.fn().mockImplementation((url, init) => {
+      requests.push({ url: url.toString(), init });
+      return Promise.resolve({
+        ok: true,
+        headers: new Headers({ "content-type": "application/json" }),
+        json: async () => init?.method === "POST" && url.toString().endsWith("/bulk")
+          ? { dry_run: true, received: 1, valid: 1, created: 1, updated: 0, skipped: 0, items: [] }
+          : { camera: { camera_id: "cam-01" }, created: true, worker_status: "STARTED" },
+      } as any);
+    });
+
+    await createCamera({ camera_id: "cam-01", source_system: "MANUAL", location_quality: "UNKNOWN" });
+    await bulkImportCameras(
+      [{ camera_id: "cam-02", source_system: "CSV_IMPORT", location_quality: "UNKNOWN" }],
+      { mode: "CREATE_ONLY", dry_run: true },
+    );
+
+    expect(requests[0].url).toContain("/api/v1/cameras");
+    expect(requests[0].init?.method).toBe("POST");
+    expect(JSON.parse(String(requests[0].init?.body))).toMatchObject({ camera_id: "cam-01" });
+    expect(JSON.parse(String(requests[1].init?.body))).toMatchObject({ mode: "CREATE_ONLY", dry_run: true });
+  });
+
+  it("exposes gap evidence, connector readiness, and pair feasibility through explicit endpoints", async () => {
+    const urls: string[] = [];
+    global.fetch = vi.fn().mockImplementation((url) => {
+      urls.push(url.toString());
+      const payload = url.toString().includes("feasibility-check")
+        ? { from_camera_id: "cam-01", to_camera_id: "cam-02", feasibility: "FEASIBLE" }
+        : url.toString().includes("connectors")
+          ? { items: [], total: 0, config_path: "config.json" }
+          : { total_cameras: 30, geolocated_cameras: 0 };
+      return Promise.resolve({
+        ok: true,
+        headers: new Headers({ "content-type": "application/json" }),
+        json: async () => payload,
+      } as any);
+    });
+
+    await getCameraGapAnalysis(2500);
+    await listVMSConnectors();
+    await checkCameraPairFeasibility({ from_camera_id: "cam-01", to_camera_id: "cam-02", elapsed_seconds: 600 });
+
+    expect(urls[0]).toContain("/api/v1/cameras/gap-analysis?isolation_radius_m=2500");
+    expect(urls[1]).toContain("/api/v1/cameras/connectors");
+    expect(urls[2]).toContain("/api/v1/routes/feasibility-check");
   });
 });

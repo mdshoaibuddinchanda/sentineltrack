@@ -143,6 +143,24 @@ def parse_camera(item: dict, base_host: str | None = None) -> CameraRecord:
             "lng",
         )
 
+    has_coordinates = latitude is not None and longitude is not None
+    source_system = first_value(item, "source_system", "vms", "system")
+    if source_system is None and base_host:
+        source_system = "SENTINEL_CATALOGUE"
+
+    organization = first_value(item, "organization", "agency", "owner")
+    location_quality = first_value(item, "location_quality", "coordinate_quality")
+    if location_quality not in {"VERIFIED", "APPROXIMATE", "UNKNOWN"}:
+        location_quality = "UNKNOWN"
+
+    live = first_value(
+        item,
+        "live",
+        "online",
+        "is_active",
+        "active",
+    )
+
     return CameraRecord(
 
         camera_id=str(camera_id),
@@ -164,6 +182,17 @@ def parse_camera(item: dict, base_host: str | None = None) -> CameraRecord:
 
         latitude=latitude,
         longitude=longitude,
+        azimuth=first_value(item, "azimuth", "heading"),
+        location_quality=location_quality if has_coordinates else "UNKNOWN",
+
+        organization=organization,
+        source_system=source_system,
+        external_id=str(first_value(item, "external_id", "id", "camera_id", "cameraId") or camera_id),
+        onboarding_method="CATALOGUE_SYNC" if base_host else first_value(item, "onboarding_method"),
+        coordinate_source=first_value(item, "coordinate_source", "coordinate_provenance"),
+        coordinate_accuracy_m=first_value(item, "coordinate_accuracy_m", "accuracy_m"),
+        coverage_radius_m=first_value(item, "coverage_radius_m"),
+        field_of_view_degrees=first_value(item, "field_of_view_degrees", "fov_degrees"),
 
         codec=first_value(
             item,
@@ -192,13 +221,9 @@ def parse_camera(item: dict, base_host: str | None = None) -> CameraRecord:
             "bitrate",
         ),
 
-        live=first_value(
-            item,
-            "live",
-            "online",
-            "is_active",
-            "active",
-        ),
+        # A missing catalogue flag means enabled for ingestion; it never means
+        # ONLINE. Current stream health is established only after frame decode.
+        live=True if live is None else live,
 
 
         rtsp_url=rtsp,

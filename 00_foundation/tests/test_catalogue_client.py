@@ -76,6 +76,7 @@ def test_catalogue_authenticates_and_exports_ffmpeg_cookie_without_password():
     )
 
     assert client.fetch() == {"cameras": [{"id": "1"}]}
+    assert session.headers["User-Agent"] == "Mozilla/5.0 SentinelTrack/1.0"
     assert session.post_data == {"password": "organizer-secret"}
     cookie = client.get_ffmpeg_cookies()
     assert "feed_session=opaque-token" in cookie

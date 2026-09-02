@@ -228,6 +228,7 @@ function DashboardApp() {
                             onSelectCamera={handleSelectCamera}
                             selectedCameraId={selectedCameraId}
                             liveFramesDecoded={liveFramesDecoded}
+                            onRefresh={refreshCameras}
                           />
                         }
                       />
@@ -239,6 +240,7 @@ function DashboardApp() {
                             onSelectCamera={handleSelectCamera}
                             selectedCameraId={selectedCameraId}
                             liveFramesDecoded={liveFramesDecoded}
+                            onRefresh={refreshCameras}
                           />
                         }
                       />

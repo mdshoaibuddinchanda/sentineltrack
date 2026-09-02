@@ -28,11 +28,7 @@ and current blockers are summarized in
 For the native API path, start the local PostGIS database first:
 
 ```powershell
-docker run -d --name sentinel-postgres -p 5432:5432 `
-  -e POSTGRES_USER=sentinel `
-  -e POSTGRES_PASSWORD=sentinel_dev `
-  -e POSTGRES_DB=sentinel `
-  postgis/postgis:16-3.4
+docker compose up -d postgres
 ```
 
 Use a disposable local password only. The Compose path starts its own
@@ -93,7 +89,7 @@ Use `http://localhost:5173` for the dashboard and `http://localhost:8000/docs` f
 
 ```powershell
 cd C:\DR2\sentineltrack
-$env:DATABASE_PASSWORD = "sentinel_dev" # disposable local value only
+$env:DATABASE_PASSWORD = Read-Host "Local PostgreSQL password (must match your ignored .env)"
 docker compose up -d postgres
 ```
 
@@ -103,7 +99,7 @@ permitted camera sources remain local provisioning inputs.
 
 ## Six-act walkthrough
 
-1. **Catalogue** — open **Cameras → Overview** to show every permitted camera in one screen; point out the latest authenticated snapshot, online state, FPS, decoded-frame count, freshness, and any real connection error. Select one tile to open its continuous live relay and full telemetry.
+1. **Catalogue and Model 1** — open **Cameras → Overview** to show every permitted camera in one screen; point out the latest authenticated snapshot, online state, FPS, decoded-frame count, freshness, and any real connection error. Open **Camera setup and GIS**, show the current GPS/ownership gap counts, and demonstrate a CSV dry run or one authorized metadata edit. Select a tile to open its continuous live relay and full telemetry.
 2. **Observe** — show a sighting with camera, timestamp, stream epoch, vehicle/plate evidence, and model provenance.
 3. **Identify** — search the target/watchlist and show normalized plate matching.
 4. **Corroborate** — show chronological sightings and the P7 lower-bound feasibility explanation.
@@ -112,7 +108,13 @@ permitted camera sources remain local provisioning inputs.
 
 ## Official-feed procedure
 
-Before the official run, obtain the organizer-provided catalogue, credentials, allowed network path, and retention instructions. Register stable camera IDs and verify clock/epoch behavior. Run the same six acts on the government feeds and export a report containing vehicle/plate result, camera, timestamp, evidence source, and confidence/provenance. Record only permitted material.
+Before the official run, obtain the organizer-provided catalogue, credentials,
+allowed network path, authoritative GIS/department metadata, and retention
+instructions. Register stable camera IDs and verify clock/epoch behavior. Use
+the Camera setup panel to validate GPS provenance and export the unresolved gap
+CSV. Run the same six acts on the government feeds and export a report containing
+vehicle/plate result, camera, timestamp, evidence source, and
+confidence/provenance. Record only permitted material.
 
 ## Troubleshooting
 
@@ -124,6 +126,8 @@ Before the official run, obtain the organizer-provided catalogue, credentials, a
 | Need browser video | Use the Cameras page or the authenticated `/api/v1/cameras/{id}/live` relay; upstream feed URLs are never exposed to the browser. |
 | Organizer DNS blocked | Verify `Resolve-DnsName cctv.corp8.cloud`; correct the workstation/VPN DNS before restarting. |
 | Feed reconnects | Preserve camera ID, increment stream epoch, and show the reset in diagnostics. |
+| GIS demonstration says coordinates are required | Import or edit at least two authoritative WGS84 camera locations with coordinate sources; do not infer them from names. |
+| VMS connector says disabled/setup required | Replace the disabled template only with an approved department endpoint, provision its referenced environment secrets, restart, and run Validate before Sync. |
 | Database unavailable | Do not fabricate results; record the dependency failure and stop the run. |
 | Model/checkpoint unavailable | Keep ANPR/ReID claims disabled and show the graceful-degradation explanation. |
 | Government stream unavailable | Stop and report the external feed issue; do not replace it silently with mockups. |

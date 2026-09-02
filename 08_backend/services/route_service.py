@@ -2,16 +2,17 @@ import time
 import importlib
 import csv
 import io
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 try:
     from ..errors import RoutePersistenceAPIError
-    from ..schemas.routes import RouteResponse, RouteSegmentResponse, RouteSightingResponse, RouteSummaryResponse, GeoJSONFeatureCollection
+    from ..schemas.routes import RouteResponse, RouteSegmentResponse, RouteSightingResponse, RouteSummaryResponse, GeoJSONFeatureCollection, CameraPairFeasibilityResponse
 except (ImportError, ValueError):
     RoutePersistenceAPIError = importlib.import_module("08_backend.errors").RoutePersistenceAPIError
     rt_m = importlib.import_module("08_backend.schemas.routes")
     RouteResponse, RouteSegmentResponse, RouteSightingResponse, RouteSummaryResponse, GeoJSONFeatureCollection = rt_m.RouteResponse, rt_m.RouteSegmentResponse, rt_m.RouteSightingResponse, rt_m.RouteSummaryResponse, rt_m.GeoJSONFeatureCollection
+    CameraPairFeasibilityResponse = rt_m.CameraPairFeasibilityResponse
 
 
 def _get_route_pipeline():
@@ -36,6 +37,87 @@ class RouteService:
             keys_to_remove = [k for k in self._trajectory_cache if k[0] == reg_clean]
             for k in keys_to_remove:
                 self._trajectory_cache.pop(k, None)
+
+    def evaluate_camera_pair(
+        self,
+        from_camera_id: str,
+        to_camera_id: str,
+        elapsed_seconds: float,
+    ) -> CameraPairFeasibilityResponse:
+        """Run a non-persisting, hypothetical P7 feasibility check on registry cameras."""
+        camera_repo = self.pipeline.camera_repo
+        from_camera = camera_repo.get_camera(from_camera_id)
+        to_camera = camera_repo.get_camera(to_camera_id)
+        if from_camera is None:
+            raise importlib.import_module("08_backend.errors").CameraNotFoundError(
+                f"Camera '{from_camera_id}' not found."
+            )
+        if to_camera is None:
+            raise importlib.import_module("08_backend.errors").CameraNotFoundError(
+                f"Camera '{to_camera_id}' not found."
+            )
+
+        models_m = importlib.import_module("07_route_engine.models")
+        feasibility_m = importlib.import_module("07_route_engine.feasibility")
+        spatial_m = importlib.import_module("07_route_engine.spatial")
+        now = datetime.now(timezone.utc)
+        later = now + timedelta(seconds=elapsed_seconds)
+        from_sighting = models_m.RouteSighting(
+            sighting_id="feasibility-demo-from",
+            target_id="FEASIBILITY_DEMO",
+            registration_candidate="FEASIBILITY_DEMO",
+            camera_id=from_camera_id,
+            stream_epoch=0,
+            track_id=0,
+            first_pts_ms=0.0,
+            last_pts_ms=0.0,
+            event_time_utc=now,
+            time_source=models_m.TimeSource.SOURCE_WALLCLOCK,
+            time_quality=models_m.TimeQuality.HIGH,
+            location_quality=from_camera.location_quality,
+        )
+        to_sighting = models_m.RouteSighting(
+            sighting_id="feasibility-demo-to",
+            target_id="FEASIBILITY_DEMO",
+            registration_candidate="FEASIBILITY_DEMO",
+            camera_id=to_camera_id,
+            stream_epoch=0,
+            track_id=0,
+            first_pts_ms=0.0,
+            last_pts_ms=0.0,
+            event_time_utc=later,
+            time_source=models_m.TimeSource.SOURCE_WALLCLOCK,
+            time_quality=models_m.TimeQuality.HIGH,
+            location_quality=to_camera.location_quality,
+        )
+        segment = feasibility_m.evaluate_segment_feasibility(
+            from_sighting,
+            to_sighting,
+            from_cam_geo=from_camera,
+            to_cam_geo=to_camera,
+        )
+        _, composite_quality = spatial_m.calculate_segment_distance(from_camera, to_camera)
+        feasibility_value = segment.feasibility.value if hasattr(segment.feasibility, "value") else str(segment.feasibility)
+        if feasibility_value == "IMPOSSIBLE":
+            explanation = "The elapsed time would require movement above the configured physical limit."
+        elif feasibility_value == "QUESTIONABLE":
+            explanation = "The movement is physically possible but exceeds the configured soft speed threshold."
+        elif feasibility_value == "FEASIBLE":
+            explanation = "The lower-bound movement is compatible with the supplied elapsed time."
+        else:
+            explanation = "Verified coordinates are required before movement feasibility can be determined."
+        return CameraPairFeasibilityResponse(
+            from_camera_id=from_camera_id,
+            to_camera_id=to_camera_id,
+            elapsed_seconds=elapsed_seconds,
+            distance_lower_bound_m=segment.distance_lower_bound_m,
+            minimum_required_speed_kmh=segment.minimum_required_speed_kmh,
+            feasibility=feasibility_value,
+            segment_score=segment.segment_score,
+            location_quality=composite_quality.value,
+            warnings=segment.warnings,
+            explanation=explanation,
+        )
 
     def build_target_trajectory(
         self,

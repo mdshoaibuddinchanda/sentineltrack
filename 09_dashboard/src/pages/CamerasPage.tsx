@@ -3,19 +3,23 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Camera } from "../types/api";
 import { Card } from "../components/common/Card";
 import { CameraStatusBadge } from "../components/common/Badge";
+import { CameraRegistryTools } from "../components/cameras/CameraRegistryTools";
 import { searchNearbyCameras, getCameraLiveStreamUrl, getCameraPreviewUrl } from "../api/cameras";
 import { Video, Search, MapPin, AlertCircle, RefreshCw, Grid2X2, List, Activity, ExternalLink } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 interface CamerasPageProps {
   cameras: Camera[];
   onSelectCamera?: (cameraId: string) => void;
   selectedCameraId?: string | null;
   liveFramesDecoded?: number;
+  onRefresh?: () => void | Promise<void>;
 }
 
-export function CamerasPage({ cameras, onSelectCamera, liveFramesDecoded }: CamerasPageProps) {
+export function CamerasPage({ cameras, onSelectCamera, liveFramesDecoded, onRefresh }: CamerasPageProps) {
   const { cameraId: routeCameraId } = useParams<{ cameraId?: string }>();
   const navigate = useNavigate();
+  const { hasPermission } = useAuth();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -182,17 +186,17 @@ export function CamerasPage({ cameras, onSelectCamera, liveFramesDecoded }: Came
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div className="rounded-lg border border-police-750 bg-police-850 px-4 py-3">
               <div className="flex items-center justify-between text-xs text-slate-400"><span>Camera sources</span><Video className="h-4 w-4 text-cyan-400" /></div>
-              <div className="mt-1 text-2xl font-bold text-white">{cameras.length}</div>
+              <div className="mt-1 text-2xl font-bold text-slate-100">{cameras.length}</div>
               <div className="text-[11px] text-slate-400">{onlineCount} online · {notOnlineCount} need attention</div>
             </div>
             <div className="rounded-lg border border-police-750 bg-police-850 px-4 py-3">
               <div className="flex items-center justify-between text-xs text-slate-400"><span>Decoded frames</span><Activity className="h-4 w-4 text-emerald-400" /></div>
-              <div className="mt-1 text-2xl font-bold text-white">{decodedCount.toLocaleString("en-IN")}</div>
+              <div className="mt-1 text-2xl font-bold text-slate-100">{decodedCount.toLocaleString("en-IN")}</div>
               <div className="text-[11px] text-slate-400">Reported by the authenticated workers</div>
             </div>
             <div className="rounded-lg border border-police-750 bg-police-850 px-4 py-3">
               <div className="flex items-center justify-between text-xs text-slate-400"><span>Preview refresh</span><RefreshCw className="h-4 w-4 text-cyan-400" /></div>
-              <div className="mt-1 text-2xl font-bold text-white">5 sec</div>
+              <div className="mt-1 text-2xl font-bold text-slate-100">5 sec</div>
               <div className="text-[11px] text-slate-400">One continuous stream opens below for the selected camera</div>
             </div>
           </div>
@@ -468,6 +472,13 @@ export function CamerasPage({ cameras, onSelectCamera, liveFramesDecoded }: Came
           </Card>
         </div>
       </div>}
+
+      <CameraRegistryTools
+        cameras={cameras}
+        selectedCamera={selectedCam}
+        canManage={hasPermission("camera:manage")}
+        onChanged={onRefresh || (() => undefined)}
+      />
     </div>
   );
 }

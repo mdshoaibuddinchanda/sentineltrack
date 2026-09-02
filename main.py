@@ -117,6 +117,15 @@ def wait_for_http(url: str, timeout: float = 30.0) -> bool:
     return False
 
 
+def startup_timeout_seconds() -> float:
+    """Allow bounded catalogue retries without the parent killing a healthy startup."""
+    try:
+        configured = float(os.getenv("SENTINEL_STARTUP_TIMEOUT", "90"))
+    except ValueError:
+        configured = 90.0
+    return min(180.0, max(35.0, configured))
+
+
 def ensure_frontend_dependencies() -> None:
     if not DASHBOARD.is_dir():
         raise RuntimeError(f"Dashboard directory missing: {DASHBOARD}")
@@ -313,7 +322,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             if not wait_for_http(
                 f"http://127.0.0.1:{args.api_port}/health",
-                timeout=35.0,
+                timeout=startup_timeout_seconds(),
             ):
                 raise RuntimeError("Backend did not become ready on time.")
 

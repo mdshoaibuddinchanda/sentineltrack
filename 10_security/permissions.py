@@ -6,6 +6,7 @@ from .models import UserRole, Permission
 ROLE_PERMISSIONS: Dict[UserRole, Set[str]] = {
     UserRole.ADMIN: {
         Permission.CAMERA_READ.value,
+        Permission.CAMERA_MANAGE.value,
         Permission.TARGET_READ.value,
         Permission.TARGET_CREATE.value,
         Permission.TARGET_UPDATE.value,
@@ -25,6 +26,7 @@ ROLE_PERMISSIONS: Dict[UserRole, Set[str]] = {
     },
     UserRole.SUPERVISOR: {
         Permission.CAMERA_READ.value,
+        Permission.CAMERA_MANAGE.value,
         Permission.TARGET_READ.value,
         Permission.TARGET_CREATE.value,
         Permission.TARGET_UPDATE.value,

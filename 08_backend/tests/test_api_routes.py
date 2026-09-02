@@ -11,6 +11,42 @@ p7_models = importlib.import_module("07_route_engine.models")
 p7_cam_repo = importlib.import_module("07_route_engine.camera_repository")
 
 app = backend_app.app
+
+
+def test_camera_pair_feasibility_demo_uses_registry_without_persisting_sightings():
+    cam_repo_mod = importlib.import_module("07_route_engine.camera_repository")
+    models_mod = importlib.import_module("07_route_engine.models")
+    cam_repo = cam_repo_mod.PostgresCameraRepository()
+    cam_repo.save_camera(models_mod.CameraGeo(
+        "test_cam_route_from", "Route From", 23.0200, 72.5700,
+        location_quality=models_mod.LocationQuality.VERIFIED,
+    ))
+    cam_repo.save_camera(models_mod.CameraGeo(
+        "test_cam_route_to", "Route To", 23.1200, 72.6700,
+        location_quality=models_mod.LocationQuality.VERIFIED,
+    ))
+    try:
+        client = TestClient(app)
+        response = client.post(
+            "/api/v1/routes/feasibility-check",
+            json={
+                "from_camera_id": "test_cam_route_from",
+                "to_camera_id": "test_cam_route_to",
+                "elapsed_seconds": 30,
+            },
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["distance_lower_bound_m"] > 0
+        assert body["feasibility"] in {"QUESTIONABLE", "IMPOSSIBLE"}
+        assert "not a road route" in body["disclaimer"].lower()
+    finally:
+        db = importlib.import_module("00_foundation.registry.database")
+        with db.get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "DELETE FROM cameras WHERE camera_id IN ('test_cam_route_from', 'test_cam_route_to')"
+                )
 Sighting = p5_models.Sighting
 MatchClass = p5_models.MatchClass
 PostgresTargetMatchingRepository = p5_repo.PostgresTargetMatchingRepository

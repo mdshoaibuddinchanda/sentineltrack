@@ -10,7 +10,7 @@ The Gujarat Sentinel challenge requires a practical platform that can ingest het
 
 ## 3. Proposed Solution
 
-SentinelTrack combines registry-first ingestion, per-camera tracking, ANPR, watchlist matching, conservative appearance support, chronological feasibility analysis, secure APIs, and a control-room dashboard. Existing departmental VMS remains authoritative for continuous recordings; SentinelTrack centralizes permitted metadata, events, alerts, audit, and selected evidence.
+SentinelTrack combines registry-first ingestion, manual/CSV camera onboarding, two bounded VMS adapter contracts, per-camera tracking, ANPR, watchlist matching, conservative appearance support, chronological feasibility analysis, secure APIs, and a control-room dashboard. Existing departmental VMS remains authoritative for continuous recordings; SentinelTrack centralizes permitted metadata, events, alerts, audit, and selected evidence.
 
 ## 4. System Architecture
 
@@ -18,7 +18,8 @@ The selected architecture is hybrid: department/regional gateways and inference 
 
 ## 5. Functional Capabilities
 
-- camera catalogue and stream health;
+- camera catalogue, manual/bulk onboarding, GPS provenance, gap reporting, and stream health;
+- OGC API Features and ONVIF Profile T organization adapter paths;
 - vehicle detection and per-camera ByteTrack tracking;
 - plate detection, OCR normalization, and five-frame consensus;
 - watchlist registration, matching, alert safeguards, and acknowledgement;
@@ -50,7 +51,9 @@ The implemented P10 baseline includes opaque server-side sessions, HttpOnly cook
 
 ## 11. GIS / Investigation
 
-P7 provides chronological camera sightings, geodesic/straight-line lower-bound distance, minimum physically required speed, feasibility classification, and same-camera dwell collapse. It does not claim shortest road routes, exact driven paths, live traffic reconstruction, or road-level route snapping.
+P7 provides chronological camera sightings, geodesic/straight-line lower-bound distance, minimum physically required speed, feasibility classification, and same-camera dwell collapse. A non-persisting camera-pair demonstration reuses the same classifier, while a PostGIS AOI endpoint reports explicitly approximate circular-buffer coverage. It does not claim shortest road routes, exact driven paths, live traffic reconstruction, calibrated visibility, optimal placement, or road-level route snapping.
+
+The current organizer registry has 30 enabled cameras and stream sources but no authoritative coordinates, departments, organizations, or azimuth values. These are reported—not guessed—in [`../reports/model1/MODEL1_GAP_ANALYSIS.md`](../reports/model1/MODEL1_GAP_ANALYSIS.md). The operator can close them through the Cameras page once official records are provided.
 
 ## 12. Scalability
 
@@ -74,7 +77,7 @@ P11 implements bounded queues, stale-frame dropping, fair scheduling, adaptive b
 
 ## 17. Department Dependencies
 
-[`DEPARTMENT_REQUIREMENTS.md`](DEPARTMENT_REQUIREMENTS.md) assigns inputs and acceptance responsibilities across Police/Control Room, CCTV/VMS, IT/Data Centre, Network, Cybersecurity, GIS, Investigation/Operations, Procurement, and Legal/Privacy/Governance. Exact production schemas, credentials, retention, and legal policies require owner confirmation.
+[`DEPARTMENT_REQUIREMENTS.md`](DEPARTMENT_REQUIREMENTS.md) assigns inputs and acceptance responsibilities across Police/Control Room, CCTV/VMS, IT/Data Centre, Network, Cybersecurity, GIS, Investigation/Operations, Procurement, and Legal/Privacy/Governance. Exact production schemas, credentials, retention, and legal policies require owner confirmation. OGC API Features and ONVIF Profile T adapters are implemented and contract tested; live validation against two real departmental products still requires their approved endpoints and environment-only credentials.
 
 ## 18. Deployment Plan
 
@@ -86,7 +89,7 @@ P11 implements bounded queues, stale-frame dropping, fair scheduling, adaptive b
 
 ## 20. Limitations
 
-OCR exact accuracy remains the largest recognition limitation; external P1 vehicle GT is unavailable; P6 lacks true cross-camera labeled identity GT; ReID is intentionally review-only; cloud/multi-node capacity is projected; P7 is not road-level routing; TensorRT is not claimed; and large-scale live Sentinel-network testing has not occurred. Mitigations and non-claims are in [`LIMITATIONS_AND_FUTURE_WORK.md`](LIMITATIONS_AND_FUTURE_WORK.md).
+OCR exact accuracy remains the largest recognition limitation; external P1 vehicle GT is unavailable; P6 lacks true cross-camera labeled identity GT; ReID is intentionally review-only; authoritative GPS/department metadata is not in the current organizer catalogue; the two generic VMS adapters lack live vendor acceptance; cloud/multi-node capacity is projected; P7 is not road-level routing; TensorRT is not claimed; and large-scale live Sentinel-network testing has not occurred. Mitigations and non-claims are in [`LIMITATIONS_AND_FUTURE_WORK.md`](LIMITATIONS_AND_FUTURE_WORK.md).
 
 ## 21. Future Work
 

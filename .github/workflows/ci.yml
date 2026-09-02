@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   backend-test:
-    name: Security & Scale Backend Gates
+    name: Core Backend, Security & Scale Gates
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -64,9 +64,21 @@ jobs:
         run: |
           python tools/init_schema.py
 
-      - name: Run Security & Scale Pytest Suite
+      - name: Run Core, Security & Scale Pytest Suite
         run: |
-          python -m pytest 10_security/tests/ 11_scale_deployment/tests/ tests/test_ci_contract.py -v --timeout=30
+          python -m pytest \
+            00_foundation/tests/test_catalogue_client.py \
+            00_foundation/tests/test_parser.py \
+            00_foundation/tests/test_stream.py \
+            00_foundation/tests/test_vms_connectors.py \
+            08_backend/tests/test_api_cameras.py \
+            08_backend/tests/test_api_routes.py \
+            08_backend/tests/test_lifecycle_stream_sources.py \
+            10_security/tests/ \
+            11_scale_deployment/tests/ \
+            tests/test_ci_contract.py \
+            tests/test_doctor.py \
+            -v --timeout=30
 
 
 

@@ -20,14 +20,14 @@
 
 | Layer | Responsibility | Repository evidence |
 |---|---|---|
-| Source/VMS | Government and permitted public-facing feeds | Official catalogue contract; department adapters |
-| Registry/GIS | Camera metadata, coordinates, ownership, health | `00_foundation/`, `07_route_engine/` |
+| Source/VMS | Government and permitted public-facing feeds | Official catalogue plus contract-tested OGC API Features and ONVIF Profile T adapters |
+| Registry/GIS | Camera metadata, provenance, manual/CSV onboarding, gap/GeoJSON exports, health | `00_foundation/`, `07_route_engine/`, `docs/CAMERA_REGISTRY_GIS_VMS.md` |
 | Ingestion | RTSP/TCP, HLS fallback, PTS and epoch management | `00_foundation/streams/` |
 | Scheduling | Sampling, burst mode, queues, sharding and stale drops | `11_scale_deployment/` |
 | Vision | P1 vehicle detection, P2 tracking, P3 plate detection | `01_vehicle_detection/`, `02_tracking/`, `03_plate_detection/` |
 | Recognition | AABB crop, PP-OCRv5 Mobile and temporal consensus | `04_plate_ocr/` |
 | Identity | P5 watchlist scoring plus P6 appearance fallback | `05_target_matching/`, `06_vehicle_reid/` |
-| Investigation | Chronological trajectory and lower-bound feasibility | `07_route_engine/` |
+| Investigation | Chronological trajectory, pair feasibility and bounded planning coverage | `07_route_engine/`, `08_backend/services/camera_service.py` |
 | Control plane | FastAPI, WebSocket, event bus and persistence | `08_backend/` |
 | Operator UI | Cameras, targets, alerts, investigation and readiness | `09_dashboard/` |
 | Trust layer | Auth, RBAC, CSRF, audit and rate limits | `10_security/`, `docs/security/` |
@@ -37,8 +37,8 @@
 ### Sandbox / evaluator mode
 
 One API, one database, one analytics worker and the React dashboard can run on
-one host for deterministic testing. Dashboard fixtures allow the operator to
-show the investigation flow without depending on a public CCTV network.
+one host. The release launcher uses persisted records and configured permitted
+sources; it does not insert dashboard fixtures or synthetic alerts.
 
 ### Pilot mode
 
@@ -70,6 +70,11 @@ source camera + stream epoch + track
 
 The system avoids an appearance-only police identity claim. P6 is a fallback
 signal, never an authority above a strong plate.
+
+Camera-location provenance follows the same evidence principle. A textual
+location label is useful to an operator but is not promoted to WGS84 geometry.
+Only supplied coordinates with an explicit source enter PostGIS route and
+coverage calculations. Current gaps are exported rather than hidden.
 
 ## Diagram index
 

@@ -2,12 +2,14 @@ import os
 import time
 import logging
 import threading
+import math
 import cv2
 from typing import Callable, Optional, Generator, Tuple
 
 logger = logging.getLogger("sentineltrack.stream_reader")
 
 _CAPTURE_OPTIONS_LOCK = threading.Lock()
+_DEFAULT_MEDIA_USER_AGENT = "Mozilla/5.0 SentinelTrack/1.0"
 
 try:
     from .models import FramePacket
@@ -31,6 +33,7 @@ class RTSPReader:
         recovery_interval_s: float = 60.0,
         connect_timeout_s: Optional[float] = None,
         http_cookie_provider: Optional[Callable[[str], str]] = None,
+        reconnect_internally: bool = True,
     ):
         self.primary_url = url
         self.fallback_url = fallback_url
@@ -43,6 +46,7 @@ class RTSPReader:
             configured_timeout = os.getenv("RTSP_CONNECT_TIMEOUT", "10")
         self.connect_timeout_s = max(1.0, float(configured_timeout))
         self.http_cookie_provider = http_cookie_provider
+        self.reconnect_internally = bool(reconnect_internally)
 
         self.active_url = self.primary_url
         self.is_using_fallback = False
@@ -57,18 +61,35 @@ class RTSPReader:
         options: list[str] = []
         if url.lower().startswith("rtsp://"):
             options.append("rtsp_transport;tcp")
-        if url.lower().startswith(("http://", "https://")) and self.http_cookie_provider:
-            try:
-                cookies = self.http_cookie_provider(url)
-            except Exception:
-                logger.warning(
-                    "Could not obtain the authorized media session for camera %s",
-                    self.camera_id,
-                    exc_info=True,
-                )
-                cookies = ""
-            if cookies:
-                options.append(f"cookies;{cookies}")
+        if url.lower().startswith(("http://", "https://")):
+            # FFmpeg defaults to a Lavf/* agent. The current authorized camera
+            # CDN deliberately answers that with ``403 browser required``.
+            # FFmpeg's HTTP protocol exposes user_agent as an input option.
+            # Remove option delimiters/newlines from operator configuration.
+            configured_agent = os.getenv(
+                "SENTINEL_MEDIA_USER_AGENT", _DEFAULT_MEDIA_USER_AGENT
+            )
+            safe_agent = " ".join(
+                str(configured_agent)
+                .replace("\r", " ")
+                .replace("\n", " ")
+                .replace(";", " ")
+                .replace("|", " ")
+                .split()
+            )[:256]
+            options.append(f"user_agent;{safe_agent or _DEFAULT_MEDIA_USER_AGENT}")
+            if self.http_cookie_provider:
+                try:
+                    cookies = self.http_cookie_provider(url)
+                except Exception:
+                    logger.warning(
+                        "Could not obtain the authorized media session for camera %s",
+                        self.camera_id,
+                        exc_info=True,
+                    )
+                    cookies = ""
+                if cookies:
+                    options.append(f"cookies;{cookies}")
         return "|".join(options)
 
     def _open_capture(self, url: str):
@@ -191,11 +212,21 @@ class RTSPReader:
                 if self.cap is not None:
                     self.cap.release()
                 self.cap = None
+                if not self.reconnect_internally:
+                    raise StreamReadError(
+                        f"Camera {self.camera_id} source stopped yielding decodable frames"
+                    )
                 time.sleep(backoff)
                 backoff = min(backoff * 2, self.max_backoff)
                 continue
 
-            pts_ms = self.cap.get(cv2.CAP_PROP_POS_MSEC)
+            raw_pts_ms = self.cap.get(cv2.CAP_PROP_POS_MSEC)
+            # Some mixed H.264/H.265 live sources expose FFmpeg's AV_NOPTS
+            # sentinel as an enormous negative float. Preserve the contract's
+            # explicit unknown marker instead of propagating impossible time.
+            pts_ms = float(raw_pts_ms) if raw_pts_ms is not None else -1.0
+            if not math.isfinite(pts_ms) or pts_ms < 0.0:
+                pts_ms = -1.0
 
             # Loop / reset detection: if PTS jumps backward significantly, increment stream_epoch
             if self.last_pts_ms > 0 and pts_ms < (self.last_pts_ms - 2000.0):
@@ -243,3 +274,7 @@ class RTSPReader:
         if self.cap is not None:
             self.cap.release()
             self.cap = None
+
+
+class StreamReadError(RuntimeError):
+    """A connected source stopped yielding frames and needs supervision."""
