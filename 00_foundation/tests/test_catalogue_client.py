@@ -71,6 +71,7 @@ def test_catalogue_authenticates_and_exports_ffmpeg_cookie_without_password():
     session = FakeSession([login, catalogue], post_response=auth_ok)
     client = client_m.SentinelCatalogueClient(
         host="https://live.sentinelgujarat.in",
+        email="",
         password="organizer-secret",
         session=session,
     )
@@ -82,6 +83,60 @@ def test_catalogue_authenticates_and_exports_ffmpeg_cookie_without_password():
     assert "feed_session=opaque-token" in cookie
     assert "organizer-secret" not in cookie
     assert client.effective_host == "https://cctv.corp8.cloud"
+
+
+def test_current_catalogue_authentication_submits_required_email_identity():
+    login = FakeResponse(
+        url="https://cctv.corp8.cloud/auth/login",
+        text=(
+            '<form><input type="email" name="email">'
+            '<input name="password"></form>Restricted Feed Access'
+        ),
+    )
+    auth_ok = FakeResponse(url="https://cctv.corp8.cloud/")
+    catalogue = FakeResponse(
+        url="https://cctv.corp8.cloud/api/ingest",
+        content_type="application/json",
+        payload={"cameras": [{"id": "cam01"}]},
+    )
+    session = FakeSession([login, catalogue], post_response=auth_ok)
+    client = client_m.SentinelCatalogueClient(
+        host="https://cctv.corp8.cloud",
+        email="authorized@example.gov.in",
+        password="organizer-secret",
+        session=session,
+    )
+
+    assert client.fetch() == {"cameras": [{"id": "cam01"}]}
+    assert session.post_data == {
+        "password": "organizer-secret",
+        "email": "authorized@example.gov.in",
+    }
+    assert client.diagnostics()["access_email_configured"] is True
+
+
+def test_current_catalogue_reports_missing_required_email_identity():
+    login = FakeResponse(
+        url="https://cctv.corp8.cloud/auth/login",
+        text=(
+            "<form><input type='email' name='email'>"
+            "<input name='password'></form>Restricted Feed Access"
+        ),
+    )
+    session = FakeSession([login])
+    client = client_m.SentinelCatalogueClient(
+        host="https://cctv.corp8.cloud",
+        email="",
+        password="organizer-secret",
+        session=session,
+    )
+
+    with pytest.raises(
+        client_m.CatalogueAuthenticationRequired,
+        match="SENTINEL_ACCESS_EMAIL",
+    ):
+        client.fetch()
+    assert session.post_data is None
 
 
 def test_catalogue_falls_back_to_current_authenticated_portal_registry():
@@ -105,6 +160,7 @@ def test_catalogue_falls_back_to_current_authenticated_portal_registry():
     )
     client = client_m.SentinelCatalogueClient(
         host="https://cctv.corp8.cloud",
+        email="",
         password="organizer-secret",
         session=session,
     )

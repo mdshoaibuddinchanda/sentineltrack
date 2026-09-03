@@ -3,6 +3,7 @@ import time
 import logging
 import threading
 import math
+import importlib
 import cv2
 from typing import Callable, Optional, Generator, Tuple
 
@@ -15,6 +16,67 @@ try:
     from .models import FramePacket
 except (ImportError, ValueError):
     from streams.models import FramePacket
+
+
+class _PyAVCaptureAdapter:
+    """Small VideoCapture-compatible adapter for HLS that OpenCV cannot open."""
+
+    def __init__(self, url: str, *, options: dict[str, str], timeout_s: float):
+        self.container = None
+        self._frames = None
+        self._last_pts_ms = -1.0
+        try:
+            av_module = importlib.import_module("av")
+            try:
+                self.container = av_module.open(
+                    url,
+                    mode="r",
+                    options=options,
+                    timeout=(timeout_s, timeout_s),
+                )
+            except TypeError:
+                # Compatibility with older supported PyAV releases.
+                self.container = av_module.open(
+                    url,
+                    mode="r",
+                    options=options,
+                    timeout=timeout_s,
+                )
+            self._frames = iter(self.container.decode(video=0))
+        except Exception:
+            self.release()
+
+    def isOpened(self) -> bool:
+        return self.container is not None and self._frames is not None
+
+    def read(self):
+        if not self.isOpened():
+            return False, None
+        try:
+            frame = next(self._frames)
+            if frame.pts is not None and frame.time_base is not None:
+                self._last_pts_ms = float(frame.pts * frame.time_base * 1000.0)
+            else:
+                self._last_pts_ms = -1.0
+            return True, frame.to_ndarray(format="bgr24")
+        except Exception:
+            self.release()
+            return False, None
+
+    def get(self, prop_id: int) -> float:
+        if prop_id == cv2.CAP_PROP_POS_MSEC:
+            return self._last_pts_ms
+        return 0.0
+
+    def release(self) -> None:
+        container = self.container
+        self.container = None
+        self._frames = None
+        if container is not None:
+            try:
+                container.close()
+            except Exception:
+                pass
 
 
 class RTSPReader:
@@ -92,6 +154,48 @@ class RTSPReader:
                     options.append(f"cookies;{cookies}")
         return "|".join(options)
 
+    def _open_pyav_capture(self, url: str):
+        """Use declared PyAV as an HLS fallback when OpenCV's FFmpeg rejects it."""
+        if not url.lower().startswith(("http://", "https://")):
+            return None
+
+        configured_agent = os.getenv(
+            "SENTINEL_MEDIA_USER_AGENT", _DEFAULT_MEDIA_USER_AGENT
+        )
+        safe_agent = " ".join(
+            str(configured_agent)
+            .replace("\r", " ")
+            .replace("\n", " ")
+            .replace(";", " ")
+            .replace("|", " ")
+            .split()
+        )[:256] or _DEFAULT_MEDIA_USER_AGENT
+        options = {"user_agent": safe_agent}
+        if self.http_cookie_provider:
+            try:
+                cookies = self.http_cookie_provider(url)
+            except Exception:
+                logger.warning(
+                    "Could not obtain the authorized PyAV media session for camera %s",
+                    self.camera_id,
+                    exc_info=True,
+                )
+                cookies = ""
+            if cookies:
+                options["cookies"] = cookies
+
+        capture = _PyAVCaptureAdapter(
+            url,
+            options=options,
+            timeout_s=self.connect_timeout_s,
+        )
+        if capture.isOpened():
+            logger.info(
+                "Camera %s opened authenticated HLS through the PyAV fallback",
+                self.camera_id,
+            )
+        return capture
+
     def _open_capture(self, url: str):
         """Open a capture with bounded FFmpeg open/read timeouts."""
         timeout_ms = int(self.connect_timeout_s * 1000)
@@ -113,18 +217,32 @@ class RTSPReader:
                 os.environ.pop("OPENCV_FFMPEG_CAPTURE_OPTIONS", None)
             try:
                 try:
-                    return cv2.VideoCapture(url, cv2.CAP_FFMPEG, params)
+                    capture = cv2.VideoCapture(url, cv2.CAP_FFMPEG, params)
                 except (TypeError, cv2.error):
                     logger.warning(
                         "OpenCV build does not support bounded capture parameters for camera %s",
                         self.camera_id,
                     )
-                    return cv2.VideoCapture(url, cv2.CAP_FFMPEG)
+                    capture = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
             finally:
                 if previous is None:
                     os.environ.pop("OPENCV_FFMPEG_CAPTURE_OPTIONS", None)
                 else:
                     os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = previous
+
+        if capture.isOpened() or not url.lower().startswith(("http://", "https://")):
+            return capture
+
+        pyav_capture = self._open_pyav_capture(url)
+        if pyav_capture is not None and pyav_capture.isOpened():
+            try:
+                capture.release()
+            except Exception:
+                pass
+            return pyav_capture
+        if pyav_capture is not None:
+            pyav_capture.release()
+        return capture
 
     def connect(self) -> bool:
         if self.cap is not None:

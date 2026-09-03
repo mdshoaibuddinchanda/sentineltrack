@@ -298,6 +298,7 @@ def main(argv: list[str] | None = None) -> int:
     full = not args.frontend_only
     backend: subprocess.Popen | None = None
     frontend: subprocess.Popen | None = None
+    feed_credentials_configured = False
 
     try:
         if not args.frontend_only:
@@ -308,9 +309,17 @@ def main(argv: list[str] | None = None) -> int:
             maybe_start_postgres()
             initialize_database_schema()
             os.environ["SENTINEL_ENABLE_STREAM_INGESTION"] = "true"
-            if not os.getenv("SENTINEL_ACCESS_PASSWORD", "").strip():
+            missing_feed_settings = [
+                name
+                for name in ("SENTINEL_ACCESS_EMAIL", "SENTINEL_ACCESS_PASSWORD")
+                if not os.getenv(name, "").strip()
+            ]
+            feed_credentials_configured = not missing_feed_settings
+            if missing_feed_settings:
                 print(
-                    "[attention] SENTINEL_ACCESS_PASSWORD is not configured. "
+                    "[attention] Required organizer setting(s) missing: "
+                    + ", ".join(missing_feed_settings)
+                    + ". "
                     "The protected official feeds will be shown as Access required."
                 )
 
@@ -345,8 +354,8 @@ def main(argv: list[str] | None = None) -> int:
                 " Feed      : "
                 + (
                     "credentials configured; verify decoded frames in Cameras/System status"
-                    if os.getenv("SENTINEL_ACCESS_PASSWORD", "").strip()
-                    else "BLOCKED - organizer password required"
+                    if feed_credentials_configured
+                    else "BLOCKED - organizer email and password required"
                 )
             )
         else:

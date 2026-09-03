@@ -55,6 +55,16 @@ and the 30-camera catalogue.
 | JPEG preview | Valid 92,950-byte JPEG returned from `cam18` |
 | Continuous video relay | Authenticated multipart MJPEG response; first 131,072-byte chunk contained real JPEG frame data |
 
+On 3 September, the organizer login form began requiring both an email and a
+password. A follow-up live regression check submitted both fields, authenticated
+all 30 catalogue definitions on the first attempt, and detected that OpenCV's
+bundled FFmpeg could no longer open the portal's encrypted, end-listed HLS
+playlist. The declared PyAV runtime decoded the same 1920 × 1080 source, so a
+bounded PyAV HLS fallback was added to the production reader. After restart, the
+first synchronized API sample reported 7 online cameras and 1,361 decoded
+frames; a 178,683-byte JPEG preview and authenticated multipart MJPEG data both
+passed. Counts continue to vary with external feed delivery.
+
 The frontend never receives the organizer password or direct secret-bearing
 media URL. It opens the protected application endpoint:
 
@@ -71,6 +81,10 @@ camera status.
 - Direct RTSP is used over TCP for inference.
 - An authorized HLS URL is retained as fallback when the catalogue session is
   available.
+- OpenCV remains the first decoder. If it cannot open authenticated HTTP/HLS,
+  the declared PyAV/FFmpeg runtime is used through a small capture adapter with
+  the same browser-compatible user agent, session cookie, source PTS, and
+  bounded open/read timeout.
 - The current CDN-compatible media user agent is explicit.
 - The worker, rather than a hidden inner OpenCV loop, owns reconnect and source
   failover decisions.
@@ -160,8 +174,8 @@ Relevant standards and primary references:
 
 | Gate | Result |
 | --- | --- |
-| Full Python suite | **397 passed, 1 skipped** in 56.53 s after direct dependency verification |
-| Exact backend CI selection in a clean Python 3.12 virtual environment | **176 passed** in 47.79 s using only the declared CI requirements |
+| Full Python suite | **400 passed, 1 skipped** in 63.47 s after direct dependency verification |
+| Exact backend CI selection in Python 3.12 | **179 passed** in 42.88 s using the workflow environment and declared CI requirements |
 | Frontend Vitest | **63 passed** across 15 files |
 | TypeScript | PASS |
 | ESLint | PASS |

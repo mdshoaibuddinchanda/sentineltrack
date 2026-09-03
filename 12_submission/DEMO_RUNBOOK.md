@@ -15,8 +15,8 @@ and current blockers are summarized in
   the exact commit being demonstrated).
 - No production credentials in the repository or recording.
 - Confirm the official resource contract and feed permissions before connecting any government stream.
-- Organizer-issued restricted-feed password stored only in local `.env` as
-  `SENTINEL_ACCESS_PASSWORD`.
+- Organizer account email and issued restricted-feed password stored only in
+  local `.env` as `SENTINEL_ACCESS_EMAIL` and `SENTINEL_ACCESS_PASSWORD`.
 - Working DNS resolution for the configured organizer portal
   (`cctv.corp8.cloud` in the current grant) and direct access to the published
   RTSP gateway at `103.250.160.189:8554`.
@@ -121,8 +121,8 @@ confidence/provenance. Record only permitted material.
 | Symptom | Action |
 |---|---|
 | Dashboard has no API data | Check API port, CORS, `.env`, and browser network panel; do not replace the live path with invented records. |
-| Feed says Access required | Set the organizer-issued `SENTINEL_ACCESS_PASSWORD` in local `.env`, then restart; never put it in Git or a URL. |
-| Feed is configured but no live video appears | Check the camera's decoded-frame count and latest error. `source_configured` is metadata; `ONLINE` requires a fresh decoded frame. |
+| Feed says Access required | Set both organizer-issued `SENTINEL_ACCESS_EMAIL` and `SENTINEL_ACCESS_PASSWORD` in local `.env`, then restart; never put either value in Git or a URL. |
+| Feed is configured but no live video appears | Check the camera's decoded-frame count and latest error. `source_configured` is metadata; `ONLINE` requires a fresh decoded frame. The current runtime falls back from rejected RTSP/OpenCV sources to authenticated HLS through PyAV. |
 | Need browser video | Use the Cameras page or the authenticated `/api/v1/cameras/{id}/live` relay; upstream feed URLs are never exposed to the browser. |
 | Organizer DNS blocked | Verify `Resolve-DnsName cctv.corp8.cloud`; correct the workstation/VPN DNS before restarting. |
 | Feed reconnects | Preserve camera ID, increment stream epoch, and show the reset in diagnostics. |

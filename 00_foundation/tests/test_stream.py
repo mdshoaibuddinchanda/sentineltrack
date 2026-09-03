@@ -233,6 +233,26 @@ def test_hls_reader_sanitizes_configured_user_agent(monkeypatch):
     assert options == "user_agent;Mozilla/5.0 injected option Unsafe"
 
 
+def test_hls_reader_uses_pyav_fallback_when_opencv_cannot_open(monkeypatch):
+    reader = RTSPReader(
+        url="https://mock.stream/live.m3u8",
+        camera_id="cam_pyav_fallback",
+    )
+    opencv_capture = MagicMock()
+    opencv_capture.isOpened.return_value = False
+    pyav_capture = MagicMock()
+    pyav_capture.isOpened.return_value = True
+    open_pyav = MagicMock(return_value=pyav_capture)
+    monkeypatch.setattr(reader, "_open_pyav_capture", open_pyav)
+
+    with patch("cv2.VideoCapture", return_value=opencv_capture):
+        selected = reader._open_capture(reader.primary_url)
+
+    assert selected is pyav_capture
+    open_pyav.assert_called_once_with(reader.primary_url)
+    opencv_capture.release.assert_called_once()
+
+
 def test_reader_normalizes_invalid_negative_opencv_pts():
     reader = RTSPReader(url="rtsp://mock.stream/live", camera_id="cam_bad_pts")
     mock_cap = MagicMock()

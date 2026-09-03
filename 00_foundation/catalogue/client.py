@@ -1,7 +1,7 @@
 """Authenticated client for the organizer-provided Sentinel camera catalogue.
 
 The current portal publishes the catalogue at ``/cameras.json`` and protects
-the HLS media behind a password session. The client also probes the older
+the HLS media behind an account session. The client also probes the older
 ``/api/ingest`` route for compatibility. It keeps the authorized session in
 memory and can export it in FFmpeg's cookie format without ever putting the
 password or cookie in a URL or log message.
@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import os
 import threading
+from html.parser import HTMLParser
 from urllib.parse import urljoin, urlparse
 
 import requests
@@ -68,6 +69,31 @@ def _looks_like_login(response: requests.Response) -> bool:
     return "restricted feed access" in sample or "name=\"password\"" in sample
 
 
+class _LoginInputParser(HTMLParser):
+    """Collect login field names without adding an HTML parser dependency."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.names: set[str] = set()
+
+    def handle_starttag(self, tag: str, attrs) -> None:
+        if tag.lower() != "input":
+            return
+        values = {str(key).lower(): value for key, value in attrs}
+        name = str(values.get("name") or "").strip().lower()
+        if name:
+            self.names.add(name)
+
+
+def _login_requires_email(response: requests.Response) -> bool:
+    parser = _LoginInputParser()
+    try:
+        parser.feed(response.text[:16384])
+    except Exception:
+        return False
+    return "email" in parser.names
+
+
 class SentinelCatalogueClient:
     """Fetch the camera registry and retain the authorized media session."""
 
@@ -77,6 +103,7 @@ class SentinelCatalogueClient:
         password: str | None = None,
         timeout_s: float = 15.0,
         session: requests.Session | None = None,
+        email: str | None = None,
     ):
         configured_host = host or os.getenv("SENTINEL_HOST")
         if not configured_host:
@@ -85,6 +112,8 @@ class SentinelCatalogueClient:
         self.host = configured_host.rstrip("/")
         self.catalogue_url = f"{self.host}/api/ingest"
         self.password = password if password is not None else os.getenv("SENTINEL_ACCESS_PASSWORD", "")
+        configured_email = email if email is not None else os.getenv("SENTINEL_ACCESS_EMAIL", "")
+        self.email = configured_email.strip()
         self.timeout_s = max(1.0, float(timeout_s))
         self.session = session or requests.Session()
         # The organizer CDN currently rejects libavformat/non-browser agents
@@ -128,12 +157,20 @@ class SentinelCatalogueClient:
             raise CatalogueAuthenticationRequired(
                 "The organizer feed portal requires SENTINEL_ACCESS_PASSWORD."
             )
+        if _login_requires_email(login_response) and not self.email:
+            raise CatalogueAuthenticationRequired(
+                "The organizer feed portal requires SENTINEL_ACCESS_EMAIL and "
+                "SENTINEL_ACCESS_PASSWORD."
+            )
 
         login_url = urljoin(login_response.url, "/auth/login")
+        credentials = {"password": self.password}
+        if self.email:
+            credentials["email"] = self.email
         try:
             response = self.session.post(
                 login_url,
-                data={"password": self.password},
+                data=credentials,
                 timeout=self.timeout_s,
                 allow_redirects=True,
             )
@@ -144,7 +181,7 @@ class SentinelCatalogueClient:
 
         if response.status_code >= 400 or _looks_like_login(response):
             raise CatalogueAuthenticationFailed(
-                "The organizer feed password was rejected or the session was not created."
+                "The organizer feed credentials were rejected or the session was not created."
             )
 
         self.authenticated = True
@@ -214,4 +251,5 @@ class SentinelCatalogueClient:
             "effective_host": self.effective_host,
             "authenticated": self.authenticated,
             "session_cookie_count": len(self.session.cookies),
+            "access_email_configured": bool(self.email),
         }

@@ -158,10 +158,12 @@ a temporary demo account or insert fake alerts.
 ### Configure the official feed
 
 The camera catalogue and media endpoints are protected by the organizer portal.
-Put the issued password only in the local, ignored `.env` file:
+Put the account email and issued password only in the local, ignored `.env`
+file:
 
 ```dotenv
 SENTINEL_HOST=https://cctv.corp8.cloud
+SENTINEL_ACCESS_EMAIL=<organizer-account-email>
 SENTINEL_ACCESS_PASSWORD=<organizer-issued-password>
 ```
 
@@ -173,17 +175,21 @@ python tools\doctor.py
 run.bat --full
 ```
 
-The password is used to create an in-memory session. It is not printed, stored
-in a URL, committed, or passed to the browser. The launcher reports
-`AUTH_REQUIRED` when the credential is absent; it does not substitute mock
-feeds.
+The email and password are used to create an in-memory session. They are not
+printed, stored in a URL, committed, or passed to the browser. The launcher
+reports `AUTH_REQUIRED` when a required credential is absent; it does not
+substitute mock feeds. The client retains compatibility with older portal forms
+that ask only for a password.
 
 The current organizer portal publishes `GET /cameras.json` after authentication
 and uses camera IDs `cam01` through `cam30`. SentinelTrack keeps compatibility
 with the older `/api/ingest` contract, derives the portal HLS playlist path, and
 derives the direct RTSP/TCP inference path from the published ID. In the local
 inference profile, RTSP/TCP is primary so a decoder that cannot open the portal's
-encrypted HLS playlist does not make a healthy camera appear offline.
+encrypted HLS playlist does not make a healthy camera appear offline. If the
+direct gateway rejects RTSP and OpenCV cannot open the authenticated HLS form,
+the production reader uses the already-declared PyAV/FFmpeg runtime as a bounded
+HLS decoder fallback while preserving the same cookies, PTS and stream epoch.
 
 ### How to prove a camera is live
 
