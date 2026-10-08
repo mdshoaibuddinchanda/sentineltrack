@@ -9,15 +9,11 @@ MODULE_DIR = Path(__file__).resolve().parent.parent
 if str(MODULE_DIR) not in sys.path:
     sys.path.insert(0, str(MODULE_DIR))
 
-try:
-    from 00_foundation.streams.reader import RTSPReader
-    from 00_foundation.streams.models import FramePacket
-except Exception:
-    import importlib
-    reader_mod = importlib.import_module('00_foundation.streams.reader')
-    models_mod = importlib.import_module('00_foundation.streams.models')
-    RTSPReader = reader_mod.RTSPReader
-    FramePacket = models_mod.FramePacket
+import importlib
+reader_mod = importlib.import_module('00_foundation.streams.reader')
+models_mod = importlib.import_module('00_foundation.streams.models')
+RTSPReader = reader_mod.RTSPReader
+FramePacket = models_mod.FramePacket
 
 from detector import VehicleDetector
 from benchmark import VehicleDetectionBenchmark
@@ -36,7 +32,7 @@ def main():
     print(f'[INFO] Target benchmark frames: {num_frames}')
 
     reader = RTSPReader(url=url, camera_id=camera_id)
-    detector = VehicleDetector(model_path='yolo11m.pt', confidence=0.25, imgsz=960)
+    detector = VehicleDetector(model_path='models/vehicle/yolo11m.pt', confidence=0.25, imgsz=960)
     benchmarker = VehicleDetectionBenchmark(detector)
 
     def packet_generator():

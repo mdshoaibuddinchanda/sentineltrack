@@ -1,15 +1,18 @@
 import time
 import importlib
-from datetime import datetime
+import csv
+import io
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 try:
     from ..errors import RoutePersistenceAPIError
-    from ..schemas.routes import RouteResponse, RouteSegmentResponse, RouteSightingResponse, RouteSummaryResponse, GeoJSONFeatureCollection
+    from ..schemas.routes import RouteResponse, RouteSegmentResponse, RouteSightingResponse, RouteSummaryResponse, GeoJSONFeatureCollection, CameraPairFeasibilityResponse
 except (ImportError, ValueError):
     RoutePersistenceAPIError = importlib.import_module("08_backend.errors").RoutePersistenceAPIError
     rt_m = importlib.import_module("08_backend.schemas.routes")
     RouteResponse, RouteSegmentResponse, RouteSightingResponse, RouteSummaryResponse, GeoJSONFeatureCollection = rt_m.RouteResponse, rt_m.RouteSegmentResponse, rt_m.RouteSightingResponse, rt_m.RouteSummaryResponse, rt_m.GeoJSONFeatureCollection
+    CameraPairFeasibilityResponse = rt_m.CameraPairFeasibilityResponse
 
 
 def _get_route_pipeline():
@@ -34,6 +37,87 @@ class RouteService:
             keys_to_remove = [k for k in self._trajectory_cache if k[0] == reg_clean]
             for k in keys_to_remove:
                 self._trajectory_cache.pop(k, None)
+
+    def evaluate_camera_pair(
+        self,
+        from_camera_id: str,
+        to_camera_id: str,
+        elapsed_seconds: float,
+    ) -> CameraPairFeasibilityResponse:
+        """Run a non-persisting, hypothetical P7 feasibility check on registry cameras."""
+        camera_repo = self.pipeline.camera_repo
+        from_camera = camera_repo.get_camera(from_camera_id)
+        to_camera = camera_repo.get_camera(to_camera_id)
+        if from_camera is None:
+            raise importlib.import_module("08_backend.errors").CameraNotFoundError(
+                f"Camera '{from_camera_id}' not found."
+            )
+        if to_camera is None:
+            raise importlib.import_module("08_backend.errors").CameraNotFoundError(
+                f"Camera '{to_camera_id}' not found."
+            )
+
+        models_m = importlib.import_module("07_route_engine.models")
+        feasibility_m = importlib.import_module("07_route_engine.feasibility")
+        spatial_m = importlib.import_module("07_route_engine.spatial")
+        now = datetime.now(timezone.utc)
+        later = now + timedelta(seconds=elapsed_seconds)
+        from_sighting = models_m.RouteSighting(
+            sighting_id="feasibility-demo-from",
+            target_id="FEASIBILITY_DEMO",
+            registration_candidate="FEASIBILITY_DEMO",
+            camera_id=from_camera_id,
+            stream_epoch=0,
+            track_id=0,
+            first_pts_ms=0.0,
+            last_pts_ms=0.0,
+            event_time_utc=now,
+            time_source=models_m.TimeSource.SOURCE_WALLCLOCK,
+            time_quality=models_m.TimeQuality.HIGH,
+            location_quality=from_camera.location_quality,
+        )
+        to_sighting = models_m.RouteSighting(
+            sighting_id="feasibility-demo-to",
+            target_id="FEASIBILITY_DEMO",
+            registration_candidate="FEASIBILITY_DEMO",
+            camera_id=to_camera_id,
+            stream_epoch=0,
+            track_id=0,
+            first_pts_ms=0.0,
+            last_pts_ms=0.0,
+            event_time_utc=later,
+            time_source=models_m.TimeSource.SOURCE_WALLCLOCK,
+            time_quality=models_m.TimeQuality.HIGH,
+            location_quality=to_camera.location_quality,
+        )
+        segment = feasibility_m.evaluate_segment_feasibility(
+            from_sighting,
+            to_sighting,
+            from_cam_geo=from_camera,
+            to_cam_geo=to_camera,
+        )
+        _, composite_quality = spatial_m.calculate_segment_distance(from_camera, to_camera)
+        feasibility_value = segment.feasibility.value if hasattr(segment.feasibility, "value") else str(segment.feasibility)
+        if feasibility_value == "IMPOSSIBLE":
+            explanation = "The elapsed time would require movement above the configured physical limit."
+        elif feasibility_value == "QUESTIONABLE":
+            explanation = "The movement is physically possible but exceeds the configured soft speed threshold."
+        elif feasibility_value == "FEASIBLE":
+            explanation = "The lower-bound movement is compatible with the supplied elapsed time."
+        else:
+            explanation = "Verified coordinates are required before movement feasibility can be determined."
+        return CameraPairFeasibilityResponse(
+            from_camera_id=from_camera_id,
+            to_camera_id=to_camera_id,
+            elapsed_seconds=elapsed_seconds,
+            distance_lower_bound_m=segment.distance_lower_bound_m,
+            minimum_required_speed_kmh=segment.minimum_required_speed_kmh,
+            feasibility=feasibility_value,
+            segment_score=segment.segment_score,
+            location_quality=composite_quality.value,
+            warnings=segment.warnings,
+            explanation=explanation,
+        )
 
     def build_target_trajectory(
         self,
@@ -74,6 +158,7 @@ class RouteService:
             RouteSightingResponse(
                 sighting_id=s.sighting_id,
                 camera_id=s.camera_id,
+                location_label=s.location_label,
                 event_time_utc=s.event_time_utc,
                 time_source=s.time_source.value if hasattr(s.time_source, "value") else str(s.time_source),
                 time_quality=s.time_quality.value if hasattr(s.time_quality, "value") else str(s.time_quality),
@@ -165,3 +250,102 @@ class RouteService:
             reasons=traj.reasons,
             warnings=traj.warnings
         )
+
+    @staticmethod
+    def _csv_cell(value: Any) -> Any:
+        """Prevent spreadsheet formula execution in operator exports."""
+        if isinstance(value, str) and value.lstrip(" \t\r\n").startswith(("=", "+", "-", "@")):
+            return "'" + value
+        return value
+
+    def build_route_csv_report(
+        self,
+        registration: str,
+        start_time_utc: Optional[datetime] = None,
+        end_time_utc: Optional[datetime] = None,
+        min_match_score: float = 0.60,
+    ) -> str:
+        """Build a timestamped, provenance-preserving route report as CSV."""
+        route = self.build_target_trajectory(
+            registration=registration,
+            start_time_utc=start_time_utc,
+            end_time_utc=end_time_utc,
+            min_match_score=min_match_score,
+            persist=False,
+        )
+        output = io.StringIO(newline="")
+        writer = csv.writer(output, lineterminator="\n")
+
+        metadata = (
+            ("report_type", "SentinelTrack vehicle movement report"),
+            ("generated_at_utc", datetime.now(timezone.utc).isoformat()),
+            ("registration", route.registration),
+            ("trajectory_status", route.status),
+            ("trajectory_confidence", route.trajectory_confidence),
+            ("first_seen_utc", route.start_time_utc.isoformat() if route.start_time_utc else ""),
+            ("last_seen_utc", route.end_time_utc.isoformat() if route.end_time_utc else ""),
+            ("sighting_count", route.sighting_count),
+            ("camera_count", route.camera_count),
+            ("lower_bound_distance_m", route.total_lower_bound_distance_m),
+            ("minimum_average_speed_kmh", route.minimum_average_speed_kmh),
+            ("reasons", " | ".join(route.reasons)),
+            ("warnings", " | ".join(route.warnings)),
+            ("disclaimer", route.disclaimer),
+        )
+        for key, value in metadata:
+            writer.writerow((key, self._csv_cell(value)))
+
+        writer.writerow(())
+        writer.writerow((
+            "sighting_sequence",
+            "sighting_id",
+            "camera_id",
+            "location_label",
+            "event_time_utc",
+            "time_source",
+            "time_quality",
+            "latitude",
+            "longitude",
+            "location_quality",
+            "match_score",
+        ))
+        for index, sighting in enumerate(route.sightings, start=1):
+            writer.writerow(tuple(self._csv_cell(value) for value in (
+                index,
+                sighting.sighting_id,
+                sighting.camera_id,
+                sighting.location_label or "",
+                sighting.event_time_utc.isoformat(),
+                sighting.time_source,
+                sighting.time_quality,
+                sighting.latitude if sighting.latitude is not None else "",
+                sighting.longitude if sighting.longitude is not None else "",
+                sighting.location_quality,
+                sighting.match_score,
+            )))
+
+        writer.writerow(())
+        writer.writerow((
+            "segment_sequence",
+            "from_camera_id",
+            "to_camera_id",
+            "distance_lower_bound_m",
+            "delta_seconds",
+            "minimum_required_speed_kmh",
+            "feasibility",
+            "segment_score",
+            "warnings",
+        ))
+        for segment in route.segments:
+            writer.writerow(tuple(self._csv_cell(value) for value in (
+                segment.sequence_index,
+                segment.from_camera_id,
+                segment.to_camera_id,
+                segment.distance_lower_bound_m,
+                segment.delta_seconds,
+                segment.minimum_required_speed_kmh,
+                segment.feasibility,
+                segment.segment_score,
+                " | ".join(segment.warnings),
+            )))
+        return output.getvalue()

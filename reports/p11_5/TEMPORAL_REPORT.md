@@ -1,21 +1,27 @@
-# P11.5 temporal report
+# Temporal OCR Report
 
-`tools/p11_5/temporal.py` now provides a pure, test-covered weighted consensus
-policy. It normalizes candidate strings, filters by confidence and crop
-quality, aggregates support across frame indices, and returns an auditable
-consensus result. It does not assert that a consensus is ground truth.
+The original table is retained as a historical cohort-shifting benchmark: each window had a different eligible-track denominator. The paired companion fixes the population to the same 24 tracks with at least 8 observations.
 
-The source audit found 654 sequence-capable `video_images` frames across ten
-inferred video IDs. Those XML annotations provide detection boxes and many
-plate-like names, but there is no locked frame-level OCR track benchmark with a
-defined train/validation/test protocol. Therefore current voter, best-3,
-best-5, best-8, character fusion, logit fusion, learned fusion, quality-aware
-escalation, and temporal promotion are `NOT_EVALUATED`.
+## Paired GT-crop evaluation
 
-Required evidence before promotion:
+| window | method | eligible tracks | exact | character | CER |
+| --- | --- | --- | --- | --- | --- |
+| 1 | current_voter | 24 | 0.416667 | 0.60251 | 0.284519 |
+| 3 | current_voter | 24 | 0.541667 | 0.774059 | 0.117155 |
+| 5 | current_voter | 24 | 0.666667 | 0.874477 | 0.09205 |
+| 8 | current_voter | 24 | 0.666667 | 0.90795 | 0.075314 |
 
-1. define track boundaries and frame order from the source video metadata;
-2. validate frame-level text labels and identity grouping;
-3. compare single-frame and each temporal policy on the same locked track set;
-4. record exact match, character accuracy, CER, false-correction rate, and
-   latency/VRAM under the intended stream load.
+## Paired predicted-crop evaluation
+
+The detector-predicted AABB evaluation has a smaller fixed population: 6 test tracks with at least 8 source frames.
+
+| window | method | eligible tracks | exact | character | CER |
+| --- | --- | --- | --- | --- | --- |
+| 1 | current_voter | 6 | 0.166667 | 0.55 | 0.466667 |
+| 3 | current_voter | 6 | 0.166667 | 0.666667 | 0.333333 |
+| 5 | current_voter | 6 | 0.5 | 0.833333 | 0.233333 |
+| 8 | current_voter | 6 | 0.5 | 0.916667 | 0.2 |
+
+The paired results show temporal voting helps, but the predicted-crop integration remains materially weaker than the GT-crop upper-bound path. Machine-readable companions: `temporal_paired_evaluation.json` and `temporal_predicted_e2e.json`.
+
+Logit fusion remains unavailable because the PP-OCRv5 ONNX interface exposes decoded text and character confidence, not timestep logits.

@@ -1,0 +1,53 @@
+{
+  "status": "FROZEN",
+  "source_inventory": "datasets/experiments/manifests/source_inventory.csv",
+  "source_video_rows": 654,
+  "candidate_identity_groups": 124,
+  "locked_tracks": 88,
+  "locked_frame_crops": 583,
+  "sequence_count": 10,
+  "sequences": [
+    "video2",
+    "video3",
+    "video4",
+    "video5",
+    "video6",
+    "video8",
+    "video9",
+    "video10",
+    "video11",
+    "video12"
+  ],
+  "split_by_sequence": {
+    "video2": "test",
+    "video3": "test",
+    "video4": "val",
+    "video5": "val",
+    "video6": "train",
+    "video8": "train",
+    "video9": "train",
+    "video10": "train",
+    "video11": "train",
+    "video12": "train"
+  },
+  "track_counts": {
+    "test": 20,
+    "val": 16,
+    "train": 52
+  },
+  "frame_counts": {
+    "test": 143,
+    "val": 104,
+    "train": 336
+  },
+  "single_frame_groups_excluded": 36,
+  "rejections": {
+    "no_sequence_id": 14,
+    "no_registration_identity": 21,
+    "single_frame_identity_groups": 36
+  },
+  "crop_failures": {},
+  "identity_overlap_across_splits": [],
+  "sequence_overlap_across_splits": [],
+  "split_policy": "deterministic whole-sequence split; no random equal-text grouping"
+}

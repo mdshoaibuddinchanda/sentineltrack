@@ -1,25 +1,146 @@
 export type TargetPriority = "CRITICAL" | "HIGH" | "NORMAL" | "LOW";
-export type MatchClass = "EXACT" | "HIGH_PROBABILITY" | "PROBABLE" | "POSSIBLE";
+export type MatchClass = "EXACT" | "HIGH_PROBABILITY" | "PROBABLE" | "POSSIBLE" | "REJECTED";
 export type AlertSeverity = "CRITICAL" | "HIGH" | "NORMAL" | "LOW";
 export type FeasibilityClass = "FEASIBLE" | "QUESTIONABLE" | "IMPOSSIBLE" | "UNKNOWN";
-export type TrajectoryStatus = "PLAUSIBLE_SEQUENCE" | "AMBIGUOUS" | "CONFLICTING_SIGHTINGS" | "SINGLE_SIGHTING" | "NO_ROUTE";
+export type TrajectoryStatus = "CONFIRMED_SEQUENCE" | "PLAUSIBLE_SEQUENCE" | "AMBIGUOUS" | "CONFLICTING_SIGHTINGS" | "SINGLE_SIGHTING" | "INSUFFICIENT_EVIDENCE" | "NO_ROUTE";
 export type TimeQuality = "HIGH" | "MEDIUM" | "LOW" | "UNKNOWN";
 export type LocationQuality = "VERIFIED" | "APPROXIMATE" | "UNKNOWN";
-export type CameraStreamStatus = "ONLINE" | "DEGRADED" | "OFFLINE" | "UNKNOWN";
+export type CameraStreamStatus = "ONLINE" | "DEGRADED" | "OFFLINE" | "UNKNOWN" | "NOT_CONFIGURED" | "AUTH_REQUIRED";
 
 export interface Camera {
   camera_id: string;
   name?: string;
   department?: string;
-  latitude?: number;
-  longitude?: number;
-  azimuth?: number;
+  organization?: string | null;
+  source_system?: string | null;
+  external_id?: string | null;
+  onboarding_method?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  azimuth?: number | null;
   location_quality: LocationQuality;
+  coordinate_source?: string | null;
+  coordinate_accuracy_m?: number | null;
+  coverage_radius_m?: number | null;
+  field_of_view_degrees?: number | null;
   live: boolean;
   stream_status: CameraStreamStatus;
   measured_fps?: number;
   last_checked?: string;
+  source_configured?: boolean;
+  frames_decoded?: number;
+  frames_sampled?: number;
+  reconnects?: number;
+  last_frame_s_ago?: number | null;
+  connection_issue_code?: string | null;
+  connection_issue_message?: string | null;
   metadata?: Record<string, any>;
+}
+
+export interface CameraRegistryInput {
+  camera_id: string;
+  name?: string | null;
+  department?: string | null;
+  organization?: string | null;
+  source_system?: string;
+  external_id?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  azimuth?: number | null;
+  location_quality?: LocationQuality;
+  coordinate_source?: string | null;
+  coordinate_accuracy_m?: number | null;
+  coverage_radius_m?: number | null;
+  field_of_view_degrees?: number | null;
+  rtsp_url?: string | null;
+  hls_url?: string | null;
+  webrtc_url?: string | null;
+  live?: boolean;
+  metadata?: Record<string, any>;
+}
+
+export type CameraUpdateRequest = Omit<Partial<CameraRegistryInput>, "camera_id">;
+
+export interface CameraMutationResponse {
+  camera: Camera;
+  created: boolean;
+  worker_status: string;
+}
+
+export type CameraImportMode = "CREATE_ONLY" | "UPSERT";
+
+export interface CameraImportItemResult {
+  row: number;
+  camera_id: string;
+  status: string;
+  message: string;
+}
+
+export interface CameraBulkImportResponse {
+  dry_run: boolean;
+  received: number;
+  valid: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  worker_started: number;
+  worker_restart_required: number;
+  items: CameraImportItemResult[];
+}
+
+export interface CameraGapAnalysisResponse {
+  generated_at_utc: string;
+  total_cameras: number;
+  geolocated_cameras: number;
+  verified_coordinates: number;
+  approximate_coordinates: number;
+  unknown_coordinates: number;
+  missing_coordinates: number;
+  missing_coordinate_source: number;
+  missing_department: number;
+  missing_organization: number;
+  missing_azimuth: number;
+  missing_stream_source: number;
+  enabled_cameras: number;
+  source_systems: Record<string, number>;
+  organizations: Record<string, number>;
+  departments: Record<string, number>;
+  isolated_camera_ids: string[];
+  isolation_radius_m: number;
+  limitations: string[];
+}
+
+export interface CoverageAnalysisResponse {
+  generated_at_utc: string;
+  eligible_camera_count: number;
+  area_of_interest_m2: number;
+  covered_area_m2: number;
+  uncovered_area_m2: number;
+  coverage_percent: number;
+  default_coverage_radius_m: number;
+  include_approximate: boolean;
+  coverage_model: string;
+  geojson: GeoJSONFeatureCollection;
+  limitations: string[];
+}
+
+export interface VMSConnectorStatus {
+  connector_id: string;
+  connector_type: string;
+  enabled: boolean;
+  organization: string;
+  source_system: string;
+  camera_id_prefix: string;
+  endpoint_host?: string | null;
+  credential_env_configured: boolean;
+  ready: boolean;
+  readiness_message: string;
+}
+
+export interface VMSConnectorListResponse {
+  config_path: string;
+  items: VMSConnectorStatus[];
+  total: number;
 }
 
 export interface CameraListResponse {
@@ -33,6 +154,14 @@ export interface CameraHealth {
   first_frame_latency_ms?: number;
   last_pts_ms?: number;
   last_checked?: string;
+  source_configured?: boolean;
+  connected?: boolean;
+  frames_decoded?: number;
+  frames_sampled?: number;
+  reconnects?: number;
+  last_frame_s_ago?: number | null;
+  connection_issue_code?: string | null;
+  connection_issue_message?: string | null;
 }
 
 export interface Target {
@@ -154,11 +283,12 @@ export interface RouteSegment {
 export interface RouteSighting {
   sighting_id: string;
   camera_id: string;
+  location_label?: string | null;
   event_time_utc: string;
   time_source: string;
   time_quality: TimeQuality;
-  latitude?: number;
-  longitude?: number;
+  latitude?: number | null;
+  longitude?: number | null;
   location_quality: LocationQuality;
   match_score: number;
 }
@@ -194,6 +324,20 @@ export interface RouteSummaryResponse {
   camera_count: number;
   reasons: string[];
   warnings: string[];
+  disclaimer: string;
+}
+
+export interface CameraPairFeasibilityResponse {
+  from_camera_id: string;
+  to_camera_id: string;
+  elapsed_seconds: number;
+  distance_lower_bound_m: number;
+  minimum_required_speed_kmh: number;
+  feasibility: FeasibilityClass;
+  segment_score: number;
+  location_quality: LocationQuality;
+  warnings: string[];
+  explanation: string;
   disclaimer: string;
 }
 
@@ -240,16 +384,16 @@ export interface ReadinessResponse {
 
 export interface MetricsSnapshot {
   total_requests: number;
-  active_ws_clients: number;
+  active_websocket_clients: number;
   active_camera_workers: number;
   total_frames_ingested: number;
   total_frames_dropped: number;
   total_vehicle_detections: number;
   total_plate_inferences: number;
-  total_ocr_inferences: number;
+  total_ocr_consensus: number;
   total_sightings_persisted: number;
   total_alerts_generated: number;
-  total_routes_generated: number;
+  total_routes_computed: number;
   uptime_seconds: number;
 }
 

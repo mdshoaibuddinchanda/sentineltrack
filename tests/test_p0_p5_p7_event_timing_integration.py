@@ -48,7 +48,7 @@ def test_end_to_end_event_timing_propagation_and_ordering():
     #       Cam B has LOWER PTS (2000ms) at 10:10:00 UTC
     t_a = datetime(2026, 8, 28, 10, 0, 0, tzinfo=timezone.utc)
     t_b = datetime(2026, 8, 28, 10, 10, 0, tzinfo=timezone.utc)
-    target_plate = f"GJ01TT{uuid.uuid4().hex[:6].upper()}"
+    target_plate = f"GJ01TT{int(uuid.uuid4().hex[:8], 16) % 10000:04d}"
 
     # 3. Simulate P4 TrackOCRResults with P0 timing metadata
     track_res_a = TrackOCRResult(

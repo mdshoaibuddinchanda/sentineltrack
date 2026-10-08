@@ -72,7 +72,7 @@ class MatchCandidate:
 
     reasons: list[str] = field(default_factory=list)
     alternatives: list[tuple[str, float]] = field(default_factory=list)
-    reid_score: Optional[float] = None  # Reserved for Priority 6
+    reid_score: Optional[float] = None  # Optional conservative Priority 6 support
     event_time_utc: Optional[datetime] = None
     event_time_source: Optional[str] = None
     event_time_quality: Optional[str] = None

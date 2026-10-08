@@ -34,6 +34,16 @@ class DuplicateTargetError(SentinelTrackAPIError):
     error_code = "DUPLICATE_TARGET"
 
 
+class DuplicateCameraError(SentinelTrackAPIError):
+    status_code = status.HTTP_409_CONFLICT
+    error_code = "DUPLICATE_CAMERA"
+
+
+class InvalidCameraRegistryError(SentinelTrackAPIError):
+    status_code = 422
+    error_code = "INVALID_CAMERA_REGISTRY"
+
+
 class DatabaseUnavailableError(SentinelTrackAPIError):
     status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     error_code = "DATABASE_UNAVAILABLE"
@@ -42,6 +52,11 @@ class DatabaseUnavailableError(SentinelTrackAPIError):
 class RoutePersistenceAPIError(SentinelTrackAPIError):
     status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
     error_code = "ROUTE_PERSISTENCE_ERROR"
+
+
+class VMSConnectorAPIError(SentinelTrackAPIError):
+    status_code = status.HTTP_502_BAD_GATEWAY
+    error_code = "VMS_CONNECTOR_FAILED"
 
 
 class InvalidQueryParameterError(SentinelTrackAPIError):

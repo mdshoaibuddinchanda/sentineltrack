@@ -8,6 +8,14 @@ from .models import CameraGeo, LocationQuality
 from .spatial import haversine_distance_m
 
 
+def _quality_from_row(value, latitude, longitude) -> LocationQuality:
+    if latitude is None or longitude is None:
+        return LocationQuality.UNKNOWN
+    if value and value in LocationQuality.__members__:
+        return LocationQuality(value)
+    return LocationQuality.UNKNOWN
+
+
 def get_default_connection():
     try:
         db_mod = importlib.import_module('00_foundation.registry.database')
@@ -61,7 +69,7 @@ class PostgresCameraRepository(BaseCameraRepository):
                                 latitude=lat,
                                 longitude=lon,
                                 azimuth=az,
-                                location_quality=LocationQuality(lq) if lq and lq in LocationQuality.__members__ else LocationQuality.VERIFIED,
+                                location_quality=_quality_from_row(lq, lat, lon),
                                 metadata=meta or {}
                             )
                             self._cache[c_id] = geo
@@ -90,7 +98,7 @@ class PostgresCameraRepository(BaseCameraRepository):
                             latitude=lat,
                             longitude=lon,
                             azimuth=az,
-                            location_quality=LocationQuality(lq) if lq and lq in LocationQuality.__members__ else LocationQuality.VERIFIED,
+                            location_quality=_quality_from_row(lq, lat, lon),
                             metadata=meta or {}
                         )
                         with self._lock:
@@ -131,7 +139,7 @@ class PostgresCameraRepository(BaseCameraRepository):
                             latitude=lat,
                             longitude=lon,
                             azimuth=az,
-                            location_quality=LocationQuality(lq) if lq and lq in LocationQuality.__members__ else LocationQuality.VERIFIED,
+                            location_quality=_quality_from_row(lq, lat, lon),
                             metadata=meta or {}
                         ))
                     return results

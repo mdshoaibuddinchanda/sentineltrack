@@ -1,0 +1,17 @@
+{
+  "run_id": "obb-yolo11s-v2-e20-b4-640-r3-clean-authoritative",
+  "weights": "runs\\p11_5\\obb-yolo11s-v2-e20-b4-640-r3-clean\\weights\\best.pt",
+  "weights_sha256": "b5da705740e53a96e324c982880b4cfce81fc7ec905fb4c124d3b73ef5c31d9d",
+  "dataset": "datasets/experiments/plate_detection_obb_v2_strict",
+  "dataset_manifest_sha256": "5fe9aa43204c1eda3351803859a84811bed37d63abfdb6299019bc9c3a20ac4f",
+  "split": "test",
+  "imgsz": 640,
+  "batch": 1,
+  "device": "0",
+  "task": "OBB_detection",
+  "map50": 0.9949658703071672,
+  "map50_95": 0.8975787627780786,
+  "precision": 0.9965846051729302,
+  "recall": 0.9958787719290948,
+  "f1": 0.996232
+}

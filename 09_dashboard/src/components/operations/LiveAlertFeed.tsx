@@ -2,7 +2,7 @@ import React from "react";
 import { Alert } from "../../types/api";
 import { formatRelativeTime, formatScore, maskRegistration } from "../../utils/formatters";
 import { SeverityBadge, MatchClassBadge } from "../common/Badge";
-import { AlertOctagon, Check, Compass, Eye } from "lucide-react";
+import { AlertOctagon, Check, Compass } from "lucide-react";
 
 interface LiveAlertFeedProps {
   alerts: Alert[];
@@ -34,16 +34,18 @@ export function LiveAlertFeed({
       {alerts.map((alert) => (
         <div
           key={alert.alert_id}
+          onClick={() => onSelectAlert?.(alert)}
           className={`p-3 rounded-lg border transition-all ${
             alert.acknowledged
               ? "bg-police-850/60 border-police-750/60 opacity-75"
               : alert.severity === "CRITICAL"
               ? "bg-rose-950/30 border-rose-700/80 shadow-md shadow-rose-950/20"
               : "bg-police-850 border-police-750"
-          }`}
+          } ${onSelectAlert ? "cursor-pointer" : ""}`}
         >
           <div className="flex items-start justify-between gap-2 mb-2">
             <div className="flex items-center gap-2 flex-wrap">
+              {alert.severity === "CRITICAL" && <AlertOctagon className="w-4 h-4 text-rose-400" aria-label="Critical alert" />}
               <span className="text-sm font-bold text-slate-100 font-mono">
                 {maskRegistration(alert.registration, privacyMode)}
               </span>
@@ -74,7 +76,10 @@ export function LiveAlertFeed({
 
           <div className="flex items-center justify-between gap-2 pt-2 border-t border-police-800/80">
             <button
-              onClick={() => onInvestigate(alert.registration)}
+              onClick={(event) => {
+                event.stopPropagation();
+                onInvestigate(alert.registration);
+              }}
               className="flex items-center gap-1 px-2.5 py-1 bg-police-700 hover:bg-accent-blue/80 text-white rounded text-xs font-semibold font-mono transition-colors"
             >
               <Compass className="w-3.5 h-3.5" /> Trace Trajectory
@@ -82,7 +87,10 @@ export function LiveAlertFeed({
 
             {!alert.acknowledged ? (
               <button
-                onClick={() => onAcknowledge(alert.alert_id)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onAcknowledge(alert.alert_id);
+                }}
                 className="flex items-center gap-1 px-2.5 py-1 bg-emerald-800/80 hover:bg-emerald-700 text-white rounded text-xs font-semibold font-mono transition-colors"
               >
                 <Check className="w-3.5 h-3.5" /> Acknowledge

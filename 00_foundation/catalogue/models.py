@@ -1,5 +1,5 @@
 from typing import Any
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class CameraRecord(BaseModel):
@@ -11,6 +11,17 @@ class CameraRecord(BaseModel):
 
     latitude: float | None = None
     longitude: float | None = None
+    azimuth: float | None = None
+    location_quality: str = "UNKNOWN"
+
+    organization: str | None = None
+    source_system: str | None = None
+    external_id: str | None = None
+    onboarding_method: str | None = None
+    coordinate_source: str | None = None
+    coordinate_accuracy_m: float | None = None
+    coverage_radius_m: float | None = None
+    field_of_view_degrees: float | None = None
 
     codec: str | None = None
 
@@ -20,10 +31,12 @@ class CameraRecord(BaseModel):
     reported_fps: float | None = None
     bitrate: int | None = None
 
-    live: bool | None = None
+    # Registry enablement defaults to true when a catalogue omits the field.
+    # Runtime ONLINE/OFFLINE truth remains a separate worker health signal.
+    live: bool = True
 
     rtsp_url: str | None = None
     webrtc_url: str | None = None
     hls_url: str | None = None
 
-    raw_metadata: dict[str, Any]
+    raw_metadata: dict[str, Any] = Field(default_factory=dict)

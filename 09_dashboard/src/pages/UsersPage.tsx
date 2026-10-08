@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { UserItem, listUsers, createUser, updateUser, resetUserPassword } from "../api/users";
 import { UserRole } from "../types/auth";
-import { Users, UserPlus, Shield, KeyRound, CheckCircle, XCircle, AlertTriangle, RefreshCw } from "lucide-react";
+import { Users, UserPlus, KeyRound, CheckCircle, XCircle, AlertTriangle, RefreshCw } from "lucide-react";
+import { formatDateTime } from "../utils/formatters";
 
 export function UsersPage() {
   const [users, setUsers] = useState<UserItem[]>([]);
@@ -122,7 +123,7 @@ export function UsersPage() {
             <Users className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-base font-bold tracking-wide text-white font-mono">USER ADMINISTRATION</h1>
+            <h1 className="text-base font-bold tracking-wide text-slate-100 font-mono">User administration</h1>
             <p className="text-xs text-slate-400">Manage authenticated operators, supervisors, and role assignments</p>
           </div>
         </div>
@@ -177,16 +178,19 @@ export function UsersPage() {
                   <td className="p-3 font-semibold text-cyan-300">{u.username}</td>
                   <td className="p-3">{u.display_name}</td>
                   <td className="p-3">
-                    <select
-                      value={u.role}
-                      onChange={(e) => handleRoleChange(u, e.target.value as UserRole)}
-                      className="bg-police-800 border border-police-700 rounded px-2 py-1 text-xs text-slate-200 font-mono cursor-pointer"
-                    >
-                      <option value="ADMIN">ADMIN</option>
-                      <option value="SUPERVISOR">SUPERVISOR</option>
-                      <option value="OPERATOR">OPERATOR</option>
-                      <option value="AUDITOR">AUDITOR</option>
-                    </select>
+                    <div className="flex items-center gap-2">
+                      {getRoleBadge(u.role)}
+                      <select
+                        value={u.role}
+                        onChange={(e) => handleRoleChange(u, e.target.value as UserRole)}
+                        className="bg-police-800 border border-police-700 rounded px-2 py-1 text-xs text-slate-200 font-mono cursor-pointer"
+                      >
+                        <option value="ADMIN">ADMIN</option>
+                        <option value="SUPERVISOR">SUPERVISOR</option>
+                        <option value="OPERATOR">OPERATOR</option>
+                        <option value="AUDITOR">AUDITOR</option>
+                      </select>
+                    </div>
                   </td>
                   <td className="p-3">
                     {u.enabled ? (
@@ -200,7 +204,7 @@ export function UsersPage() {
                     )}
                   </td>
                   <td className="p-3 text-slate-400 text-[11px]">
-                    {u.last_login_at ? new Date(u.last_login_at).toLocaleString() : "Never"}
+                    {u.last_login_at ? formatDateTime(u.last_login_at) : "Never"}
                   </td>
                   <td className="p-3 text-right space-x-2">
                     <button
@@ -241,7 +245,7 @@ export function UsersPage() {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-police-850 border border-police-700 rounded-lg max-w-md w-full p-5 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between border-b border-police-750 pb-3">
-              <div className="flex items-center gap-2 text-white font-mono font-bold text-sm">
+              <div className="flex items-center gap-2 text-slate-100 font-mono font-bold text-sm">
                 <UserPlus className="w-4 h-4 text-accent-blue" />
                 <span>CREATE OPERATOR ACCOUNT</span>
               </div>
@@ -336,7 +340,7 @@ export function UsersPage() {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-police-850 border border-police-700 rounded-lg max-w-md w-full p-5 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between border-b border-police-750 pb-3">
-              <div className="flex items-center gap-2 text-white font-mono font-bold text-sm">
+              <div className="flex items-center gap-2 text-slate-100 font-mono font-bold text-sm">
                 <KeyRound className="w-4 h-4 text-amber-400" />
                 <span>RESET PASSWORD: {resetTargetUser.username}</span>
               </div>

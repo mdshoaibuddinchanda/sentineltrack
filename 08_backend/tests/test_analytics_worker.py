@@ -97,7 +97,7 @@ def test_analytics_worker_deterministic_positive_path_and_timing_propagation():
     worker = AnalyticsWorker()
     worker._lazy_init_models()
 
-    target_plate = "GJ01MATCH999"
+    target_plate = "GJ01MT0999"
     # Seed target into watchlist
     shared_wm = importlib.import_module("08_backend.services.target_service").get_shared_watchlist_manager()
     shared_wm.add_entry(registration=target_plate, priority=p5_models.WatchlistPriority.CRITICAL)

@@ -1,0 +1,30 @@
+{
+  "status": "FROZEN_WITH_PHASH_REVIEW",
+  "dataset": "plate_detection_v2",
+  "root": "datasets/experiments/plate_detection_v2",
+  "manifest": "datasets/experiments/plate_detection_v2/manifest.csv",
+  "manifest_sha256": "f5a95ba304c6bac54e55752cc90f7a1451fe63ae1c1ced66a00ab6044ca34db4",
+  "row_count": 5281,
+  "split_counts": {
+    "test": 344,
+    "train": 4162,
+    "val": 775
+  },
+  "expected_count_mismatches": {},
+  "path_integrity": {
+    "rows": 5281,
+    "missing_images": [],
+    "missing_image_count": 0,
+    "missing_labels": [],
+    "missing_label_count": 0
+  },
+  "cross_split_exact_sha256": {},
+  "cross_split_identity": {},
+  "cross_split_phash": {
+    "threshold_bits": 8,
+    "cross_split_pair_count": 956,
+    "cross_split_exact_phash_group_count": 754,
+    "interpretation": "Perceptual hashes are screening evidence, not identity proof; any nonzero count is retained for review."
+  },
+  "source_inventory_sha256": "5e76ab258b19e991d8901aa3af08bf0b7ecb7d95ab9a3289b8266486c15ad6d1"
+}

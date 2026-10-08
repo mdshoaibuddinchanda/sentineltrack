@@ -5,7 +5,7 @@ import { Camera, Sighting } from "../../types/api";
 import { formatDateTime, maskRegistration } from "../../utils/formatters";
 import { CameraStatusBadge, TimeQualityBadge } from "../common/Badge";
 import { MapLegend } from "./MapLegend";
-import { Video, Navigation } from "lucide-react";
+import { Video } from "lucide-react";
 
 interface ControlRoomMapProps {
   cameras: Camera[];
@@ -14,6 +14,17 @@ interface ControlRoomMapProps {
   onSelectCamera?: (cameraId: string) => void;
   privacyMode?: boolean;
   className?: string;
+}
+
+export function hasValidCameraCoordinates(
+  camera: Pick<Camera, "latitude" | "longitude">
+): camera is Pick<Camera, "latitude" | "longitude"> & { latitude: number; longitude: number } {
+  return (
+    typeof camera.latitude === "number" &&
+    Number.isFinite(camera.latitude) &&
+    typeof camera.longitude === "number" &&
+    Number.isFinite(camera.longitude)
+  );
 }
 
 // Leaflet DivIcon helpers
@@ -33,7 +44,7 @@ function createCameraIcon(status: string, isSelected: boolean) {
   });
 }
 
-function createSightingIcon(sighting: Sighting) {
+function createSightingIcon() {
   return L.divIcon({
     className: "custom-sighting-marker",
     html: `
@@ -68,9 +79,7 @@ export function ControlRoomMap({
 }: ControlRoomMapProps) {
   const [tileError, setTileError] = useState(false);
 
-  const validCameras = cameras.filter(
-    (c) => c.latitude !== undefined && c.longitude !== undefined && !isNaN(c.latitude!) && !isNaN(c.longitude!)
-  );
+  const validCameras = cameras.filter(hasValidCameraCoordinates);
 
   const positions: [number, number][] = validCameras.map((c) => [c.latitude!, c.longitude!]);
 
@@ -136,13 +145,13 @@ export function ControlRoomMap({
         {/* Sighting Overlay Markers */}
         {sightings.map((s) => {
           const cam = cameras.find((c) => c.camera_id === s.camera_id);
-          if (!cam || !cam.latitude || !cam.longitude) return null;
+          if (!cam || !hasValidCameraCoordinates(cam)) return null;
           return (
-            <Marker key={s.sighting_id} position={[cam.latitude, cam.longitude]} icon={createSightingIcon(s)}>
+            <Marker key={s.sighting_id} position={[cam.latitude, cam.longitude]} icon={createSightingIcon()}>
               <Popup>
                 <div className="p-2 space-y-1.5 min-w-[200px]">
                   <div className="text-xs font-bold text-cyan-300 font-mono">TARGET SIGHTING</div>
-                  <div className="text-sm font-bold text-white font-mono">
+                  <div className="text-sm font-bold text-slate-100 font-mono">
                     {maskRegistration(s.registration_candidate, privacyMode)}
                   </div>
                   <div className="text-[11px] text-slate-300">Camera: {s.camera_id}</div>

@@ -1,0 +1,22 @@
+flowchart LR
+  subgraph D[Departments]
+    C1[RTSP / WHEP / HLS cameras]
+    C2[Existing VMS]
+  end
+  C1 --> G1[Regional gateway A]
+  C2 --> G2[Regional gateway B]
+  subgraph R[Regional inference domain]
+    G1 --> W1[Worker shard 1]
+    G2 --> W2[Worker shard 2]
+    W1 --> BUS[Regional event bus]
+    W2 --> BUS
+    BUS --> RP[Regional PostGIS primary/standby]
+    BUS --> RO[Regional evidence store]
+  end
+  RP --> CP[Central control plane]
+  RO --> CP
+  CP --> API[API replicas / WebSocket]
+  API --> UI[Department and state dashboards]
+  MON[Monitoring / audit / alerting] --> G1
+  MON --> W1
+  MON --> CP

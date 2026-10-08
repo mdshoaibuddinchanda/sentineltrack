@@ -1,9 +1,10 @@
 import { describe, it, expect, vi } from "vitest";
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { TargetListTable } from "../components/targets/TargetListTable";
 import { TrajectorySummaryCard } from "../components/investigation/TrajectorySummaryCard";
 import { ReadinessMatrix } from "../components/system/ReadinessMatrix";
+import { Header } from "../components/layout/Header";
 import { Target, RouteResponse } from "../types/api";
 
 describe("Privacy Mode & System Readiness Strict Truth Tests", () => {
@@ -80,5 +81,33 @@ describe("Privacy Mode & System Readiness Strict Truth Tests", () => {
     // Omitted components (like route_engine, vehicle_detector, etc) must render UNKNOWN
     const unknownBadges = screen.getAllByText("UNKNOWN");
     expect(unknownBadges.length).toBeGreaterThan(0);
+  });
+
+  it("labels the privacy control clearly and invokes the toggle", () => {
+    const onTogglePrivacyMode = vi.fn();
+
+    render(
+      <Header
+        systemStatus="HEALTHY"
+        wsStatus="LIVE"
+        activeCamerasCount={30}
+        activeTargetsCount={1}
+        unackAlertsCount={0}
+        liveFramesDecoded={100}
+        darkMode={false}
+        onToggleDarkMode={vi.fn()}
+        onRefresh={vi.fn()}
+        privacyMode={false}
+        onTogglePrivacyMode={onTogglePrivacyMode}
+      />
+    );
+
+    expect(screen.getByText("Privacy off")).toBeDefined();
+    const privacyControl = screen.getByRole("button", {
+      name: "Turn privacy mode on and hide registration numbers",
+    });
+    expect(privacyControl.getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(privacyControl);
+    expect(onTogglePrivacyMode).toHaveBeenCalledTimes(1);
   });
 });

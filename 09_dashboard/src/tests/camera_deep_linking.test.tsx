@@ -1,11 +1,33 @@
 import { describe, it, expect, vi } from "vitest";
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { CamerasPage } from "../pages/CamerasPage";
+import { hasValidCameraCoordinates } from "../components/map/ControlRoomMap";
 import { Camera } from "../types/api";
 
+vi.mock("../api/cameras", () => ({
+  searchNearbyCameras: vi.fn().mockResolvedValue([]),
+  getCameraLiveStreamUrl: vi.fn((cameraId: string) => `/live/${cameraId}`),
+  getCameraPreviewUrl: vi.fn((cameraId: string) => `/preview/${cameraId}`),
+  getCameraGapAnalysis: vi.fn().mockResolvedValue({
+    total_cameras: 2,
+    geolocated_cameras: 2,
+    verified_coordinates: 2,
+    missing_stream_source: 0,
+  }),
+  listVMSConnectors: vi.fn().mockResolvedValue({ items: [], total: 0, config_path: "test" }),
+  downloadCameraGapAnalysis: vi.fn(),
+  downloadCameraGeoJSON: vi.fn(),
+}));
+
 describe("Camera Deep Linking & Asynchronous Loading Tests", () => {
+  it("rejects null or non-finite camera coordinates before map rendering", () => {
+    expect(hasValidCameraCoordinates({ latitude: null, longitude: 72.5 })).toBe(false);
+    expect(hasValidCameraCoordinates({ latitude: 23.0, longitude: Number.NaN })).toBe(false);
+    expect(hasValidCameraCoordinates({ latitude: 23.0, longitude: 72.5 })).toBe(true);
+  });
+
   const mockCameras: Camera[] = [
     {
       camera_id: "cam_sg_highway_01",
@@ -33,7 +55,22 @@ describe("Camera Deep Linking & Asynchronous Loading Tests", () => {
     },
   ];
 
-  it("selects requested camera from route URL parameter", () => {
+  it("shows every camera in the default overview", async () => {
+    render(
+      <MemoryRouter initialEntries={["/cameras"]}>
+        <Routes>
+          <Route path="/cameras" element={<CamerasPage cameras={mockCameras} />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("All cameras (2)")).toBeDefined();
+      expect(screen.getAllByRole("button", { name: /Open camera/ })).toHaveLength(2);
+    });
+  });
+
+  it("selects requested camera from route URL parameter", async () => {
     render(
       <MemoryRouter initialEntries={["/cameras/cam_vastrapur_01"]}>
         <Routes>
@@ -45,11 +82,13 @@ describe("Camera Deep Linking & Asynchronous Loading Tests", () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText("Vastrapur Lake East")).toBeDefined();
-    expect(screen.getAllByText("Urban Security").length).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(screen.getAllByText("Vastrapur Lake East").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Urban Security").length).toBeGreaterThan(0);
+    });
   });
 
-  it("asynchronously synchronizes camera selection once camera list arrives", () => {
+  it("asynchronously synchronizes camera selection once camera list arrives", async () => {
     const { rerender } = render(
       <MemoryRouter initialEntries={["/cameras/cam_vastrapur_01"]}>
         <Routes>
@@ -76,11 +115,13 @@ describe("Camera Deep Linking & Asynchronous Loading Tests", () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText("Vastrapur Lake East")).toBeDefined();
-    expect(screen.getAllByText("Urban Security").length).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(screen.getAllByText("Vastrapur Lake East").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Urban Security").length).toBeGreaterThan(0);
+    });
   });
 
-  it("displays truthful not-found state when requested camera ID does not exist", () => {
+  it("displays truthful not-found state when requested camera ID does not exist", async () => {
     render(
       <MemoryRouter initialEntries={["/cameras/cam_nonexistent_999"]}>
         <Routes>
@@ -92,7 +133,9 @@ describe("Camera Deep Linking & Asynchronous Loading Tests", () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText("Camera 'cam_nonexistent_999' not found")).toBeDefined();
-    expect(screen.getByText("This camera ID is not registered in the CCTV network.")).toBeDefined();
+    await waitFor(() => {
+      expect(screen.getByText("Camera 'cam_nonexistent_999' not found")).toBeDefined();
+      expect(screen.getByText("This camera ID is not registered in the CCTV network.")).toBeDefined();
+    });
   });
 });

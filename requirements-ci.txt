@@ -1,6 +1,0 @@
--r requirements-api.txt
-pytest
-pytest-asyncio
-pytest-timeout
-httpx
-opencv-python-headless

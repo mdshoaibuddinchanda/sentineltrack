@@ -1,0 +1,57 @@
+{
+  "schema_version": "1.0",
+  "report_type": "MODEL1_CAMERA_REGISTRY_GAP_ANALYSIS",
+  "generated_at_utc": "2026-09-02T14:42:06.165643Z",
+  "evidence_class": "LOCAL_POSTGIS_REGISTRY_SNAPSHOT",
+  "source": "CameraService.build_gap_analysis(isolation_radius_m=5000)",
+  "registry": {
+    "total_cameras": 30,
+    "enabled_cameras": 30,
+    "cameras_with_stream_source": 30,
+    "missing_stream_source": 0,
+    "geolocated_cameras": 0,
+    "verified_coordinates": 0,
+    "approximate_coordinates": 0,
+    "unknown_coordinates": 30,
+    "missing_coordinates": 30,
+    "missing_department": 30,
+    "missing_organization": 30,
+    "missing_azimuth": 30,
+    "source_systems": {
+      "SENTINEL_CATALOGUE": 30
+    },
+    "isolated_camera_ids": [],
+    "isolation_radius_m": 5000.0
+  },
+  "implementation": {
+    "manual_onboarding": "IMPLEMENTED",
+    "bulk_csv_dry_run_and_apply": "IMPLEMENTED",
+    "transactional_audited_mutations": "IMPLEMENTED",
+    "gps_provenance_and_quality": "IMPLEMENTED",
+    "postgis_geojson_export": "IMPLEMENTED",
+    "metadata_gap_csv_export": "IMPLEMENTED",
+    "aoi_coverage_estimate": "IMPLEMENTED_AS_PLANNING_APPROXIMATION",
+    "camera_pair_feasibility_demo": "IMPLEMENTED_AS_STRAIGHT_LINE_LOWER_BOUND",
+    "ogc_api_features_connector": "CONTRACT_TESTED_NOT_LIVE_VENDOR_VALIDATED",
+    "onvif_profile_t_connector": "CONTRACT_TESTED_NOT_LIVE_VENDOR_VALIDATED"
+  },
+  "external_inputs_still_required": [
+    "Authoritative camera latitude and longitude with coordinate source and quality",
+    "Department and organization ownership for each organizer camera",
+    "Surveyed azimuth, field of view, and effective coverage assumptions where available",
+    "Approved endpoints and environment-only credentials for each external VMS",
+    "Live validation against the two real departmental VMS implementations"
+  ],
+  "runtime_dependency_observation": {
+    "catalogue_refresh_attempt": "AUTHENTICATED_SUCCESS",
+    "catalogue_camera_count": 30,
+    "registry_mutated_by_failed_refresh": false,
+    "interpretation": "The final doctor run authenticated and returned 30 cameras. Earlier transient timeouts left the persisted registry intact."
+  },
+  "limitations": [
+    "Camera names were not geocoded because that would fabricate authoritative operational coordinates.",
+    "An empty isolated-camera list is not evidence of good spatial coverage when zero cameras are geolocated.",
+    "Circular coverage buffers do not model occlusion, lens calibration, road topology, or measured recognition range.",
+    "Pair feasibility uses geodesic lower-bound distance and does not reconstruct a road route."
+  ]
+}

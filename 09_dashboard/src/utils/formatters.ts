@@ -16,6 +16,11 @@ export function formatScore(score?: number | null): string {
   return score.toFixed(2);
 }
 
+export function formatNumber(value?: number | null): string {
+  if (value === undefined || value === null || !Number.isFinite(value)) return "--";
+  return value.toLocaleString("en-IN");
+}
+
 export function formatDuration(seconds?: number | null): string {
   if (seconds === undefined || seconds === null || isNaN(seconds)) return "--";
   if (seconds < 60) return `${Math.round(seconds)}s`;
@@ -36,12 +41,12 @@ export function formatDateTime(isoString?: string | null, includeSeconds = true)
       year: "numeric",
       month: "short",
       day: "2-digit",
-      hour: "2-digit",
+      hour: "numeric",
       minute: "2-digit",
       second: includeSeconds ? "2-digit" : undefined,
-      hour12: false,
-      timeZoneName: "short",
-    });
+      hour12: true,
+      timeZone: "Asia/Kolkata",
+    }) + " IST";
   } catch {
     return "--";
   }

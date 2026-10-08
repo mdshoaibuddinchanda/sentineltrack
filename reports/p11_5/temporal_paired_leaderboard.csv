@@ -1,0 +1,17 @@
+window,method,population,eligible_tracks,tracks,exact_matches,exact_accuracy,character_accuracy,cer
+1,character_fusion,tracks_with_at_least_8_observations,24,24,4,0.166667,0.564854,0.271967
+1,current_voter,tracks_with_at_least_8_observations,24,24,10,0.416667,0.60251,0.284519
+1,single_best,tracks_with_at_least_8_observations,24,24,4,0.166667,0.564854,0.271967
+1,weighted_vote,tracks_with_at_least_8_observations,24,24,4,0.166667,0.564854,0.271967
+3,character_fusion,tracks_with_at_least_8_observations,24,24,7,0.291667,0.723849,0.192469
+3,current_voter,tracks_with_at_least_8_observations,24,24,13,0.541667,0.774059,0.117155
+3,single_best,tracks_with_at_least_8_observations,24,24,7,0.291667,0.707113,0.188285
+3,weighted_vote,tracks_with_at_least_8_observations,24,24,6,0.25,0.702929,0.192469
+5,character_fusion,tracks_with_at_least_8_observations,24,24,6,0.25,0.824268,0.129707
+5,current_voter,tracks_with_at_least_8_observations,24,24,16,0.666667,0.874477,0.09205
+5,single_best,tracks_with_at_least_8_observations,24,24,9,0.375,0.832636,0.112971
+5,weighted_vote,tracks_with_at_least_8_observations,24,24,7,0.291667,0.824268,0.121339
+8,character_fusion,tracks_with_at_least_8_observations,24,24,7,0.291667,0.807531,0.129707
+8,current_voter,tracks_with_at_least_8_observations,24,24,16,0.666667,0.90795,0.075314
+8,single_best,tracks_with_at_least_8_observations,24,24,6,0.25,0.782427,0.150628
+8,weighted_vote,tracks_with_at_least_8_observations,24,24,7,0.291667,0.803347,0.146444

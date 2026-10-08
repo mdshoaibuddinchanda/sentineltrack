@@ -1,5 +1,5 @@
 import React from "react";
-import { AlertTriangle, WifiOff, RefreshCw } from "lucide-react";
+import { AlertTriangle, RefreshCw, WifiOff } from "lucide-react";
 import { SystemStatusType } from "../../hooks/useSystemStatus";
 
 interface OfflineBannerProps {
@@ -7,54 +7,65 @@ interface OfflineBannerProps {
   error?: string | null;
   onRetry: () => void;
   degradedDetails?: Record<string, any>;
+  liveInputAvailable?: boolean;
+  liveInputMessage?: string;
 }
 
-export function OfflineBanner({ status, error, onRetry, degradedDetails }: OfflineBannerProps) {
-  if (status === "HEALTHY" || status === "LOADING") return null;
+function readableName(name: string): string {
+  if (name === "stream_ingestion") return "Live camera input";
+  return name
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+export function OfflineBanner({ status, error, onRetry, degradedDetails, liveInputAvailable, liveInputMessage }: OfflineBannerProps) {
+  if (status === "LOADING") return null;
+  if (status === "HEALTHY" && liveInputAvailable !== false) return null;
 
   if (status === "OFFLINE") {
     return (
-      <div className="bg-rose-950/90 border-b border-rose-700 text-rose-200 px-4 py-2 flex items-center justify-between text-xs sm:text-sm">
-        <div className="flex items-center gap-2">
-          <WifiOff className="w-4 h-4 text-rose-400 shrink-0" />
-          <span className="font-semibold">SentinelTrack Backend Disconnected:</span>
-          <span>{error || "Unable to reach FastAPI backend service (port 8000). Reconnecting automatically..."}</span>
+      <div className="connection-banner connection-banner--offline" role="status">
+        <div className="connection-banner__message">
+          <WifiOff size={19} aria-hidden="true" />
+          <div>
+            <strong>Connection lost</strong>
+            <span>{error || "The SentinelTrack service is not responding. Information may be out of date."}</span>
+          </div>
         </div>
-        <button
-          onClick={onRetry}
-          className="flex items-center gap-1.5 px-2.5 py-1 bg-rose-800/80 hover:bg-rose-700 rounded text-xs font-semibold text-white transition-colors"
-        >
-          <RefreshCw className="w-3.5 h-3.5" /> Re-Check
+        <button type="button" onClick={onRetry} className="connection-banner__button">
+          <RefreshCw size={16} /> Check again
         </button>
       </div>
     );
   }
 
-  if (status === "DEGRADED") {
-    const failedMods = Object.entries(degradedDetails || {})
-      .filter(([_, ready]) => ready === false)
-      .map(([name]) => name);
+  const failedModules = Object.entries(degradedDetails || {})
+    .filter(([, ready]) => ready === false)
+    .filter(([name]) => name !== "stream_ingestion")
+    .map(([name]) => readableName(name));
 
-    return (
-      <div className="bg-amber-950/90 border-b border-amber-700 text-amber-200 px-4 py-2 flex items-center justify-between text-xs sm:text-sm">
-        <div className="flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-          <span className="font-semibold">System Readiness Degraded:</span>
-          <span>
-            {failedMods.length > 0
-              ? `Subsystems offline: ${failedMods.join(", ")}. Primary REST endpoints remain active.`
-              : "One or more analytics modules report degraded readiness. Control room operations remain active."}
+  const cameraInputUnavailable = status === "HEALTHY" && liveInputAvailable === false;
+
+  return (
+    <div className="connection-banner connection-banner--warning" role="status">
+      <div className="connection-banner__message">
+        <AlertTriangle size={19} aria-hidden="true" />
+          <div>
+            <strong>{cameraInputUnavailable ? "Camera input not connected" : "Some services need attention"}</strong>
+            <span>
+            {cameraInputUnavailable
+              ? liveInputMessage || "The application is connected, but no camera source is currently delivering frames. This page checks again automatically."
+              : failedModules.length > 0
+              ? `${failedModules.join(", ")} unavailable. Core information remains available where possible.`
+              : "The system is available with limited services."}
           </span>
         </div>
-        <button
-          onClick={onRetry}
-          className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-800/80 hover:bg-amber-700 rounded text-xs font-semibold text-white transition-colors"
-        >
-          <RefreshCw className="w-3.5 h-3.5" /> Probe
-        </button>
       </div>
-    );
-  }
-
-  return null;
+      {!cameraInputUnavailable && (
+        <button type="button" onClick={onRetry} className="connection-banner__button">
+          <RefreshCw size={16} /> Check again
+        </button>
+      )}
+    </div>
+  );
 }

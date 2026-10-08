@@ -1,0 +1,3 @@
+# Optional OCR comparison tools. Production uses the pinned PP-OCRv5 Mobile ONNX path.
+easyocr>=1.7.1
+transformers>=4.40.0

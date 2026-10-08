@@ -1,5 +1,64 @@
 import json
 import subprocess
+import time
+
+import cv2
+
+
+def _probe_with_opencv(url: str, timeout: int = 15) -> dict:
+    """Probe one real frame when the optional ffprobe binary is unavailable."""
+    timeout_ms = max(1000, int(timeout * 1000))
+    capture = None
+    started = time.monotonic()
+    try:
+        params = [
+            cv2.CAP_PROP_OPEN_TIMEOUT_MSEC,
+            timeout_ms,
+            cv2.CAP_PROP_READ_TIMEOUT_MSEC,
+            timeout_ms,
+        ]
+        try:
+            capture = cv2.VideoCapture(url, cv2.CAP_FFMPEG, params)
+        except (TypeError, cv2.error):
+            capture = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
+
+        if capture is None or not capture.isOpened():
+            return {
+                "success": False,
+                "error": "OpenCV could not open the source",
+            }
+
+        ok, frame = capture.read()
+        if not ok or frame is None:
+            return {
+                "success": False,
+                "error": "OpenCV opened the source but decoded no frame",
+            }
+
+        height, width = frame.shape[:2]
+        fps = capture.get(cv2.CAP_PROP_FPS)
+        reported_fps = round(float(fps), 2) if fps and fps > 0 else None
+
+        return {
+            "success": True,
+            "codec": None,
+            "width": int(capture.get(cv2.CAP_PROP_FRAME_WIDTH) or width),
+            "height": int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT) or height),
+            "reported_fps": reported_fps,
+            "probe_backend": "opencv",
+            "first_frame_latency_ms": round((time.monotonic() - started) * 1000.0, 2),
+        }
+    except Exception as exc:
+        return {
+            "success": False,
+            "error": f"OpenCV probe failed: {exc}",
+        }
+    finally:
+        if capture is not None:
+            try:
+                capture.release()
+            except Exception:
+                pass
 
 
 def probe_stream(url: str, timeout: int = 15) -> dict:
@@ -30,6 +89,8 @@ def probe_stream(url: str, timeout: int = 15) -> dict:
             timeout=timeout,
         )
 
+    except FileNotFoundError:
+        return _probe_with_opencv(url, timeout=timeout)
     except subprocess.TimeoutExpired:
         return {
             "success": False,
@@ -90,4 +151,4 @@ def probe_stream(url: str, timeout: int = 15) -> dict:
 
 # Backward compatibility alias
 probe_rtsp = probe_stream
-
+

@@ -28,6 +28,20 @@
 |---|---|---|---|---|
 | GET | /api/v1/cameras | camera:read | No | No |
 | GET | /api/v1/cameras/{id} | camera:read | No | No |
+| GET | /api/v1/cameras/nearby | camera:read | No | No |
+| GET | /api/v1/cameras/{id}/health | camera:read | No | No |
+| GET | /api/v1/cameras/{id}/nearby | camera:read | No | No |
+| GET | /api/v1/cameras/{id}/preview | camera:read | No | No |
+| GET | /api/v1/cameras/{id}/live | camera:read | No | Continuous MJPEG relay; upstream URL/session never exposed |
+| POST | /api/v1/cameras | camera:manage | Yes | Yes (fail_closed) |
+| PATCH | /api/v1/cameras/{id}/registry | camera:manage | Yes | Yes (fail_closed) |
+| POST | /api/v1/cameras/bulk | camera:manage | Yes | Dry run is non-mutating; apply is fail-closed audited |
+| GET | /api/v1/cameras/gap-analysis | camera:read | No | No; current aggregate evidence |
+| GET | /api/v1/cameras/gap-analysis.csv | camera:read | No | Yes (`EXPORT_CAMERA_GAP_ANALYSIS`) |
+| GET | /api/v1/cameras/export.geojson | camera:read | No | Yes; excludes stream URLs |
+| POST | /api/v1/cameras/coverage-analysis | camera:read | Yes | Yes; non-persisting planning estimate |
+| GET | /api/v1/cameras/connectors | camera:read | No | No; secret-free readiness only |
+| POST | /api/v1/cameras/connectors/{id}/sync | camera:manage | Yes | Validation or fail-closed audited apply |
 | GET | /api/v1/targets | target:read | No | No |
 | POST | /api/v1/targets | target:create | Yes | Yes (fail_closed) |
 | GET | /api/v1/targets/{id} | target:read | No | No |
@@ -39,6 +53,8 @@
 | GET | /api/v1/routes/{reg} | route:read | No | Yes |
 | GET | /api/v1/routes/{reg}/geojson | route:read | No | Yes |
 | GET | /api/v1/routes/{reg}/summary | route:read | No | Yes |
+| GET | /api/v1/routes/{reg}/report.csv | route:read | No | Yes (`EXPORT_ROUTE_REPORT`) |
+| POST | /api/v1/routes/feasibility-check | route:read | No | Yes; non-persisting lower-bound calculation |
 
 ## WebSocket Endpoints
 | Path | Auth | Permission Required |
@@ -47,7 +63,11 @@
 | /ws/alerts | Session cookie | alert:read |
 | /ws/sightings | Session cookie | sighting:read |
 
-## Health Endpoint (Unauthenticated)
-| Method | Path | Auth | Notes |
+## Health and telemetry endpoints
+
+| Method | Path | Permission | Notes |
 |---|---|---|---|
-| GET | /api/v1/health | No | Liveness check only; no sensitive data |
+| GET | /health | Public | Liveness and build reference only |
+| GET | /ready | system:read | Database, models, and secret-free feed diagnostics |
+| GET | /metrics | metrics:read | Operational counters |
+| GET | /metrics/prometheus | metrics:read | Prometheus text exposition |

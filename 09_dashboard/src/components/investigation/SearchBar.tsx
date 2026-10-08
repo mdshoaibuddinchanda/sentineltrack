@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Search, RotateCcw, Sparkles } from "lucide-react";
+import { Search, RotateCcw } from "lucide-react";
 
 interface SearchBarProps {
   initialValue?: string;
@@ -19,11 +19,6 @@ export function SearchBar({ initialValue = "", onSearch, isLoading = false }: Se
     if (query.trim()) {
       onSearch(query.trim().toUpperCase());
     }
-  };
-
-  const handleSampleClick = (plate: string) => {
-    setQuery(plate);
-    onSearch(plate);
   };
 
   return (
@@ -55,25 +50,6 @@ export function SearchBar({ initialValue = "", onSearch, isLoading = false }: Se
         </button>
       </form>
 
-      <div className="flex items-center gap-2 text-xs font-mono text-slate-400 flex-wrap">
-        <span className="flex items-center gap-1 text-slate-500">
-          <Sparkles className="w-3 h-3 text-cyan-400" /> Samples:
-        </span>
-        <button
-          type="button"
-          onClick={() => handleSampleClick("GJ01AB1234")}
-          className="px-2 py-0.5 bg-police-800 hover:bg-police-700 rounded text-cyan-300 font-semibold border border-police-700"
-        >
-          GJ01AB1234 (Active Target)
-        </button>
-        <button
-          type="button"
-          onClick={() => handleSampleClick("GJ18XY5678")}
-          className="px-2 py-0.5 bg-police-800 hover:bg-police-700 rounded text-slate-300 font-semibold border border-police-700"
-        >
-          GJ18XY5678
-        </button>
-      </div>
     </div>
   );
 }

@@ -1,41 +1,46 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { listCameras } from "../api/cameras";
 import { Camera } from "../types/api";
-import { DEMO_CAMERAS } from "../utils/demoData";
 
-export function useCameras(params?: { department?: string; live?: boolean; stream_status?: string }, demoMode = false) {
+export function useCameras(params?: { department?: string; live?: boolean; stream_status?: string }, enabled = true) {
   const [cameras, setCameras] = useState<Camera[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasLoadedRef = useRef(false);
 
   const fetchCameras = useCallback(async () => {
-    if (demoMode) {
-      let items = [...DEMO_CAMERAS];
-      if (params?.department) items = items.filter((c) => c.department?.toLowerCase().includes(params.department!.toLowerCase()));
-      if (params?.stream_status) items = items.filter((c) => c.stream_status === params.stream_status);
-      setCameras(items);
-      setTotal(items.length);
+    if (!enabled) {
+      setCameras([]);
+      setTotal(0);
       setLoading(false);
+      hasLoadedRef.current = false;
       return;
     }
-
     try {
-      setLoading(true);
-      const res = await listCameras(params);
+      if (!hasLoadedRef.current) setLoading(true);
+      const res = await listCameras({
+        department: params?.department,
+        live: params?.live,
+        stream_status: params?.stream_status,
+      });
       setCameras(res.items);
       setTotal(res.total);
       setError(null);
+      hasLoadedRef.current = true;
     } catch (e: any) {
       setError(e.message || "Failed to load camera registry");
     } finally {
       setLoading(false);
     }
-  }, [params?.department, params?.live, params?.stream_status, demoMode]);
+  }, [params?.department, params?.live, params?.stream_status, enabled]);
 
   useEffect(() => {
     fetchCameras();
-  }, [fetchCameras]);
+    if (!enabled) return;
+    const interval = window.setInterval(fetchCameras, 5000);
+    return () => window.clearInterval(interval);
+  }, [fetchCameras, enabled]);
 
   return { cameras, total, loading, error, refresh: fetchCameras };
 }

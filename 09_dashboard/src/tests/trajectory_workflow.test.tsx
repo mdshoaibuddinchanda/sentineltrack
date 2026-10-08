@@ -5,11 +5,11 @@ import { TrajectorySummaryCard } from "../components/investigation/TrajectorySum
 import { SightingTimeline } from "../components/investigation/SightingTimeline";
 import { KinematicSegmentsTable } from "../components/investigation/KinematicSegmentsTable";
 import { WarningsPanel } from "../components/investigation/WarningsPanel";
-import { DEMO_ROUTE_GJ01AB1234 } from "../utils/demoData";
+import { TEST_ROUTE } from "./testFixtures";
 
 describe("Trajectory Kinematics & Investigation Tests", () => {
   it("renders trajectory summary card with metrics", () => {
-    render(<TrajectorySummaryCard route={DEMO_ROUTE_GJ01AB1234} />);
+    render(<TrajectorySummaryCard route={TEST_ROUTE} />);
 
     expect(screen.getByText("GJ01AB1234")).toBeDefined();
     expect(screen.getByText("PLAUSIBLE TRAJECTORY")).toBeDefined();
@@ -22,7 +22,7 @@ describe("Trajectory Kinematics & Investigation Tests", () => {
     const handleSelect = vi.fn();
     render(
       <SightingTimeline
-        sightings={DEMO_ROUTE_GJ01AB1234.sightings}
+        sightings={TEST_ROUTE.sightings}
         onSelectSighting={handleSelect}
       />
     );
@@ -34,7 +34,7 @@ describe("Trajectory Kinematics & Investigation Tests", () => {
   });
 
   it("renders kinematic segment table with lower-bound distances and required speeds", () => {
-    render(<KinematicSegmentsTable segments={DEMO_ROUTE_GJ01AB1234.segments} />);
+    render(<KinematicSegmentsTable segments={TEST_ROUTE.segments} />);
 
     expect(screen.getByText("4.3 km")).toBeDefined();
     expect(screen.getByText("71 km/h")).toBeDefined();

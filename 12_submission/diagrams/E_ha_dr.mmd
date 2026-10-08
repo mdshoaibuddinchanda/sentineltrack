@@ -1,0 +1,18 @@
+flowchart LR
+  subgraph P[Primary region]
+    LB[Load balancer] --> A1[API replica A]
+    LB --> A2[API replica B]
+    A1 --> DBP[(PostGIS primary)]
+    A2 --> DBP
+    DBP --> DBS[(PostGIS standby)]
+    A1 --> OBJ[(Versioned evidence store)]
+    W[Inference worker shards] --> DBP
+    MON[Monitoring and audit] --> LB
+    MON --> W
+    MON --> DBP
+  end
+  DBP -. WAL / backup .-> DRDB[(DR database)]
+  OBJ -. replication / manifest .-> DROB[(DR object store)]
+  P -. region loss / approved promotion .-> DR[Secondary DR region]
+  DR --> DRDB
+  DR --> DROB

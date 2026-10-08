@@ -25,7 +25,8 @@ def main():
 
     client = SentinelCatalogueClient()
 
-    # 1. Download /api/ingest
+    # 1. Fetch the current catalogue (legacy-route compatibility is handled
+    #    inside the client).
     payload = client.fetch()
 
     # 2. Save original JSON
@@ -50,7 +51,7 @@ def main():
         )
 
     # 3. Convert JSON into CameraRecord objects
-    cameras = parse_catalogue(payload)
+    cameras = parse_catalogue(payload, base_host=client.effective_host)
 
     print(
         f"Discovered {len(cameras)} cameras"

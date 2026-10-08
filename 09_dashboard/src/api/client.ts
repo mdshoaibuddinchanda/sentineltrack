@@ -92,8 +92,14 @@ export async function request<T>(
 
       const errPayload = data as ApiError;
       const code = errPayload?.error?.code || `HTTP_${response.status}`;
-      const msg = errPayload?.error?.message || (typeof data === "string" ? data : response.statusText);
-      throw new ApiClientError(msg, code, response.status, errPayload?.error?.details);
+      const msg =
+        errPayload?.error?.message ||
+        (typeof data === "object" && data?.detail ? String(data.detail) : undefined) ||
+        (typeof data === "string" ? data : response.statusText);
+      const details =
+        errPayload?.error?.details ??
+        (typeof data === "object" && data !== null ? data : undefined);
+      throw new ApiClientError(msg, code, response.status, details);
     }
 
     return data as T;

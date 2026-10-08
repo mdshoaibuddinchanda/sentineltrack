@@ -36,11 +36,14 @@ export class ErrorBoundary extends Component<Props, State> {
           <p className="text-xs text-slate-400 max-w-md font-mono">
             {this.state.error?.message || "An unexpected error occurred in this view component."}
           </p>
+          <p className="text-xs text-slate-500 max-w-md text-center">
+            You can select another page from the navigation above. This page resets automatically when you change tabs.
+          </p>
           <button
             onClick={() => this.setState({ hasError: false, error: null })}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-police-700 hover:bg-police-600 rounded text-xs font-semibold text-white transition-colors"
           >
-            <RefreshCw className="w-3.5 h-3.5" /> Retry Component
+            <RefreshCw className="w-3.5 h-3.5" /> Try this page again
           </button>
         </div>
       );

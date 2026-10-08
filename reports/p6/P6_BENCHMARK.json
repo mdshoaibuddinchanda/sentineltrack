@@ -1,0 +1,73 @@
+{
+  "model": {
+    "architecture": "torchvision.mobilenet_v3_small",
+    "model": "mobilenet_v3_small_imagenet",
+    "model_version": "torchvision-0.20.1",
+    "checkpoint_url": "https://download.pytorch.org/models/mobilenet_v3_small-047dcff4.pth",
+    "checkpoint_path": "C:\\Users\\SHOAIB-CHANDA\\.cache\\torch\\hub\\checkpoints\\mobilenet_v3_small-047dcff4.pth",
+    "checkpoint_sha256": "047dcff4addef86ea5bc2eff13c9614dc11f47ab1160d0a71a25e7db994f4e1f",
+    "license": "BSD-3-Clause (torchvision code; ImageNet weights provenance is recorded separately)",
+    "input_resolution": [
+      224,
+      224
+    ],
+    "embedding_dimension": 576,
+    "device": "cuda",
+    "plate_region_masked_for_reid": true
+  },
+  "device": "cuda",
+  "embedding_dimension": 576,
+  "extractor": {
+    "batch_1": {
+      "p50_latency_ms": 9.0376,
+      "p95_latency_ms": 10.6913,
+      "embeddings_per_second": 110.6488
+    },
+    "batch_4": {
+      "p50_latency_ms": 13.6531,
+      "p95_latency_ms": 14.4735,
+      "embeddings_per_second": 292.9738
+    },
+    "batch_8": {
+      "p50_latency_ms": 20.4159,
+      "p95_latency_ms": 24.3476,
+      "embeddings_per_second": 391.8514
+    }
+  },
+  "track_level_aggregation": {
+    "gallery_tracks": 100,
+    "top_k_crops": 5,
+    "p50_add_observation_ms": 0.0642,
+    "p95_add_observation_ms": 0.0979
+  },
+  "gallery_search": {
+    "100": {
+      "gallery_embeddings": 100,
+      "p50_search_ms": 1.6155,
+      "p95_search_ms": 1.8469
+    },
+    "1000": {
+      "gallery_embeddings": 1000,
+      "p50_search_ms": 13.6102,
+      "p95_search_ms": 16.7317
+    },
+    "10000": {
+      "gallery_embeddings": 10000,
+      "p50_search_ms": 166.5587,
+      "p95_search_ms": 240.6022
+    }
+  },
+  "memory": {
+    "cpu_rss_mb": 976.41,
+    "gpu_vram_total_mb": 4095.5,
+    "gpu_vram_allocated_mb": 3.64,
+    "gpu_vram_reserved_mb": 136.0
+  },
+  "conditional_compute": {
+    "strong_plate": "skip_reid",
+    "partial_plate": "run_reid",
+    "no_usable_plate": "run_reid_review_only",
+    "capacity_claim": "bounded benchmark only; no 80k-camera capacity claim"
+  },
+  "generated_at_utc": "2026-08-29T19:54:01.910089+00:00"
+}

@@ -1,0 +1,177 @@
+{
+  "status": "COMPLETE",
+  "dataset": "datasets/experiments/multiframe_ocr_v1",
+  "tracks": 88,
+  "frames": 583,
+  "recognizer": "PP-OCRv5 mobile",
+  "inference_latency_ms": {
+    "p50": 12.77,
+    "p95": 39.648
+  },
+  "logit_fusion": {
+    "status": "NOT_AVAILABLE",
+    "reason": "The current ONNX recognizer exposes decoded text/character confidence, not per-timestep logits."
+  },
+  "results": [
+    {
+      "window": 1,
+      "method": "single_best",
+      "eligible_tracks": 88,
+      "tracks": 88,
+      "exact_matches": 19,
+      "exact_accuracy": 0.215909,
+      "character_accuracy": 0.577143,
+      "cer": 0.24
+    },
+    {
+      "window": 1,
+      "method": "current_voter",
+      "eligible_tracks": 88,
+      "tracks": 88,
+      "exact_matches": 29,
+      "exact_accuracy": 0.329545,
+      "character_accuracy": 0.593143,
+      "cer": 0.250286
+    },
+    {
+      "window": 1,
+      "method": "weighted_vote",
+      "eligible_tracks": 88,
+      "tracks": 88,
+      "exact_matches": 19,
+      "exact_accuracy": 0.215909,
+      "character_accuracy": 0.577143,
+      "cer": 0.24
+    },
+    {
+      "window": 1,
+      "method": "character_fusion",
+      "eligible_tracks": 88,
+      "tracks": 88,
+      "exact_matches": 19,
+      "exact_accuracy": 0.215909,
+      "character_accuracy": 0.577143,
+      "cer": 0.24
+    },
+    {
+      "window": 3,
+      "method": "single_best",
+      "eligible_tracks": 64,
+      "tracks": 64,
+      "exact_matches": 19,
+      "exact_accuracy": 0.296875,
+      "character_accuracy": 0.665094,
+      "cer": 0.204403
+    },
+    {
+      "window": 3,
+      "method": "current_voter",
+      "eligible_tracks": 64,
+      "tracks": 64,
+      "exact_matches": 33,
+      "exact_accuracy": 0.515625,
+      "character_accuracy": 0.742138,
+      "cer": 0.127358
+    },
+    {
+      "window": 3,
+      "method": "weighted_vote",
+      "eligible_tracks": 64,
+      "tracks": 64,
+      "exact_matches": 21,
+      "exact_accuracy": 0.328125,
+      "character_accuracy": 0.691824,
+      "cer": 0.194969
+    },
+    {
+      "window": 3,
+      "method": "character_fusion",
+      "eligible_tracks": 64,
+      "tracks": 64,
+      "exact_matches": 22,
+      "exact_accuracy": 0.34375,
+      "character_accuracy": 0.713836,
+      "cer": 0.190252
+    },
+    {
+      "window": 5,
+      "method": "single_best",
+      "eligible_tracks": 38,
+      "tracks": 38,
+      "exact_matches": 13,
+      "exact_accuracy": 0.342105,
+      "character_accuracy": 0.806878,
+      "cer": 0.124339
+    },
+    {
+      "window": 5,
+      "method": "current_voter",
+      "eligible_tracks": 38,
+      "tracks": 38,
+      "exact_matches": 24,
+      "exact_accuracy": 0.631579,
+      "character_accuracy": 0.835979,
+      "cer": 0.108466
+    },
+    {
+      "window": 5,
+      "method": "weighted_vote",
+      "eligible_tracks": 38,
+      "tracks": 38,
+      "exact_matches": 14,
+      "exact_accuracy": 0.368421,
+      "character_accuracy": 0.81746,
+      "cer": 0.10582
+    },
+    {
+      "window": 5,
+      "method": "character_fusion",
+      "eligible_tracks": 38,
+      "tracks": 38,
+      "exact_matches": 13,
+      "exact_accuracy": 0.342105,
+      "character_accuracy": 0.804233,
+      "cer": 0.121693
+    },
+    {
+      "window": 8,
+      "method": "single_best",
+      "eligible_tracks": 24,
+      "tracks": 24,
+      "exact_matches": 6,
+      "exact_accuracy": 0.25,
+      "character_accuracy": 0.782427,
+      "cer": 0.150628
+    },
+    {
+      "window": 8,
+      "method": "current_voter",
+      "eligible_tracks": 24,
+      "tracks": 24,
+      "exact_matches": 16,
+      "exact_accuracy": 0.666667,
+      "character_accuracy": 0.90795,
+      "cer": 0.075314
+    },
+    {
+      "window": 8,
+      "method": "weighted_vote",
+      "eligible_tracks": 24,
+      "tracks": 24,
+      "exact_matches": 7,
+      "exact_accuracy": 0.291667,
+      "character_accuracy": 0.803347,
+      "cer": 0.146444
+    },
+    {
+      "window": 8,
+      "method": "character_fusion",
+      "eligible_tracks": 24,
+      "tracks": 24,
+      "exact_matches": 7,
+      "exact_accuracy": 0.291667,
+      "character_accuracy": 0.807531,
+      "cer": 0.129707
+    }
+  ]
+}

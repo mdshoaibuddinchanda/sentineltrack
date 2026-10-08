@@ -4,7 +4,7 @@ import { HealthResponse, ReadinessResponse, MetricsSnapshot } from "../types/api
 
 export type SystemStatusType = "HEALTHY" | "DEGRADED" | "OFFLINE" | "LOADING";
 
-export function useSystemStatus(pollIntervalMs = 8000) {
+export function useSystemStatus(pollIntervalMs = 8000, enabled = true) {
   const [status, setStatus] = useState<SystemStatusType>("LOADING");
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [readiness, setReadiness] = useState<ReadinessResponse | null>(null);
@@ -13,15 +13,24 @@ export function useSystemStatus(pollIntervalMs = 8000) {
   const [error, setError] = useState<string | null>(null);
 
   const fetchStatus = useCallback(async () => {
+    if (!enabled) {
+      setStatus("LOADING");
+      setHealth(null);
+      setReadiness(null);
+      setMetrics(null);
+      setError(null);
+      return;
+    }
     try {
       const [h, r, m] = await Promise.all([
         getHealth().catch(() => null),
         getReadiness().catch((err) => {
           if (err?.status === 503) {
+            const payload = err?.details || {};
             return {
               status: "degraded" as const,
-              components: err?.details?.components || {},
-              details: err?.details || {},
+              components: payload?.components || {},
+              details: payload?.details || {},
             };
           }
           return null;
@@ -29,10 +38,14 @@ export function useSystemStatus(pollIntervalMs = 8000) {
         getMetrics().catch(() => null),
       ]);
 
+      const coreComponents = Object.entries(r?.components || {})
+        .filter(([key]) => key !== "stream_ingestion")
+        .map(([, value]) => value);
+
       if (!h) {
         setStatus("OFFLINE");
         setError("SentinelTrack backend is unreachable.");
-      } else if (r?.status === "degraded" || (r && Object.values(r.components).some((v) => v === false))) {
+      } else if (coreComponents.some((value) => value === false)) {
         setStatus("DEGRADED");
         setError(null);
       } else {
@@ -48,13 +61,14 @@ export function useSystemStatus(pollIntervalMs = 8000) {
       setStatus("OFFLINE");
       setError(e.message || "Failed to poll system status");
     }
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
     fetchStatus();
+    if (!enabled) return;
     const interval = setInterval(fetchStatus, pollIntervalMs);
     return () => clearInterval(interval);
-  }, [fetchStatus, pollIntervalMs]);
+  }, [fetchStatus, pollIntervalMs, enabled]);
 
   return { status, health, readiness, metrics, lastUpdated, error, refresh: fetchStatus };
 }

@@ -3,7 +3,7 @@ import { WebSocketConnectionStatus, WebSocketEventMessage } from "../types/webso
 
 const WS_BASE_URL = import.meta.env.VITE_SENTINEL_WS_URL || "ws://localhost:8000";
 
-export function useWebSocket(topics: string[] | string = "*") {
+export function useWebSocket(topics: string[] | string = "*", enabled = true) {
   const [status, setStatus] = useState<WebSocketConnectionStatus>("CONNECTING");
   const [events, setEvents] = useState<WebSocketEventMessage[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
@@ -91,6 +91,12 @@ export function useWebSocket(topics: string[] | string = "*") {
 
   useEffect(() => {
     shouldReconnectRef.current = true;
+    if (!enabled) {
+      setStatus("CONNECTING");
+      return () => {
+        shouldReconnectRef.current = false;
+      };
+    }
     connect();
     return () => {
       shouldReconnectRef.current = false;
@@ -101,7 +107,7 @@ export function useWebSocket(topics: string[] | string = "*") {
         wsRef.current = null;
       }
     };
-  }, [connect]);
+  }, [connect, enabled]);
 
   const clearEvents = useCallback(() => {
     setEvents([]);

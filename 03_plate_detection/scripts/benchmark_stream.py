@@ -59,7 +59,7 @@ def main():
     v_detector = VehicleDetector(model_path='models/vehicle/yolo11m.pt', confidence=0.25, imgsz=960)
     v_pipeline = VehicleTrackingPipeline(detector=v_detector)
 
-    p_detector = PlateDetector(model_path='models/plate/production/best.pt', confidence=0.20, imgsz=960)
+    p_detector = PlateDetector(model_path='models/plate/yolo11s_plate_v2.pt', confidence=0.20, imgsz=960)
     p_pipeline = PlateDetectionPipeline(plate_detector=p_detector)
 
 

@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def load_tool(name: str):
-    path = ROOT / "tools" / "p11_5" / f"{name}.py"
+    path = ROOT / "experiments" / "archive" / "p11_5" / f"{name}.py"
     spec = importlib.util.spec_from_file_location(f"test_{name}", path)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)

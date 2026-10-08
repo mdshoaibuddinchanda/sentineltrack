@@ -12,8 +12,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements-api.txt /app/
-RUN pip install --no-cache-dir -r requirements-api.txt
+COPY requirements/api.txt /app/requirements/api.txt
+RUN pip install --no-cache-dir -r requirements/api.txt
 
 COPY 00_foundation /app/00_foundation
 COPY 05_target_matching /app/05_target_matching

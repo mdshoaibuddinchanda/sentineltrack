@@ -1,0 +1,21 @@
+flowchart LR
+  CAM[Department cameras / VMS] --> CAT[Central catalogue and GIS]
+  CAM --> GW[Department or regional gateway]
+  CAT --> GW
+  GW --> ING[Ingest and stream epoch]
+  ING --> SCH[Bounded scheduler and queues]
+  SCH --> DET[P1 vehicle / plate detection]
+  DET --> TRK[P2 ByteTrack]
+  TRK --> OCR[P3/P4 plate crop and OCR]
+  OCR --> MAT[P5 watchlist matching]
+  TRK --> REID[P6 conditional appearance fallback]
+  OCR --> FUS[Identity fusion]
+  MAT --> FUS
+  REID --> FUS
+  FUS --> ROUTE[P7 chronological feasibility]
+  ROUTE --> EVT[Events, alerts, audit]
+  EVT --> DB[(PostGIS / event store)]
+  EVT --> OBJ[(Evidence object store)]
+  DB --> API[P8/P9 API and WebSocket]
+  OBJ --> API
+  API --> UI[Operator dashboard]

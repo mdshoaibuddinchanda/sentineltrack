@@ -62,14 +62,18 @@ class RouteEnginePipeline:
         # 2. Retrieve All Camera Locations
         cameras_map = self.camera_repo.get_all_cameras()
 
-        # Enforce camera coordinates on sightings if missing from join
+        # Enrich sightings from the registry. Textual organizer locations are
+        # retained even when verified GIS coordinates are not supplied.
         for s in candidate_sightings:
-            if s.latitude is None and s.camera_id in cameras_map:
+            if s.camera_id in cameras_map:
                 cam = cameras_map[s.camera_id]
-                s.latitude = cam.latitude
-                s.longitude = cam.longitude
-                s.azimuth = cam.azimuth
-                s.location_quality = cam.location_quality
+                if not s.location_label:
+                    s.location_label = cam.name
+                if s.latitude is None:
+                    s.latitude = cam.latitude
+                    s.longitude = cam.longitude
+                    s.azimuth = cam.azimuth
+                    s.location_quality = cam.location_quality
 
         # 3. Solve Optimal Trajectory DAG
         selected_sightings, segments, status, raw_conf, alt_paths, solve_warnings = solve_best_trajectory_dag(

@@ -13,9 +13,12 @@ describe("Router & Deep Linking Tests", () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText("OPERATIONS")).toBeDefined();
-    expect(screen.getByText("TARGETS")).toBeDefined();
-    expect(screen.getByText("ALERTS")).toBeDefined();
+    expect(screen.getByText("Dashboard")).toBeDefined();
+    expect(screen.getByText("Watchlist")).toBeDefined();
+    expect(screen.getByText("Alerts")).toBeDefined();
+    expect(screen.getByText("Find a vehicle")).toBeDefined();
+    expect(screen.getByText("System status")).toBeDefined();
+    expect(screen.queryByText("More")).toBeNull();
     expect(screen.getByText("2")).toBeDefined(); // badge
   });
 
@@ -23,7 +26,7 @@ describe("Router & Deep Linking Tests", () => {
     render(
       <MemoryRouter initialEntries={["/investigation/GJ18XY5678"]}>
         <Routes>
-          <Route path="/investigation/:registration" element={<InvestigationPage demoMode={true} />} />
+          <Route path="/investigation/:registration" element={<InvestigationPage />} />
         </Routes>
       </MemoryRouter>
     );

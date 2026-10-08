@@ -57,6 +57,11 @@ export function SightingTimeline({
                   <MapPin className="w-3 h-3 text-cyan-400 shrink-0" />
                   {s.camera_id}
                 </span>
+                {s.location_label && (
+                  <div className="mt-1 text-[11px] font-semibold text-slate-400">
+                    {s.location_label}
+                  </div>
+                )}
               </div>
               <TimeQualityBadge quality={s.time_quality} />
             </div>

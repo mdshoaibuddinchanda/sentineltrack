@@ -72,6 +72,38 @@ class ScaleDeploymentConfig:
         default_factory=lambda: os.getenv("SENTINEL_PG_EVENT_BRIDGE", "false").lower() in ("true", "1", "yes")
     )
 
+    # The full launcher explicitly enables ingestion. Keeping the library
+    # default off makes API/test imports safe and prevents an accidental
+    # direct import from opening camera connections.
+    enable_stream_ingestion: bool = field(
+        default_factory=lambda: os.getenv("SENTINEL_ENABLE_STREAM_INGESTION", "false").lower() in ("true", "1", "yes")
+    )
+
+    # Stream connection controls. These values are consumed by the OpenCV
+    # reader; keeping them here makes the launcher configuration observable
+    # and prevents failed RTSP sources from blocking a worker indefinitely.
+    rtsp_connect_timeout_s: float = field(
+        default_factory=lambda: max(1.0, float(os.getenv("RTSP_CONNECT_TIMEOUT", "10")))
+    )
+    stream_max_backoff_s: float = field(
+        default_factory=lambda: max(1.0, float(os.getenv("STREAM_MAX_BACKOFF", "30")))
+    )
+    stream_failover_threshold: int = field(
+        default_factory=lambda: max(1, int(os.getenv("STREAM_FAILOVER_THRESHOLD", "1")))
+    )
+    stream_stale_after_s: float = field(
+        default_factory=lambda: max(5.0, float(os.getenv("STREAM_STALE_AFTER", "20")))
+    )
+    stream_recovery_interval_s: float = field(
+        default_factory=lambda: max(30.0, float(os.getenv("STREAM_RECOVERY_INTERVAL", "30")))
+    )
+    prefer_hls_for_official_feeds: bool = field(
+        default_factory=lambda: os.getenv("SENTINEL_PREFER_OFFICIAL_HLS", "true").lower() in ("true", "1", "yes")
+    )
+    refresh_catalogue_on_start: bool = field(
+        default_factory=lambda: os.getenv("SENTINEL_REFRESH_CATALOGUE_ON_START", "true").lower() in ("true", "1", "yes")
+    )
+
     def is_api_enabled(self) -> bool:
         return self.process_role in ("all", "api")
 

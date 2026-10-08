@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { useAuth } from "./context/AuthContext";
 import { LoginPage } from "./pages/LoginPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Header } from "./components/layout/Header";
@@ -26,31 +27,47 @@ import { useAlerts } from "./hooks/useAlerts";
 import { listSightings } from "./api/sightings";
 import { getAlert } from "./api/alerts";
 import { Sighting } from "./types/api";
-import { DEMO_SIGHTINGS } from "./utils/demoData";
 import { maskRegistration } from "./utils/formatters";
 import { AlertOctagon } from "lucide-react";
 
-export function App() {
+function DashboardApp() {
   const navigate = useNavigate();
-  const [demoMode, setDemoMode] = useState<boolean>(
-    import.meta.env.VITE_DEMO_MODE === "true"
-  );
+  const location = useLocation();
+  const { isAuthenticated } = useAuth();
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("sentineltrack-theme") === "dark";
+  });
   const [privacyMode, setPrivacyMode] = useState<boolean>(false);
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
   const [sightings, setSightings] = useState<Sighting[]>([]);
   const [toastMessage, setToastMessage] = useState<{ title: string; desc: string; registration: string } | null>(null);
 
   // Global Subsystem Hooks (stable topic key to eliminate WebSocket churn)
-  const { status: sysStatus, health, readiness, metrics, error: sysError, refresh: refreshSystem } = useSystemStatus(8000);
-  const { status: wsStatus, events: wsEvents } = useWebSocket("*");
-  const { cameras, refresh: refreshCameras } = useCameras(undefined, demoMode);
-  const { targets, create: createTarget, update: updateTarget, disable: disableTarget, refresh: refreshTargets } = useTargets(undefined, demoMode);
-  const { alerts, unackCount, acknowledge: acknowledgeAlert, prependLiveAlert, refresh: refreshAlerts } = useAlerts(undefined, demoMode);
+  const { status: sysStatus, health, readiness, metrics, lastUpdated, error: sysError, refresh: refreshSystem } = useSystemStatus(8000, isAuthenticated);
+  const { status: wsStatus, events: wsEvents } = useWebSocket("*", isAuthenticated);
+  const { cameras, refresh: refreshCameras } = useCameras(undefined, isAuthenticated);
+  const { targets, create: createTarget, update: updateTarget, disable: disableTarget, refresh: refreshTargets } = useTargets(undefined, isAuthenticated);
+  const { alerts, total: totalAlerts, unackCount, acknowledge: acknowledgeAlert, prependLiveAlert, refresh: refreshAlerts } = useAlerts(undefined, isAuthenticated);
+  const streamStatus = readiness?.details?.stream_ingestion as
+    | { total_frames_decoded?: number; message?: string; source_diagnostics?: { message?: string } }
+    | undefined;
+  const liveFramesDecoded = streamStatus?.total_frames_decoded;
+  // Alerts are persisted evidence. A later camera outage must not erase them
+  // from the operator view; database cleanup, not UI suppression, separates
+  // test/demo records from real history.
+  const activeAlerts = alerts;
+  const activeUnackCount = unackCount;
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = darkMode ? "dark" : "light";
+    window.localStorage.setItem("sentineltrack-theme", darkMode ? "dark" : "light");
+  }, [darkMode]);
 
   // Initial & periodic sightings fetch
   const fetchSightings = useCallback(async () => {
-    if (demoMode) {
-      setSightings(DEMO_SIGHTINGS);
+    if (!isAuthenticated) {
+      setSightings([]);
       return;
     }
     try {
@@ -59,7 +76,7 @@ export function App() {
     } catch {
       // Offline fallback
     }
-  }, [demoMode]);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     fetchSightings();
@@ -86,7 +103,7 @@ export function App() {
         setTimeout(() => setToastMessage(null), 7000);
 
         // Fetch authoritative database record from backend — never synthesize fake evidence
-        if (alertId && !demoMode) {
+        if (alertId) {
           getAlert(alertId)
             .then((authAlert) => {
               prependLiveAlert(authAlert);
@@ -101,7 +118,7 @@ export function App() {
         fetchSightings();
       }
     }
-  }, [wsEvents, prependLiveAlert, fetchSightings, refreshAlerts, demoMode, privacyMode]);
+  }, [wsEvents, prependLiveAlert, fetchSightings, refreshAlerts, privacyMode]);
 
   const handleRefreshAll = () => {
     refreshSystem();
@@ -121,8 +138,7 @@ export function App() {
   };
 
   return (
-    <AuthProvider>
-      <Routes>
+    <Routes>
         {/* Public route — accessible without authentication */}
         <Route path="/login" element={<LoginPage />} />
 
@@ -131,16 +147,17 @@ export function App() {
           path="/*"
           element={
             <ProtectedRoute>
-              <div className="h-screen w-screen flex flex-col bg-police-900 text-slate-100 overflow-hidden font-sans">
+              <div className={`app-shell ${darkMode ? "theme-dark" : "theme-light"} h-screen w-screen flex flex-col overflow-hidden font-sans`}>
                 {/* Top Header */}
                 <Header
                   systemStatus={sysStatus}
                   wsStatus={wsStatus}
                   activeCamerasCount={cameras.filter((c) => c.stream_status === "ONLINE").length}
                   activeTargetsCount={targets.filter((t) => t.enabled).length}
-                  unackAlertsCount={unackCount}
-                  demoMode={demoMode}
-                  onToggleDemoMode={() => setDemoMode((prev) => !prev)}
+                  unackAlertsCount={activeUnackCount}
+                  liveFramesDecoded={liveFramesDecoded}
+                  darkMode={darkMode}
+                  onToggleDarkMode={() => setDarkMode((prev) => !prev)}
                   onRefresh={handleRefreshAll}
                   privacyMode={privacyMode}
                   onTogglePrivacyMode={() => setPrivacyMode((prev) => !prev)}
@@ -152,10 +169,12 @@ export function App() {
                   error={sysError}
                   onRetry={refreshSystem}
                   degradedDetails={readiness?.components}
+                  liveInputAvailable={liveFramesDecoded === undefined ? undefined : liveFramesDecoded > 0}
+                  liveInputMessage={streamStatus?.message || streamStatus?.source_diagnostics?.message}
                 />
 
                 {/* Primary Navigation */}
-                <Navigation unackAlertsCount={unackCount} />
+                <Navigation unackAlertsCount={activeUnackCount} />
 
                 {/* Toast Notification */}
                 {toastMessage && (
@@ -164,20 +183,20 @@ export function App() {
                       handleInvestigate(toastMessage.registration);
                       setToastMessage(null);
                     }}
-                    className="fixed top-20 right-4 z-50 p-3 bg-rose-950 border-2 border-rose-600 rounded-lg shadow-2xl text-white cursor-pointer hover:bg-rose-900 transition-all animate-bounce max-w-sm"
+                    className="alert-toast"
                   >
-                    <div className="flex items-center gap-2 font-mono font-bold text-xs text-rose-300">
-                      <AlertOctagon className="w-4 h-4 text-rose-400 animate-pulse" />
+                    <div className="alert-toast__title">
+                      <AlertOctagon className="w-4 h-4" />
                       <span>{toastMessage.title}</span>
                     </div>
-                    <div className="text-[11px] text-slate-200 mt-1 font-mono">{toastMessage.desc}</div>
-                    <div className="text-[10px] text-cyan-300 font-semibold mt-1 font-mono">Click to open GIS trajectory &rarr;</div>
+                    <div className="alert-toast__description">{toastMessage.desc}</div>
+                    <div className="alert-toast__action">Select to view the vehicle record →</div>
                   </div>
                 )}
 
                 {/* Main Content View Container with Router */}
-                <main className="flex-1 p-4 overflow-y-auto bg-police-900/60">
-                  <ErrorBoundary fallbackTitle="Page Display Error">
+                <main className="app-main flex-1 p-4 overflow-y-auto">
+                  <ErrorBoundary key={`${location.pathname}${location.search}`} fallbackTitle="Page Display Error">
                     <Routes>
                       <Route path="/" element={<Navigate to="/operations" replace />} />
                       <Route
@@ -185,13 +204,14 @@ export function App() {
                         element={
                           <OperationsPage
                             cameras={cameras}
-                            alerts={alerts}
+                            alerts={activeAlerts}
                             sightings={sightings}
-                            unackAlertsCount={unackCount}
+                            unackAlertsCount={activeUnackCount}
                             activeTargetsCount={targets.filter((t) => t.enabled).length}
                             analyticsWorkerStatus={readiness?.components?.analytics_worker === true}
                             workerCount={metrics?.active_camera_workers ?? 0}
                             persistedSightingsTotal={metrics?.total_sightings_persisted}
+                            liveFramesDecoded={liveFramesDecoded}
                             onAcknowledgeAlert={acknowledgeAlert}
                             onInvestigate={handleInvestigate}
                             onSelectCamera={handleSelectCamera}
@@ -207,6 +227,8 @@ export function App() {
                             cameras={cameras}
                             onSelectCamera={handleSelectCamera}
                             selectedCameraId={selectedCameraId}
+                            liveFramesDecoded={liveFramesDecoded}
+                            onRefresh={refreshCameras}
                           />
                         }
                       />
@@ -217,6 +239,8 @@ export function App() {
                             cameras={cameras}
                             onSelectCamera={handleSelectCamera}
                             selectedCameraId={selectedCameraId}
+                            liveFramesDecoded={liveFramesDecoded}
+                            onRefresh={refreshCameras}
                           />
                         }
                       />
@@ -241,6 +265,9 @@ export function App() {
                             onAcknowledge={acknowledgeAlert}
                             onInvestigate={handleInvestigate}
                             privacyMode={privacyMode}
+                            liveFramesDecoded={liveFramesDecoded}
+                            totalAlerts={totalAlerts}
+                            storedUnacknowledgedCount={unackCount}
                           />
                         }
                       />
@@ -252,6 +279,9 @@ export function App() {
                             onAcknowledge={acknowledgeAlert}
                             onInvestigate={handleInvestigate}
                             privacyMode={privacyMode}
+                            liveFramesDecoded={liveFramesDecoded}
+                            totalAlerts={totalAlerts}
+                            storedUnacknowledgedCount={unackCount}
                           />
                         }
                       />
@@ -259,7 +289,6 @@ export function App() {
                         path="/investigation"
                         element={
                           <InvestigationPage
-                            demoMode={demoMode}
                             privacyMode={privacyMode}
                           />
                         }
@@ -268,7 +297,6 @@ export function App() {
                         path="/investigation/:registration"
                         element={
                           <InvestigationPage
-                            demoMode={demoMode}
                             privacyMode={privacyMode}
                           />
                         }
@@ -277,10 +305,11 @@ export function App() {
                         path="/system"
                         element={
                           <SystemPage
-                            health={health}
-                            readiness={readiness}
-                            metrics={metrics}
-                            onRefresh={refreshSystem}
+                          health={health}
+                          readiness={readiness}
+                          metrics={metrics}
+                          lastUpdated={lastUpdated}
+                          onRefresh={refreshSystem}
                           />
                         }
                       />
@@ -309,7 +338,14 @@ export function App() {
             </ProtectedRoute>
           }
         />
-      </Routes>
+    </Routes>
+  );
+}
+
+export function App() {
+  return (
+    <AuthProvider>
+      <DashboardApp />
     </AuthProvider>
   );
 }

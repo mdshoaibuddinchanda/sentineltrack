@@ -1,0 +1,17 @@
+flowchart TD
+  A[Observed vehicle event] --> B[Normalize plate and preserve evidence]
+  B --> C[Check watchlist and temporal context]
+  C --> D{Identity evidence}
+  D -->|strong plate| E[ANPR authoritative]
+  D -->|partial plate| F[ANPR + appearance + feasibility]
+  D -->|no usable plate| G[Appearance review only]
+  E --> H{Policy / corroboration}
+  F --> H
+  G --> I[Possible / REVIEW]
+  H -->|qualifies| J[Alert with provenance]
+  H -->|does not qualify| I
+  J --> K[Operator acknowledge]
+  I --> L[Analyst investigate]
+  K --> L
+  L --> M[Timeline, evidence, route caveat]
+  M --> N[Audit action and export report]

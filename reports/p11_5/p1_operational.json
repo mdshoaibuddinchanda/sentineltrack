@@ -1,0 +1,58 @@
+{
+  "status": "OPERATIONAL_PROBE_ONLY",
+  "model": "models/vehicle/yolo11m.pt",
+  "model_sha256": "d5ffc1a674953a08e11a8d21e022781b1b23a19b730afc309290bd9fb5305b95",
+  "device": "cuda:0",
+  "dataset": "datasets/video_images",
+  "probe_images": 25,
+  "accuracy": {
+    "status": "UNAVAILABLE_NO_VEHICLE_GT",
+    "recall": null,
+    "false_positive_rate": null,
+    "note": "The source inventory has plate boxes, not vehicle detection boxes; no external COCO/vehicle GT was downloaded."
+  },
+  "measurements": [
+    {
+      "batch": 1,
+      "images": 25,
+      "precision": "fp32",
+      "imgsz": 960,
+      "latency_ms_per_image": {
+        "mean": 66.662,
+        "p50": 63.316,
+        "p95": 78.749,
+        "p99": 79.128
+      },
+      "fps": 15.001,
+      "peak_vram_bytes": 233401344
+    },
+    {
+      "batch": 2,
+      "images": 25,
+      "precision": "fp32",
+      "imgsz": 960,
+      "latency_ms_per_image": {
+        "mean": 67.871,
+        "p50": 64.009,
+        "p95": 76.064,
+        "p99": 76.064
+      },
+      "fps": 14.734,
+      "peak_vram_bytes": 233492480
+    },
+    {
+      "batch": 4,
+      "images": 25,
+      "precision": "fp32",
+      "imgsz": 960,
+      "latency_ms_per_image": {
+        "mean": 66.17,
+        "p50": 61.167,
+        "p95": 69.226,
+        "p99": 69.226
+      },
+      "fps": 15.113,
+      "peak_vram_bytes": 233493504
+    }
+  ]
+}

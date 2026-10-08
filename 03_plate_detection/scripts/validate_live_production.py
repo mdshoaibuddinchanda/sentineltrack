@@ -39,7 +39,7 @@ def run_live_production_validation(camera_ids: list[str], frames_per_camera: int
     EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
 
     v_detector = VehicleDetector(model_path='models/vehicle/yolo11m.pt', confidence=0.25, imgsz=960)
-    p_detector = PlateDetector(model_path='models/plate/production/best.pt', confidence=0.20, imgsz=960)
+    p_detector = PlateDetector(model_path='models/plate/yolo11s_plate_v2.pt', confidence=0.20, imgsz=960)
 
     overall_results = {
         'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),

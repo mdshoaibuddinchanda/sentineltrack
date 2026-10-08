@@ -42,7 +42,7 @@ def run_live_ocr_validation(camera_ids: list[str] = ['1', '2', '3'], frames_per_
     print(f'[LIVE OCR] Starting Multi-Camera Live OCR Validation on: {camera_ids} ({frames_per_camera} frames/cam)...')
 
     v_detector = VehicleDetector(model_path='models/vehicle/yolo11m.pt', confidence=0.25, imgsz=960)
-    p_detector = PlateDetector(model_path='models/plate/production/best.pt', confidence=0.20, imgsz=960)
+    p_detector = PlateDetector(model_path='models/plate/yolo11s_plate_v2.pt', confidence=0.20, imgsz=960)
     recognizer = get_recognizer('ppocr_mobile', device='cpu')
     ocr_pipe = PlateOCRPipeline(recognizer=recognizer, default_variant='raw', min_crop_quality=0.20)
 

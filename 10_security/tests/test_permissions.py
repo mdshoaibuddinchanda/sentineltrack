@@ -43,6 +43,7 @@ class TestPermissions:
         assert Permission.USER_READ not in op_perms and Permission.USER_READ.value not in op_perms
         assert Permission.TARGET_CREATE not in op_perms and Permission.TARGET_CREATE.value not in op_perms
         assert Permission.TARGET_DISABLE not in op_perms and Permission.TARGET_DISABLE.value not in op_perms
+        assert Permission.CAMERA_MANAGE not in op_perms and Permission.CAMERA_MANAGE.value not in op_perms
 
     def test_auditor_permissions(self):
         aud_perms = get_permissions_for_role(UserRole.AUDITOR)
@@ -51,12 +52,14 @@ class TestPermissions:
         # Auditor cannot mutate targets or ack alerts
         assert Permission.TARGET_CREATE not in aud_perms and Permission.TARGET_CREATE.value not in aud_perms
         assert Permission.ALERT_ACK not in aud_perms and Permission.ALERT_ACK.value not in aud_perms
+        assert Permission.CAMERA_MANAGE not in aud_perms and Permission.CAMERA_MANAGE.value not in aud_perms
 
     def test_supervisor_permissions(self):
         sup_perms = get_permissions_for_role(UserRole.SUPERVISOR)
         assert Permission.TARGET_CREATE in sup_perms or Permission.TARGET_CREATE.value in sup_perms
         assert Permission.TARGET_UPDATE in sup_perms or Permission.TARGET_UPDATE.value in sup_perms
         assert Permission.TARGET_DISABLE in sup_perms or Permission.TARGET_DISABLE.value in sup_perms
+        assert Permission.CAMERA_MANAGE in sup_perms or Permission.CAMERA_MANAGE.value in sup_perms
         # Supervisor cannot manage users
         assert Permission.USER_CREATE not in sup_perms and Permission.USER_CREATE.value not in sup_perms
         assert Permission.USER_DISABLE not in sup_perms and Permission.USER_DISABLE.value not in sup_perms

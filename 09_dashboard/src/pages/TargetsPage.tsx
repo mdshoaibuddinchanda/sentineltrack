@@ -88,7 +88,7 @@ export function TargetsPage({
       {/* Target Watchlist Table */}
       <Card
         title={`ACTIVE TARGET WATCHLISTS (${filteredTargets.length})`}
-        subtitle="Automatic plate matching & real-time alert trigger registry"
+        subtitle="Vehicles that the system should look for"
         icon={<Activity className="w-4 h-4 text-accent-blue" />}
         bodyClassName="p-0"
       >

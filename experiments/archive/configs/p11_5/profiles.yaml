@@ -1,0 +1,43 @@
+# P11.5 profiles are intentionally declarative and only reference validated
+# artifacts. A profile with no artifact remains unavailable until benchmarked.
+schema_version: 1
+profiles:
+  baseline:
+    status: validated
+    p1: models/vehicle/yolo11m.pt
+    p3: models/plate/yolo11s_plate_v2.pt
+    ocr: models/ocr/PP-OCRv5_mobile_rec_infer.onnx
+    temporal: current_multiframe_voter
+    runtime: pytorch_onnx_cpu_mix
+    precision: fp32
+    minimum_vram_mb: 0
+  development:
+    status: unavailable_archived_external
+    p1: models/vehicle/yolo11m.pt
+    p3: external://sentineltrack_archive/runs/p11_5/p3-yolo11s-v2-e20-b4-640-r3-clean/weights/best.pt
+    ocr: models/ocr/PP-OCRv5_mobile_rec_infer.onnx
+    temporal: current_multiframe_voter_window5
+    runtime: pytorch_onnx_cpu_mix
+    precision: fp32
+    minimum_vram_mb: 0
+  cloud_balanced:
+    status: unavailable_not_benchmarked
+    p1: null
+    p3: null
+    ocr: null
+    temporal: null
+    runtime: null
+    precision: null
+    minimum_vram_mb: null
+  cloud_accuracy:
+    status: unavailable_not_benchmarked
+    p1: null
+    p3: null
+    ocr: null
+    temporal: null
+    runtime: null
+    precision: null
+    minimum_vram_mb: null
+  auto:
+    status: resolver_only
+    fallback_order: [cloud_accuracy, cloud_balanced, development, baseline]

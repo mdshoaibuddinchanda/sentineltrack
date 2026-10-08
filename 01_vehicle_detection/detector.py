@@ -30,14 +30,15 @@ class VehicleDetector:
 
     def __init__(
         self,
-        model_path: str = "yolo11m.pt",
+        model_path: Optional[str] = None,
         confidence: float = 0.25,
         imgsz: int = 960,
         device: Optional[str] = None,
         half: bool = False
     ):
-        self.model_path = model_path
-        self.model = YOLO(model_path)
+        resolved_model_path = model_path or str(ROOT_DIR / "models" / "vehicle" / "yolo11m.pt")
+        self.model_path = resolved_model_path
+        self.model = YOLO(resolved_model_path)
         self.confidence = confidence
         self.imgsz = imgsz
         self.device = device

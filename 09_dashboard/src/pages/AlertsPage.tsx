@@ -13,9 +13,20 @@ interface AlertsPageProps {
   onAcknowledge: (alertId: string) => void;
   onInvestigate: (registration: string) => void;
   privacyMode?: boolean;
+  liveFramesDecoded?: number;
+  totalAlerts?: number;
+  storedUnacknowledgedCount?: number;
 }
 
-export function AlertsPage({ alerts, onAcknowledge, onInvestigate, privacyMode = false }: AlertsPageProps) {
+export function AlertsPage({
+  alerts,
+  onAcknowledge,
+  onInvestigate,
+  privacyMode = false,
+  liveFramesDecoded,
+  totalAlerts,
+  storedUnacknowledgedCount,
+}: AlertsPageProps) {
   const { hasPermission, user } = useAuth();
   const canAck = hasPermission("alert:ack") || user?.role === "ADMIN" || user?.role === "SUPERVISOR" || user?.role === "OPERATOR";
   const { alertId: routeAlertId } = useParams<{ alertId?: string }>();
@@ -97,13 +108,19 @@ export function AlertsPage({ alerts, onAcknowledge, onInvestigate, privacyMode =
 
   return (
     <div className="space-y-4">
+      {liveFramesDecoded !== undefined && liveFramesDecoded === 0 && (
+        <div className="source-note" role="status">
+          <strong>No live alert input</strong>
+          <span>No camera frames have reached the analytics worker in this run. The records below are historical database records{totalAlerts !== undefined ? ` (${totalAlerts} stored, ${storedUnacknowledgedCount ?? 0} not acknowledged)` : ""} and must not be treated as a current detection.</span>
+        </div>
+      )}
       {/* Route Filter Focus Banner */}
       {routeAlertId && (
         <div className="bg-police-800 border border-cyan-500/60 p-3 rounded-lg flex items-center justify-between font-mono text-xs text-slate-200">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-cyan-400" />
             <span>
-              Filtering by Alert ID: <strong className="text-white">{routeAlertId}</strong>
+              Filtering by Alert ID: <strong className="text-slate-100">{routeAlertId}</strong>
             </span>
             {loadingDirectAlert && (
               <span className="flex items-center gap-1 text-cyan-300 text-[11px] ml-2">
@@ -161,7 +178,9 @@ export function AlertsPage({ alerts, onAcknowledge, onInvestigate, privacyMode =
       {/* Alerts Table */}
       <Card
         title={`INCIDENT ALERT LOG (${filteredAlerts.length})`}
-        subtitle="Idempotent match detections with explainable OCR evidence"
+        subtitle={liveFramesDecoded !== undefined && liveFramesDecoded === 0
+          ? "Stored alert records — current camera input is not producing detections"
+          : "Review, acknowledge, and investigate watchlist matches"}
         icon={<Bell className="w-4 h-4 text-rose-500" />}
         bodyClassName="p-0 overflow-x-auto"
       >

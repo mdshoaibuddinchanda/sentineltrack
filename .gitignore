@@ -28,14 +28,14 @@ runs/
 *.weights
 
 # Reports, video chunks & outputs (narrowly scoped to prevent ignoring .ts TypeScript source files)
-reports/
+reports/*
 !reports/security/
 !reports/security/**
 !reports/p11/
 !reports/p11/**
+!reports/model1/
+!reports/model1/**
 *.jpg
-
-
 *.jpeg
 *.png
 *.mp4
@@ -50,13 +50,19 @@ videos/**/*.ts
 # Python artifacts
 __pycache__/
 *.py[cod]
+*.pyo
 *.class
-.pytest_cache/
-.coverage
+.pytest*/
+.coverage*
+.mypy_cache/
+.ruff_cache/
 htmlcov/
 
 # Logs & scratch
 *.log
+logs/*.pid
+logs/*
+!logs/.gitkeep
 scratch/
 mlruns/
 .mlflow/
@@ -66,3 +72,11 @@ mlruns/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Checked-in documentation assets are intentional exceptions to the media rules above.
+!docs/assets/
+!docs/assets/**
+!docs/assets/*.png
+!docs/assets/*.jpg
+!docs/assets/*.jpeg
+!docs/assets/*.webp

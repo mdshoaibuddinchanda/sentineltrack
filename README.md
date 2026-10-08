@@ -1,173 +1,333 @@
-# SentinelTrack
+<div align="center">
 
-**Production-oriented multi-camera vehicle intelligence and ANPR platform developed for the Sentinel Gujarat CCTV integration challenge.**
+# SENTINELTRACK
 
----
+### Evidence-first vehicle intelligence for Gujarat’s multi-camera future
 
-## System Architecture
+**Observe. Correlate. Explain.**
+
+<p>
+  <a href="https://github.com/mdshoaibuddinchanda/sentineltrack/actions/workflows/ci.yml"><img src="https://github.com/mdshoaibuddinchanda/sentineltrack/actions/workflows/ci.yml/badge.svg?branch=launcher-visual-review" alt="CI status"></a>
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12"></a>
+  <a href="09_dashboard/"><img src="https://img.shields.io/badge/UI-React%20%2B%20TypeScript-61DAFB?logo=react&logoColor=111827" alt="React and TypeScript"></a>
+  <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Academic%20Evaluation-0B1220.svg" alt="Academic and non-commercial evaluation license"></a>
+</p>
+
+<p>
+  <a href="12_submission/README.md">Hackathon package</a> ·
+  <a href="12_submission/DEMO_RUNBOOK.md">Demo runbook</a> ·
+  <a href="docs/TESTING_GUIDE.md">Testing guide</a> ·
+  <a href="SECURITY.md">Security policy</a>
+</p>
+
+</div>
+
+SentinelTrack is a multi-camera vehicle intelligence platform for the Gujarat
+Sentinel CCTV integration challenge. It receives permitted camera metadata and
+video, detects vehicles, reads number plates, follows vehicles within a camera,
+correlates sightings across cameras, and presents evidence to an operator.
+
+The system is designed around one simple rule: every result must explain its
+source. A camera row is not considered live until the worker decodes a current
+frame. A plate result is not treated as a strong identity without corroboration.
+Appearance similarity is a conservative review signal, never a replacement for
+ANPR.
+
+> **External-source boundary:** organizer and departmental credentials stay in
+> the local environment and are never committed. Camera `ONLINE` state is based
+> on a fresh decoded worker frame—not on a configured URL, a database flag, or a
+> demo fixture. If an authorized host is unavailable, SentinelTrack reports the
+> dependency failure and keeps the last persisted registry intact.
+
+## What the platform does
+
+| Area | Responsibility | Operator-visible evidence |
+| --- | --- | --- |
+| Camera registry | Imports permitted catalogues, supports manual/CSV onboarding, and normalizes two VMS adapter contracts. | Camera ID, ownership, GPS provenance, protocol, source state, health, and gap evidence. |
+| Stream ingestion | Opens protected HLS or RTSP sources with bounded recovery. | Decoded-frame count, sampled-frame count, reconnects, freshness, and error reason. |
+| Vehicle analytics | Runs vehicle detection and per-camera tracking. | Vehicle boxes, track IDs, timestamps, and model provenance. |
+| ANPR | Detects plate regions, reads text, and combines observations over time. | Raw/normalized candidates, quality, consensus support, and decision reason. |
+| Target matching | Compares verified plate evidence against an authorized watchlist. | Match class, score, alert severity, and audit trail. |
+| Vehicle appearance | Supplies a masked, track-level ReID fallback when plate evidence is incomplete. | `ANPR_REID_SUPPORT` or `REID_REVIEW`; never an appearance-only high-severity claim. |
+| Route investigation | Orders sightings and checks lower-bound time/distance feasibility. | Camera sequence, timestamps, locations, and feasibility explanation. |
+| Control room | Provides the secured API, WebSocket events, and React dashboard. | Cameras, alerts, watchlist, investigation, system health, and audit views. |
+
+## Identity and safety policy
+
+SentinelTrack uses a plate-first hierarchy:
+
+| Evidence available | System behavior |
+| --- | --- |
+| Strong/full plate | ANPR remains authoritative. ReID is skipped or logged diagnostically and cannot override it. |
+| Partial/degraded plate | Plate evidence may be supported by appearance, time, and route feasibility. It cannot become an exact identity from appearance alone. |
+| No usable plate | Appearance is fallback evidence only. The result remains `POSSIBLE`/`REVIEW` and cannot create an automatic `HIGH` or `CRITICAL` identity alert. |
+
+The implementation does not pass OCR text into the appearance model. If a plate
+box is available inside the vehicle crop, that region is masked before the
+appearance embedding is calculated. Stream epochs scope tracker and ReID state
+so an old track cannot silently cross a reconnect boundary.
+
+## End-to-end flow
+
+```mermaid
+flowchart LR
+  A[Catalogue / approved VMS / CSV] --> B[Normalized camera and GIS registry]
+  B --> C0[Authenticated HLS / RTSP]
+  C0 --> C[Decoded frame with PTS]
+  C --> D[Vehicle detection]
+  D --> E[ByteTrack per camera and epoch]
+  E --> F[Plate detection and OCR]
+  F --> G[Watchlist matching]
+  E --> H{Plate evidence}
+  H -->|Partial or none| I[Masked appearance fallback]
+  I --> J[Temporal and route support]
+  G --> K[Evidence and alerts]
+  J --> K
+  K --> L[FastAPI and WebSocket]
+  L --> M[React control room]
+```
+
+The runtime is split into numbered stages so each responsibility has a clear
+home. The numbers describe ownership, not a mandatory reading order.
+
+## Repository map
+
+| Directory | Contents |
+| --- | --- |
+| `00_foundation/` | Stream readers, catalogue client, OGC/ONVIF adapters, frame packets, registry, and shared infrastructure. |
+| `01_vehicle_detection/` | YOLO11m vehicle detector and local benchmarks. |
+| `02_tracking/` | ByteTrack state and track lifecycle management. |
+| `03_plate_detection/` | Plate detector, crop validation, quality scoring, and training utilities. |
+| `04_plate_ocr/` | PP-OCRv5 Mobile recognition, grammar, consensus, and evaluation. |
+| `05_target_matching/` | Watchlists, normalization, matching safeguards, alerts, and history. |
+| `06_vehicle_reid/` | Bounded MobileNetV3-Small appearance fallback. |
+| `07_route_engine/` | Chronological sightings, feasibility checks, GeoJSON, and reports. |
+| `08_backend/` | FastAPI application, services, authentication boundary, event bus, and workers. |
+| `09_dashboard/` | React, TypeScript, Vite, dashboard pages, and live camera relay UI. |
+| `10_security/` | Authentication, authorization, CSRF, audit, and security tests. |
+| `11_scale_deployment/` | Fair scheduling, bounded queues, health, sharding, and deployment planning. |
+| `12_submission/` | Hackathon report, HLD, evidence map, runbook, scripts, and checklist. |
+| `configs/` | Active runtime configuration. |
+| `models/` | Model manifest and locally provisioned model files. |
+| `reports/` | Tracked evaluation and benchmark evidence. |
+| `scripts/` | Setup and verification helpers. |
+| `tools/` | Preflight, schema, cleanup, doctor, benchmark, and evidence tools. |
+| `tests/` | Cross-stage contract tests. |
+| `docs/` | Architecture, operations, security, reproducibility, and release audits. |
+
+Datasets, raw media, generated runs, logs, caches, frontend dependencies, and
+model binaries are local provisioning artifacts and are ignored by Git. Their
+provenance and cleanup decisions are recorded in
+[`docs/release/REPOSITORY_AUDIT.md`](docs/release/REPOSITORY_AUDIT.md).
+
+## Canonical runtime models
+
+The operational source of truth is [`models/manifest.json`](models/manifest.json).
+It records model identity, path, required/optional status, and SHA-256.
+
+| Stage | Selected runtime model | Local path |
+| --- | --- | --- |
+| Vehicle detection | YOLO11m | `models/vehicle/yolo11m.pt` |
+| Plate detection | Selected P11.5 YOLO11s candidate | `models/plate/yolo11s_plate_v2.pt` |
+| Plate recognition | PP-OCRv5 Mobile ONNX | `models/ocr/PP-OCRv5_mobile_rec_infer.onnx` |
+| Appearance fallback | MobileNetV3-Small ImageNet baseline, 576-D | `models/reid/mobilenet_v3_small-047dcff4.pth` |
+
+The appearance model is a retrieval baseline, not a claim of trained
+cross-camera vehicle identity accuracy. No true cross-camera vehicle-ID ground
+truth is available in the local dataset, so P6 reports proxy pair evidence only.
+
+## Run with Conda `PY312`
+
+The normal Windows path is:
+
+```powershell
+conda activate PY312
+Set-Location C:\DR2\sentineltrack
+python -m pip install -r requirements.txt
+docker compose up -d postgres
+python tools\preflight.py
+python tools\doctor.py
+run.bat --full
+```
+
+The launcher starts PostgreSQL/PostGIS when needed, the API on port `8000`, and
+the dashboard on port `5173`. It uses the configured account and does not create
+a temporary demo account or insert fake alerts.
+
+### Configure the official feed
+
+The camera catalogue and media endpoints are protected by the organizer portal.
+Put the account email and issued password only in the local, ignored `.env`
+file:
+
+```dotenv
+SENTINEL_HOST=https://cctv.corp8.cloud
+SENTINEL_ACCESS_EMAIL=<organizer-account-email>
+SENTINEL_ACCESS_PASSWORD=<organizer-issued-password>
+```
+
+Then run:
+
+```powershell
+python -m 00_foundation.scripts.fetch_catalogue
+python tools\doctor.py
+run.bat --full
+```
+
+The email and password are used to create an in-memory session. They are not
+printed, stored in a URL, committed, or passed to the browser. The launcher
+reports `AUTH_REQUIRED` when a required credential is absent; it does not
+substitute mock feeds. The client retains compatibility with older portal forms
+that ask only for a password.
+
+The current organizer portal publishes `GET /cameras.json` after authentication
+and uses camera IDs `cam01` through `cam30`. SentinelTrack keeps compatibility
+with the older `/api/ingest` contract, derives the portal HLS playlist path, and
+derives the direct RTSP/TCP inference path from the published ID. In the local
+inference profile, RTSP/TCP is primary so a decoder that cannot open the portal's
+encrypted HLS playlist does not make a healthy camera appear offline. If the
+direct gateway rejects RTSP and OpenCV cannot open the authenticated HLS form,
+the production reader uses the already-declared PyAV/FFmpeg runtime as a bounded
+HLS decoder fallback while preserving the same cookies, PTS and stream epoch.
+
+### How to prove a camera is live
+
+Use the Cameras page or the authenticated relay endpoint:
 
 ```text
-SENTINEL STREAM INGESTION (RTSP / HLS)
-                  │
-                  ▼
- 00_FOUNDATION: Dynamic PTS Health Monitor & Unified Stream Resolver (PostGIS)
-                  │
-                  ▼
- 01_VEHICLE_DETECTION: YOLO11 Vehicle Detector (Car, Truck, Bus, Motorcycle)
-                  │
-                  ▼
- 02_TRACKING: Cadence-Aware ByteTrack (Isolated Per-Camera State & Gap Reset)
-                  │
-                  ▼
- 03_PLATE_DETECTION: Padded Vehicle Cropper + 960px Magnifier + Dedicated Plate YOLO
-                  │
-                  ▼
-   [NEXT: 04_PLATE_OCR -> 05_TARGET_MATCHING -> 06_VEHICLE_REID -> 07_ROUTE_ENGINE]
+http://127.0.0.1:8000/api/v1/cameras/<camera-id>/live
 ```
 
----
+This is a continuous MJPEG relay backed by the worker's current decoded frame.
+It is not a still-image refresh and it does not expose the upstream camera URL.
+A camera becomes `ONLINE` only after a fresh frame is decoded. `Configured`,
+`Connecting`, `Access required`, `Decode error`, and `Stale` are separate states.
 
-## Priority Stages Implemented
+The dashboard and API expose the evidence needed to answer whether analytics are
+running: decoded frames, sampled frames, active tracks, model readiness,
+inference counters, reconnects, and the latest error. If decoded frames are
+zero, the model cannot be processing that source.
 
-### Priority 0: Foundation & Ingestion
+### Camera overview and continuous video
 
-* **Catalogue Client & Resilient Parser**: Multi-key parser with schema fallback support.
-* **PostgreSQL / PostGIS Registry**: Geospatial indexing with `ST_MakePoint`, health event logs, and `ON CONFLICT` upserts.
-* **Unified Stream Resolver**: Automatic RTSP/TCP probing with seamless fallback to HLS/HTTPS.
-* **Dynamic PTS Health Tracking**: Sliding-window median interval tracking avoiding static FPS assumptions.
+Open **Cameras** after login. The default **Overview** shows every registered
+camera in one screen with its latest authenticated worker snapshot, online
+state, measured FPS, decoded-frame count, freshness, and connection error. The
+overview refreshes snapshots every five seconds and deliberately does not open
+30 simultaneous video relays. Select any tile to switch automatically to the
+camera detail view, where the authenticated continuous MJPEG relay, worker
+telemetry, coordinates, and nearby-camera information are available. The
+**List** button returns to the table view.
 
-### Priority 1: Vehicle Detection
+The overview is a health-and-operations screen, not fabricated playback. A
+source marked `ONLINE` means the worker has decoded a current frame; a missing
+snapshot or stale counter is shown as a real dependency state.
 
-* **Vehicle Filtering**: Passes COCO vehicle classes (`car`, `motorcycle`, `bus`, `truck`).
-* **PTS-Based Sampling**: 150 ms interval sampling cadence (~6.7 FPS).
-* **Hardware Benchmarking**: Optimized for GPU acceleration with low VRAM footprint.
+### Camera onboarding, GPS, and GIS
 
-### Priority 2: Single-Camera Vehicle Tracking
+The same Cameras page includes a clearly named **Camera setup and GIS** panel;
+there is no hidden “More” menu. Administrators and supervisors can register one
+camera, edit the selected camera, or validate and apply a CSV of up to 500
+records. Every coordinate requires a quality and source. The platform never
+geocodes a location label silently.
 
-* **Isolated Camera Registry**: Independent ByteTrack instances per camera feed to prevent ID collisions.
-* **Cadence-Aware Kalman Filter**: Matches ByteTrack frame rate directly to the 150 ms sampling cadence.
-* **Epoch & Gap Reset Safeguards**: Automatically invalidates tracks on stream restarts or PTS gaps > 1500 ms.
+The panel also exports a spreadsheet-safe gap report and safe GeoJSON, shows
+whether two configured organization adapters are ready, checks lower-bound
+travel feasibility between two geolocated cameras, and estimates circular-buffer
+coverage for an operator-supplied GeoJSON area. The route result is not a road
+path, and coverage is labelled a planning approximation. Full contracts,
+security controls, and setup are in
+[`docs/CAMERA_REGISTRY_GIS_VMS.md`](docs/CAMERA_REGISTRY_GIS_VMS.md); the current
+30-camera data gaps are recorded in
+[`reports/model1/MODEL1_GAP_ANALYSIS.md`](reports/model1/MODEL1_GAP_ANALYSIS.md).
 
-### Priority 3: License Plate Detection & Provenance
+The header's clearly labelled **Privacy on/off** control masks or reveals
+vehicle registration numbers in operator views. It is a privacy control—not an
+AI switch. Keep privacy mode on while presenting screens to anyone who is not
+authorized to view full registrations.
 
-* **Padded Vehicle Cropping**: Extracts vehicle ROIs with 8% margin to protect bumper edges.
-* **High-Resolution Magnification**: Dynamically scales crops to 960 px before plate localization.
-* **Dedicated Single-Class Plate Model**: Enforces `{0: 'license_plate'}` contract, rejecting generic COCO false positives.
-* **Verified Real Dataset Workflow**: Uses open verified ANPR dataset (CC-BY-4.0) with strict **Real-Only Validation & Test** splits and zero hash overlap.
-* **Coordinate Re-Projection**: Accurately projects local crop coordinates back to full 1920x1080 CCTV space.
-* **Quality & Top-K Accumulation**: Evaluates sharpness (Laplacian variance), contrast, and retains the top candidate crops per track.
+### Add the authorized target
 
-### Priority 4: License Plate OCR & Multi-Frame Consensus
+An empty watchlist is intentional after the local demo-data cleanup. Add only
+the registration authorized for the challenge through the Watchlist page or the
+protected target API. The system must never invent a target or an alert.
 
-* **Production Recognizer:** `PP-OCRv5_mobile_rec` running via ONNX Runtime CPU with genuine tensor batching.
-* **Layout Awareness:** Integrated two-line motorcycle / square plate decomposition and reassembly.
-* **Soft Indian Grammar & Normalization:** Position-specific confusion discounting ($O/0, I/1, A/4, B/8, S/5, Z/2, G/6$) without global string corruption.
-* **Multi-Frame Weighted Voter:** Positional character consensus requiring corroborating support count $\ge 2$ for track resolution.
+## Validation commands
 
-### Priority 5: Target Registration Matching & Watchlists
+Backend and repository checks:
 
-* **Multi-Tier Indexing:** Suffix-4 prefix trees and fuzzy distance clustering for sub-millisecond retrieval against 100k+ records.
-* **Confusion Cost Matrix:** Position-aware Levenshtein metric accounting for Indian registration plate fonts (e.g. `DL`, `GJ`, `MH`, `BH` series).
-* **Multi-Frame Corroboration:** Corroborated multi-frame observations receive automated alerts; uncorroborated single observations are gated to `REVIEW`.
-* **PostGIS Historical Search:** Stores raw sightings for non-destructive future rescoring and audit trails.
-
-### Priority 7: Cross-Camera Route / GIS & Spatio-Temporal Trajectory Engine
-
-* **Cross-Camera Sighting Graph:** Dynamic programming DAG solver reconstructing the most plausible chronological trajectory across distributed municipal cameras.
-* **Strict Spatio-Temporal Model:** Strictly avoids invalid global PTS comparison by resolving UTC wall-clock time provenance (`SOURCE_WALLCLOCK`, `PTS_ANCHORED_ESTIMATE`, `DB_PERSISTENCE_FALLBACK`).
-* **Lower-Bound Kinematics Feasibility:** Evaluates inter-camera geodesic distance ($R=6371\text{km}$) and required minimum transit speed to flag and penalize physically impossible jumps ($>220\text{ km/h}$).
-* **Same-Camera Dwell Collapse:** Automatically merges stationary dwell observations into single nodes with dwell durations and aggregated support counts.
-* **PostGIS & RFC-7946 GeoJSON:** Native PostgreSQL 16 + PostGIS storage with `ST_DWithin` spatial indexing and standards-compliant GeoJSON FeatureCollection generation for Control Room mapping UIs.
-
----
-
-## Setup & Installation
-
-### 1. Clone Repository & Create Environment
-
-```bash
-git clone https://github.com/mdshoaibuddinchanda/sentineltrack.git
-cd sentineltrack
-
-# Create and activate Python 3.12 environment
-conda create -n py312 python=3.12 -y
-conda activate py312
-pip install -r requirements.txt
+```powershell
+python -m pytest -q
+python -m compileall -q 00_foundation 01_vehicle_detection 02_tracking 03_plate_detection 04_plate_ocr 05_target_matching 06_vehicle_reid 07_route_engine 08_backend 10_security 11_scale_deployment scripts tools
+python tools\preflight.py
+python tools\doctor.py
 ```
 
-### 2. Environment Configuration
+Frontend checks:
 
-Copy the sample environment file:
-
-```bash
-cp .env.example .env
+```powershell
+Set-Location 09_dashboard
+npm ci
+npm run typecheck
+npm run lint
+npx vitest run
+npm run build
 ```
 
-Edit `.env` with your Sentinel host and database credentials.
-*(Note: `.env.example` contains development-only default credentials for local Docker Postgres).*
+GitHub Actions runs the security/scale backend gate and the frontend
+typecheck, lint, test, and build gates. See
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
-### 3. Start Database
+## Documentation starting points
 
-```bash
-docker run -d --name sentinel-postgres -p 5432:5432 -e POSTGRES_USER=sentinel -e POSTGRES_PASSWORD=sentinel_dev -e POSTGRES_DB=sentinel postgis/postgis:16-3.4
-```
+| Question | Document |
+| --- | --- |
+| How do I run and record the software? | [`12_submission/DEMO_RUNBOOK.md`](12_submission/DEMO_RUNBOOK.md) |
+| What is the evaluator package? | [`12_submission/README.md`](12_submission/README.md) |
+| How is the platform structured? | [`12_submission/HLD.md`](12_submission/HLD.md) and [`12_submission/ARCHITECTURE.md`](12_submission/ARCHITECTURE.md) |
+| How do camera onboarding, GIS, and VMS adapters work? | [`docs/CAMERA_REGISTRY_GIS_VMS.md`](docs/CAMERA_REGISTRY_GIS_VMS.md) |
+| Which official camera metadata is still missing? | [`reports/model1/MODEL1_GAP_ANALYSIS.md`](reports/model1/MODEL1_GAP_ANALYSIS.md) |
+| What official requirements were checked? | [`12_submission/OFFICIAL_REQUIREMENTS_MATRIX.md`](12_submission/OFFICIAL_REQUIREMENTS_MATRIX.md) |
+| What is the current live-runtime diagnosis? | [`docs/release/LIVE_RUNTIME_AUDIT.md`](docs/release/LIVE_RUNTIME_AUDIT.md) |
+| What evidence is measured? | [`12_submission/EVIDENCE_INVENTORY.md`](12_submission/EVIDENCE_INVENTORY.md) and [`reports/`](reports/) |
+| How are tests run? | [`docs/TESTING_GUIDE.md`](docs/TESTING_GUIDE.md) |
+| How is the repository cleaned? | [`docs/release/FINAL_HYGIENE_AUDIT.md`](docs/release/FINAL_HYGIENE_AUDIT.md) |
+| How are security and privacy handled? | [`SECURITY.md`](SECURITY.md) and [`docs/security/`](docs/security/) |
 
-### 3. Start Database
+Historical experiments and development baselines remain under
+`experiments/archive/` and `docs/archive/`. They are retained for provenance,
+not used as active runtime instructions.
 
-```bash
-docker run -d --name sentinel-postgres -p 5432:5432 -e POSTGRES_USER=sentinel -e POSTGRES_PASSWORD=sentinel_dev -e POSTGRES_DB=sentinel postgis/postgis:16-3.4
-```
+## Official challenge references
 
-### 4. Model Setup
+The implementation and submission package were aligned against the public
+official pages:
 
-Download the base vehicle detector, plate detector, and OCR recognition models:
+- [Problems](https://sentinel.gujarat.gov.in/problems)
+- [FAQs](https://sentinel.gujarat.gov.in/faqs)
+- [Resource and integration guide](https://sentinel.gujarat.gov.in/resource)
+- [Phases and prizes](https://sentinel.gujarat.gov.in/phases)
 
-```bash
-# Vehicle and plate detectors
-python scripts/setup_models.py
+The published challenge describes a registry/GIS foundation, permitted
+multi-camera feeds, a designated-vehicle test case, timestamped output,
+working-software demonstration, and a statewide scale plan. External organizer
+credentials, designated vehicle data, team eligibility, and portal-only upload
+fields are not present in this repository and must be supplied by the submission
+owner.
 
-# Priority 4 OCR models (PP-OCRv5 Mobile & Server)
-python -m 04_plate_ocr.scripts.setup_ocr_models
-```
+## License and responsible use
 
----
+SentinelTrack is released under the
+[SentinelTrack Academic and Non-Commercial Evaluation License](LICENSE).
+Academic research, teaching, evaluation, and hackathon judging are permitted.
+Commercial use, production deployment, operational surveillance, paid services,
+and other use outside that scope require prior written permission from the
+copyright holder. This is a custom restrictive license, not an OSI-approved
+open-source license.
 
-## Testing & Validation
-
-Run the automated test suite (66 unit tests across Priorities 0–4):
-
-```bash
-python -m pytest -v
-```
-
-### OCR Testing & Benchmark Scripts
-
-* **Full Quantitative Evaluation (Mobile, Server, Adaptive):**
-
-  ```bash
-  python -m 04_plate_ocr.training.evaluate
-  ```
-
-* **Latency & Batching Benchmark ($B=1, 2, 4, 8$):**
-
-  ```bash
-  python -m 04_plate_ocr.benchmark
-  ```
-
-* **Test Single Plate Crop:**
-
-  ```bash
-  python -m 04_plate_ocr.scripts.test_crop <path_to_image>
-  ```
-
-* **Live Multi-Camera Sentinel OCR Validator:**
-
-  ```bash
-  python -m 04_plate_ocr.scripts.validate_live_production
-  ```
-
----
-
-## License
-
-Proprietary / Competition Submission.
+Third-party models, datasets, fonts, and libraries retain their own licenses.
+Review [`docs/release/MODEL_INVENTORY.md`](docs/release/MODEL_INVENTORY.md)
+before redistributing any component. SentinelTrack is decision-support
+software; deploying departments remain responsible for authorization, lawful
+use, retention, security, and human review.
